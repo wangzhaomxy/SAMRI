@@ -138,6 +138,10 @@ class BboxPromptDemo:
         self.set_image_path(image_path)
         self._show(fig_size=fig_size, random_color=random_color, alpha=alpha)
 
+    def show_nii(self, image, fig_size=5, random_color=True, alpha=0.65):
+        self._set_image(image)
+        self._show(fig_size=fig_size, random_color=random_color, alpha=alpha)
+
     def set_image_path(self, image_path):
         image = cv2.imread(image_path)
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
