@@ -8,9 +8,9 @@
 from setuptools import find_packages, setup
 
 setup(
-    name="medsam",
+    name="MRI-SAM",
     version="0.0.1",
-    author="Jun Ma",
+    author="Zhao Wang",
     python_requires=">=3.9",
     install_requires=["monai", "matplotlib", "scikit-image", "SimpleITK>=2.2.1", "nibabel", "tqdm", "scipy", "ipympl", "opencv-python", "jupyterlab", "ipywidgets"],
     packages=find_packages(exclude="notebooks"),
