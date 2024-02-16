@@ -139,6 +139,7 @@ class BboxPromptDemo:
         self._show(fig_size=fig_size, random_color=random_color, alpha=alpha)
 
     def show_nii(self, image, fig_size=5, random_color=True, alpha=0.65):
+        image = image.transpose(1,2,0)
         self._set_image(image)
         self._show(fig_size=fig_size, random_color=random_color, alpha=alpha)
 
@@ -164,10 +165,7 @@ class BboxPromptDemo:
         img_resize = (img_resize - img_resize.min()) / np.clip(img_resize.max() - img_resize.min(), a_min=1e-8, a_max=None) # normalize to [0, 1], (H, W, 3
         # convert the shape to (3, H, W)
         assert np.max(img_resize)<=1.0 and np.min(img_resize)>=0.0, 'image should be normalized to [0, 1]'
-        if img_resize.shape[0]>5:
-            img_tensor = torch.tensor(img_resize).float().permute(2, 0, 1).unsqueeze(0).to(self.model.device)
-        else:
-            img_tensor = torch.tensor(img_resize).float().unsqueeze(0).to(self.model.device)
+        img_tensor = torch.tensor(img_resize).float().permute(2, 0, 1).unsqueeze(0).to(self.model.device)
         return img_tensor
     
     @torch.no_grad()
