@@ -139,7 +139,6 @@ class BboxPromptDemo:
         self._show(fig_size=fig_size, random_color=random_color, alpha=alpha)
 
     def show_nii(self, image, fig_size=5, random_color=True, alpha=0.65):
-        image = image.transpose(1,2,0)
         self._set_image(image)
         self._show(fig_size=fig_size, random_color=random_color, alpha=alpha)
 
