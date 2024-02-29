@@ -9,14 +9,21 @@ import os
 
 import torch
 from segment_anything import sam_model_registry
-from utils.test_parser import parser
+from utils.parsers import test_parser
+from utils.visual import *
 import torch.nn.functional as F
 
-
-args = parser.parse_args()
-
+# load args from command line
+args = test_parser.parse_args()
 
 device = args.device
-medsam_model = sam_model_registry["vit_b"](checkpoint=args.checkpoint)
-medsam_model = medsam_model.to(device)
-medsam_model.eval()
+checkpoint=args.checkpoint
+encoder_tpye = args.encoder_tpye
+
+# regist the MRI-SAM model
+mri_sam_model = sam_model_registry[encoder_tpye](checkpoint)
+mri_sam_model = mri_sam_model.to(device)
+mri_sam_model.eval()
+
+
+
