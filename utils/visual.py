@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 
-# visualization functions
-# reference: https://github.com/facebookresearch/segment-anything/blob/main/notebooks/predictor_example.ipynb
+"""
+visualization functions
+reference: https://github.com/facebookresearch/segment-anything/blob/main/notebooks/predictor_example.ipynb
+"""
 
 import numpy as np
 import matplotlib.pyplot as plt
