@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import os
 join = os.path.join
 import torch
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
 import glob
 import random
 import nibabel as nib
@@ -19,10 +19,17 @@ from utils.utils import IMAGE_KEYS, MASK_KEYS
 
 class NiiDataset(Dataset):
     def __init__(self, data_root):
+        super().__init__()
         self.data_root = data_root
         self.img_file = sorted(glob.glob(IMAGE_KEYS))
         self.gt_file = sorted(glob.glob(MASK_KEYS))
-        print(f"number of images: {len(self.img_file)}")
+        # print(f"number of images: {len(self.img_file)}")
+        """
+        Args:
+            data_root (str): The path of the dataset
+            img_file (list): The absolute path of the image files list
+            gr_file (list): The absolute pathe of the ground truth masks list.
+        """
 
     def __len__(self):
         return len(self.img_file)
