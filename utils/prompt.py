@@ -45,20 +45,20 @@ def gen_points(mask, num_points=1):
                     points tuples in a list.
 
     Returns:
-        (Tuple): a (H, W) point Tupple if the num_points = 1;
+        (np.array): a (W, H) point Tupple if the num_points = 1;
         OR
-        [(Tuple), ...]: a list of point Tupples if the num_points > 1.
+        (np.array)[(Tuple), ...]: a list of point Tupples if the num_points > 1.
     """
     h, w = np.nonzero(mask)
     if num_points == 1:
         p_idx = random.randrange(len(h))
-        return (h[p_idx], w[p_idx])
+        return (w[p_idx], h[p_idx])
     else:
         points = []
         for i in range(num_points):
             p_idx = random.randrange(len(h))
-            points.append((h[p_idx], w[p_idx]))
-        return points
+            points.append((w[p_idx], h[p_idx]))
+        return np.array(points)
 
 
 def gen_bboxes(mask, num_bboxes=1, jitter=0):
@@ -74,22 +74,23 @@ def gen_bboxes(mask, num_bboxes=1, jitter=0):
         jitter (int): the random shift of the original bounding box.
 
     Returns:
-        (Tuple): a (min_h, min_w, max_h, max_w) bounding box Tupple if the
+        (Tuple): a (min_w, min_h, max_w, max_h) bounding box Tupple if the
                 num_bboxes = 1;
         [(Tuple), ...]: a list of bounding box Tupples if the num_bboxes > 1. 
     """
     h, w = np.nonzero(mask)
-    bbox = (max(0, (h[0] + rand_shift(jitter))),
-                 max(0, (w[0] + rand_shift(jitter))), 
-                 min(mask.shape[0], (h[-1] + rand_shift(jitter))), 
-                 min(mask.shape[1], (w[-1] + rand_shift(jitter))))
+    bbox = ( max(0, (w[0] + rand_shift(jitter))), 
+                max(0, (h[0] + rand_shift(jitter))),
+                min(mask.shape[1], (w[-1] + rand_shift(jitter))),
+                min(mask.shape[0], (h[-1] + rand_shift(jitter)))
+                )
     if num_bboxes == 1:
-        return bbox
+        return np.array(bbox)
     else:
         bboxes = []
         for _ in range(num_bboxes):
             bboxes.append(bbox)
-        return bboxes
+        return np.array(bboxes)
 
 def rand_shift(jitter):
     """
