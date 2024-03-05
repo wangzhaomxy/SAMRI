@@ -45,19 +45,19 @@ def gen_points(mask, num_points=1):
                     points tuples in a list.
 
     Returns:
-        (np.array): a (W, H) point Tupple if the num_points = 1;
+        (np.array): a (W, H) point List if the num_points = 1;
         OR
-        (np.array)[(Tuple), ...]: a list of point Tupples if the num_points > 1.
+        (np.array)[[list], ...]: a list of point lists if the num_points > 1.
     """
     h, w = np.nonzero(mask)
     if num_points == 1:
         p_idx = random.randrange(len(h))
-        return (w[p_idx], h[p_idx])
+        return np.array([[w[p_idx], h[p_idx]]])
     else:
         points = []
         for i in range(num_points):
             p_idx = random.randrange(len(h))
-            points.append((w[p_idx], h[p_idx]))
+            points.append([w[p_idx], h[p_idx]])
         return np.array(points)
 
 
@@ -74,16 +74,16 @@ def gen_bboxes(mask, num_bboxes=1, jitter=0):
         jitter (int): the random shift of the original bounding box.
 
     Returns:
-        (Tuple): a (min_w, min_h, max_w, max_h) bounding box Tupple if the
+        (list): a [min_w, min_h, max_w, max_h] bounding box list if the
                 num_bboxes = 1;
-        [(Tuple), ...]: a list of bounding box Tupples if the num_bboxes > 1. 
+        [[list], ...]: a list of bounding box lists if the num_bboxes > 1. 
     """
     h, w = np.nonzero(mask)
-    bbox = ( max(0, (w[0] + rand_shift(jitter))), 
-                max(0, (h[0] + rand_shift(jitter))),
-                min(mask.shape[1], (w[-1] + rand_shift(jitter))),
-                min(mask.shape[0], (h[-1] + rand_shift(jitter)))
-                )
+    bbox = [max(0, (w[0] + rand_shift(jitter))), 
+            max(0, (h[0] + rand_shift(jitter))),
+            min(mask.shape[1], (w[-1] + rand_shift(jitter))),
+            min(mask.shape[0], (h[-1] + rand_shift(jitter)))
+            ]
     if num_bboxes == 1:
         return np.array(bbox)
     else:
