@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+
 """
 Inference of the MRI-SAM on the nifti datasets.
 """
