@@ -25,7 +25,6 @@ class MaskSplit():
         return self.mask_number
     
     def __getitem__(self, index):
-        self.curr_mask = self.masks[index]
         return self.masks[index]
     
     def _split_masks(self, mask):
