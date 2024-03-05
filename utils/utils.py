@@ -17,6 +17,6 @@ NUM_POINTS = 1
 NUM_BBOXES = 1
 JITTER = 0
 
-SAVE_PATH = "/home/s4670484/Documents/result/sam_vit_h"
+SAVE_PATH = "/home/s4670484/Documents/result/sam_vit_h/test/"
 
 LABEL_DICTIONARY = {1:""}
