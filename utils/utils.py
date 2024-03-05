@@ -4,7 +4,7 @@
 Permanent variables, universal functions, ect
 """
 
-IMAGE_PATH = "/home/s4670484/Documents/MSK/T2_preprocessed_resample_scale2_crop_cv_7c_slice_axis_0_class_7_thresh_7/set_1/test"
+IMAGE_PATH = "/home/s4670484/Documents/MSK/code_test/"
 IMAGE_KEYS = "*T2_img*"  # The image file names containing letters between *
 MASK_KEYS = "*A_seg*"   # The mask file names containing letters between *
 
