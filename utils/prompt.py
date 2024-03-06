@@ -79,10 +79,10 @@ def gen_bboxes(mask, num_bboxes=1, jitter=0):
         [[list], ...]: a list of bounding box lists if the num_bboxes > 1. 
     """
     h, w = np.nonzero(mask)
-    bbox = [max(0, (w[0] + rand_shift(jitter))), 
-            max(0, (h[0] + rand_shift(jitter))),
-            min(mask.shape[1], (w[-1] + rand_shift(jitter))),
-            min(mask.shape[0], (h[-1] + rand_shift(jitter)))
+    bbox = [max(0, (np.min(w) + rand_shift(jitter))), 
+            max(0, (np.min(h) + rand_shift(jitter))),
+            min(mask.shape[1], (np.max(w) + rand_shift(jitter))),
+            min(mask.shape[0], (np.max(h) + rand_shift(jitter)))
             ]
     if num_bboxes == 1:
         return np.array(bbox)
