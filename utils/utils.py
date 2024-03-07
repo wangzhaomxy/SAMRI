@@ -22,7 +22,7 @@ DEVICE = "cuda"
 
 NUM_POINTS = 1
 NUM_BBOXES = 1
-JITTER = 0
+JITTER = 10
 
 SAVE_PATH = "/home/s4670484/Documents/result/sam_vit_b/dataset1/"
 
