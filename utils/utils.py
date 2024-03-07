@@ -21,4 +21,5 @@ JITTER = 0
 
 SAVE_PATH = "/home/s4670484/Documents/result/sam_vit_h/test/"
 
-LABEL_DICTIONARY = {1:""}
+LABEL_DICTIONARY = {1:"Femur", 2:"Articular Cartilage-F", 3:"Tibia", 4:"Articular Cartilage-T", 5:"Patella", 6:"Articular Cartilage-P"}
+LABEL_LIST = ["Femur", "Articular Cartilage-F", "Tibia", "Articular Cartilage-T", "Patella", "Articular Cartilage-P"]
