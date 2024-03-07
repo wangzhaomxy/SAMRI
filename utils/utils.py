@@ -4,13 +4,14 @@
 Permanent variables, universal functions, ect
 """
 
-IMAGE_PATH = "/home/s4670484/Documents/MSK/code_test/"
+IMAGE_PATH = "/home/s4670484/Documents/MSK/T2_preprocessed_resample_scale2_crop_cv_7c_slice_axis_0_class_7_thresh_7/set_1/test/"
 IMAGE_KEYS = "*T2_img*"  # The image file names containing letters between *
 MASK_KEYS = "*A_seg*"   # The mask file names containing letters between *
 
 
 ENCODER_TYPE = "vit_h"
 SAM_CHECKPOINT = "/home/s4670484/Documents/Model_dir/sam_vit_h_4b8939.pth"
+    # /home/s4670484/Documents/Model_dir/sam_vit_h_4b8939.pth
 DEVICE = "cuda"
 
 
