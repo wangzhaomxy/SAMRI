@@ -22,3 +22,10 @@ def dice_similarity(y_true, y_pred, smooth=1e-10):
     dice = (2 * intersection + smooth) / (sum_of_squares_pred + 
                                           sum_of_squares_true + smooth)
     return dice
+
+
+
+def iou(y_true, y_pred, smooth=1e-10):
+    intersection = np.sum(np.bitwise_and(y_true, y_pred))
+    union = np.sum(np.bitwise_or(y_true, y_pred))
+    return (intersection) /  (union + smooth)
