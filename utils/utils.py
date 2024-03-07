@@ -10,8 +10,10 @@ MASK_KEYS = "*A_seg*"   # The mask file names containing letters between *
 
 
 ENCODER_TYPE = "vit_h"
-SAM_CHECKPOINT = "/home/s4670484/Documents/Model_dir/sam_vit_h_4b8939.pth"
+SAM_CHECKPOINT_H = "/home/s4670484/Documents/Model_dir/sam_vit_h_4b8939.pth"
 DEVICE = "cuda"
+
+
 
 NUM_POINTS = 1
 NUM_BBOXES = 1
