@@ -12,7 +12,7 @@ MASK_KEYS = "*A_seg*"   # The mask file names containing letters between *
 ENCODER_TYPE = "vit_b"
     # "vit_h"
     # "vit_b"
-SAM_CHECKPOINT = "/home/s4670484/Documents/Model_dir/sam_vit_b_01ec64.pth"
+SAM_CHECKPOINT = "/home/s4670484/Documents/Model_dir/medsam_vit_b.pth"
     # "/home/s4670484/Documents/Model_dir/sam_vit_h_4b8939.pth"
     # "/home/s4670484/Documents/Model_dir/sam_vit_b_01ec64.pth"
     # "/home/s4670484/Documents/Model_dir/medsam_vit_b.pth"
