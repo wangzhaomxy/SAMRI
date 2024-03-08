@@ -1,1 +1,1 @@
-# MRI-SAM
+# SAMRI
