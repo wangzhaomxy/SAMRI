@@ -1,0 +1,14 @@
+{
+	"folders": [
+		{
+			"path": ".."
+		},
+		{
+			"path": "../../MedSAM-main"
+		},
+		{
+			"path": "../../segment-anything"
+		}
+	],
+	"settings": {}
+}

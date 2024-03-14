@@ -20,7 +20,6 @@ SAM_CHECKPOINT = "/home/s4670484/Documents/Model_dir/medsam_vit_b.pth"
 DEVICE = "cuda"
 
 
-
 NUM_POINTS = 1
 NUM_BBOXES = 1
 JITTER = 10
