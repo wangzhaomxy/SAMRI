@@ -8,7 +8,7 @@
 from setuptools import find_packages, setup
 
 setup(
-    name="MRI-SAM",
+    name="SAMRI",
     version="0.0.1",
     author="Zhao Wang",
     python_requires=">=3.9",
