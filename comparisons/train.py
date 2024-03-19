@@ -24,9 +24,6 @@ in_channel = 1
 out_channel = label_num
 
 
-# load models
-unet_model = UNet(in_channel, out_channel)
-
 def train_model(
         model,
         device,
@@ -139,7 +136,7 @@ def train_model(
                             })
                         except:
                             pass
-
+"""
         if save_checkpoint:
             Path(dir_checkpoint).mkdir(parents=True, exist_ok=True)
             state_dict = model.state_dict()
@@ -164,9 +161,9 @@ def get_args():
 
     return parser.parse_args()
 
-
+"""
 if __name__ == '__main__':
-    args = get_args()
+#    args = get_args()
 
     logging.basicConfig(level=logging.INFO, format='%(levelname)s: %(message)s')
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -175,47 +172,41 @@ if __name__ == '__main__':
     # Change here to adapt to your data
     # n_channels=3 for RGB images
     # n_classes is the number of probabilities you want to get per pixel
-    model = UNet(n_channels=3, n_classes=args.classes, bilinear=args.bilinear)
+    model = UNet(n_channels=1, n_classes=6)
     model = model.to(memory_format=torch.channels_last)
 
     logging.info(f'Network:\n'
                  f'\t{model.n_channels} input channels\n'
                  f'\t{model.n_classes} output channels (classes)\n'
-                 f'\t{"Bilinear" if model.bilinear else "Transposed conv"} upscaling')
+                 )
 
+    """
     if args.load:
         state_dict = torch.load(args.load, map_location=device)
         del state_dict['mask_values']
         model.load_state_dict(state_dict)
         logging.info(f'Model loaded from {args.load}')
+    """
 
     model.to(device=device)
     try:
         train_model(
             model=model,
-            epochs=args.epochs,
-            batch_size=args.batch_size,
-            learning_rate=args.lr,
+            epochs=3,
+            batch_size=3,
             device=device,
-            img_scale=args.scale,
-            val_percent=args.val / 100,
-            amp=args.amp
         )
+        
     except torch.cuda.OutOfMemoryError:
         logging.error('Detected OutOfMemoryError! '
-                      'Enabling checkpointing to reduce memory usage, but this slows down training. '
-                      'Consider enabling AMP (--amp) for fast and memory efficient training')
+                        'Enabling checkpointing to reduce memory usage, but this slows down training. ')
         torch.cuda.empty_cache()
         model.use_checkpointing()
         train_model(
             model=model,
-            epochs=args.epochs,
-            batch_size=args.batch_size,
-            learning_rate=args.lr,
+            epochs=3,
+            batch_size=3,
             device=device,
-            img_scale=args.scale,
-            val_percent=args.val / 100,
-            amp=args.amp
         )
 
 
