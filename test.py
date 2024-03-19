@@ -31,7 +31,7 @@ encoder_tpye = args.encoder_tpye
 """
 
 encoder_tpye = ENCODER_TYPE
-checkpoint = SAM_CHECKPOINT_H
+checkpoint = SAM_CHECKPOINT
 device = DEVICE
 
 # regist the MRI-SAM model and predictor.
