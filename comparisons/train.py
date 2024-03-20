@@ -13,7 +13,7 @@ import wandb, logging, tqdm
 from torch import optim
 import torch.nn as nn
 import torch.nn.functional as F
-from evaluate import evaluate
+import evaluate
 
 # load dataset
 label_num = 6
@@ -189,25 +189,15 @@ if __name__ == '__main__':
     """
 
     model.to(device=device)
-    try:
-        train_model(
-            model=model,
-            epochs=3,
-            batch_size=3,
-            device=device,
-        )
+
+    train_model(
+        model=model,
+        epochs=3,
+        batch_size=3,
+        device=device,
+    )
         
-    except torch.cuda.OutOfMemoryError:
-        logging.error('Detected OutOfMemoryError! '
-                        'Enabling checkpointing to reduce memory usage, but this slows down training. ')
-        torch.cuda.empty_cache()
-        model.use_checkpointing()
-        train_model(
-            model=model,
-            epochs=3,
-            batch_size=3,
-            device=device,
-        )
+
 
 
 
