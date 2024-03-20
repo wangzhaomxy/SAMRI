@@ -5,6 +5,7 @@ The loss functions that MRI-SAM uses.
 """
 import numpy as np
 import torch.nn as nn
+import torch
 
 def dice_similarity(y_true, y_pred, smooth=1e-10):
     """
@@ -24,6 +25,23 @@ def dice_similarity(y_true, y_pred, smooth=1e-10):
                                           sum_of_squares_true + smooth)
     return dice
 
+def dice_similarity_py(y_true, y_pred, smooth=1e-10):
+    """
+    Calculate the dice similarity of the two images, dice similarity = (2 * 
+    intersection + smooth) / (sum of squares of prediction + sum of squares 
+    of ground truth + smooth), in a pytorch version
+
+    Parameters:
+        y_true (np.array): the gound truth of the output
+        y_pred (np.array): the predicted output
+        smooth (float): a small number to avoid zero denominator.
+    """
+    intersection = torch.sum(y_true * y_pred)
+    sum_of_squares_pred = torch.sum(torch.square(y_pred))
+    sum_of_squares_true = torch.sum(torch.square(y_true))
+    dice = (2 * intersection + smooth) / (sum_of_squares_pred + 
+                                          sum_of_squares_true + smooth)
+    return dice
 
 
 def iou(y_true, y_pred, smooth=1e-10):
@@ -49,8 +67,8 @@ class BceDiceLoss(nn.Module):
     def forward(self, y_true, y_pred):
         y_true = y_true.float()
         y_pred = y_pred.float()
-        
-        dicescore = 1 - dice_similarity(y_true, y_pred)
+
+        dicescore = 1 - dice_similarity_py(y_true, y_pred)
         bcescore = nn.BCELoss()
         bceloss = bcescore(y_true, y_pred)
 
