@@ -73,7 +73,7 @@ class UnetNiiDataset(NiiDataset):
 
         return (np_image - np_image.min()) / (np_image.max() - np_image.min())
     
-    def _tensor_mask(self, musk, label_num):
+    def _tensor_mask(self, mask, label_num):
         """
         slice the 1 channel 6 labeled mask into 6 chanel and each channel
         include 1 labeled binary mask.
@@ -88,5 +88,5 @@ class UnetNiiDataset(NiiDataset):
         """
         masks = []
         for i in range(1, label_num + 1):
-            masks.append(self.mask == i)
+            masks.append(mask == i)
         return np.array(masks)

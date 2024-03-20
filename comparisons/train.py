@@ -47,7 +47,7 @@ def train_model(
     experiment = wandb.init(project='U-Net', resume='allow', anonymous='must')
     experiment.config.update(
         dict(epochs=epochs, batch_size=batch_size, learning_rate=learning_rate,
-             val_percent=val_percent, save_checkpoint=save_checkpoint, img_scale=img_scale, amp=amp)
+             val_percent=val_percent, save_checkpoint=save_checkpoint)
     )
 
     logging.info(f'''Starting training:
@@ -192,8 +192,8 @@ if __name__ == '__main__':
 
     train_model(
         model=model,
-        epochs=3,
-        batch_size=3,
+        epochs=10,
+        batch_size=10,
         device=device,
     )
         

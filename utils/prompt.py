@@ -27,7 +27,7 @@ class MaskSplit():
     def __getitem__(self, index):
         return self.masks[index]
     
-    def _split_masks(self, mask):
+    def _split_masks(self):
         masks = []
         for i in range(1, self.mask_number+1):
             masks.append(self.mask == i)
