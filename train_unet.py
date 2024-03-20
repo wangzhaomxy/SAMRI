@@ -72,14 +72,14 @@ def train_model(
         epoch_loss = 0
 
         for batch in train_loader:
-            images, true_masks = batch['image'], batch['mask']
+            images, true_masks = batch[0], batch[1]
 
             assert images.shape[1] == model.n_channels, \
                 f'Network has been defined with {model.n_channels} input channels, ' \
                 f'but loaded images have {images.shape[1]} channels. Please check that ' \
                 'the images are loaded correctly.'
 
-            images = images.to(device=device, dtype=torch.float32)
+            images = images.to(device=device, dtype=torch.float)
             true_masks = true_masks.to(device=device, dtype=torch.long)
 
             masks_pred = model(images)
