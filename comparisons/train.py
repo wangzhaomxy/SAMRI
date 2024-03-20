@@ -9,7 +9,6 @@ from comparisons.models import UNet
 from utils.losses import BceDiceLoss, bce_dice_loss
 import torch
 from torch.utils.data import DataLoader, random_split
-import wandb, logging, tqdm
 from torch import optim
 import torch.nn as nn
 import torch.nn.functional as F
