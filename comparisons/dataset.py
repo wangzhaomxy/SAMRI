@@ -8,6 +8,7 @@ from utils.dataloader import NiiDataset
 from utils.utils import *
 from glob import glob
 import numpy as np
+import torch
 
 class UnetNiiDataset(NiiDataset):
     """
@@ -22,8 +23,8 @@ class UnetNiiDataset(NiiDataset):
     Return:
         (np.ndarray): The input image with the shape of original image in
                     CHW format of (1, 256, 256) and range of [0, 1]
-        (np.ndarray): The ground truth mask with the shape of original masks
-                    with shape of (1, 256, 256) and range of int[1,6]
+        (np.darray): The multiple channels mask with each channel including
+                        1 labeled binary mask. (C, H, W) = (6, 256, 256).
     """
     def __init__(self, data_root, label_num=6):
         super().__init__(data_root)
@@ -40,9 +41,9 @@ class UnetNiiDataset(NiiDataset):
 
         Return:
             (np.ndarray): The input image with the shape of original image in
-                        HWC unit8 format, with pixel values in [0, 255]
-            (np.ndarray): The ground truth mask with the shape of original masks
-                        with shape of (1, 256, 256) and range of int[1,6]
+                    CHW format of (1, 256, 256) and range of [0, 1]
+            (np.darray): The multiple channels mask with each channel including
+                        1 labeled binary mask. (C, H, W) = (6, 256, 256).
         """
         # load input image and corresponding mask
         nii_img = self._load_nii(self.img_file[index])

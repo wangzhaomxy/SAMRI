@@ -69,73 +69,72 @@ def train_model(
     for epoch in range(1, epochs + 1):
         model.train()
         epoch_loss = 0
-        with tqdm(total=n_train, desc=f'Epoch {epoch}/{epochs}', unit='img') as pbar:
-            for batch in train_loader:
-                images, true_masks = batch['image'], batch['mask']
 
-                assert images.shape[1] == model.n_channels, \
-                    f'Network has been defined with {model.n_channels} input channels, ' \
-                    f'but loaded images have {images.shape[1]} channels. Please check that ' \
-                    'the images are loaded correctly.'
+        for batch in train_loader:
+            images, true_masks = batch['image'], batch['mask']
 
-                images = images.to(device=device, dtype=torch.float32)
-                true_masks = true_masks.to(device=device, dtype=torch.long)
+            assert images.shape[1] == model.n_channels, \
+                f'Network has been defined with {model.n_channels} input channels, ' \
+                f'but loaded images have {images.shape[1]} channels. Please check that ' \
+                'the images are loaded correctly.'
 
-                masks_pred = model(images)
+            images = images.to(device=device, dtype=torch.float32)
+            true_masks = true_masks.to(device=device, dtype=torch.long)
 
-                loss = criterion(masks_pred, true_masks)
-                loss += bce_dice_loss(
-                    F.softmax(masks_pred, dim=1).float(),
-                    F.one_hot(true_masks, model.n_classes).permute(0, 3, 1, 2).float(),
-                    multiclass=True
-                )
+            masks_pred = model(images)
 
-                optimizer.zero_grad(set_to_none=True)
+            loss = criterion(masks_pred, true_masks)
+            loss += bce_dice_loss(
+                F.softmax(masks_pred, dim=1).float(),
+                F.one_hot(true_masks, model.n_classes).permute(0, 3, 1, 2).float(),
+                multiclass=True
+            )
 
-                loss.backward()
+            optimizer.zero_grad(set_to_none=True)
 
-                optimizer.step()
+            loss.backward()
 
-                pbar.update(images.shape[0])
-                global_step += 1
-                epoch_loss += loss.item()
-                experiment.log({
-                    'train loss': loss.item(),
-                    'step': global_step,
-                    'epoch': epoch
-                })
-                pbar.set_postfix(**{'loss (batch)': loss.item()})
+            optimizer.step()
 
-                # Evaluation round
-                division_step = (n_train // (5 * batch_size))
-                if division_step > 0:
-                    if global_step % division_step == 0:
-                        histograms = {}
-                        for tag, value in model.named_parameters():
-                            tag = tag.replace('/', '.')
-                            if not (torch.isinf(value) | torch.isnan(value)).any():
-                                histograms['Weights/' + tag] = wandb.Histogram(value.data.cpu())
-                            if not (torch.isinf(value.grad) | torch.isnan(value.grad)).any():
-                                histograms['Gradients/' + tag] = wandb.Histogram(value.grad.data.cpu())
 
-                        val_score = evaluate(model, val_loader, device)
+            global_step += 1
+            epoch_loss += loss.item()
+            experiment.log({
+                'train loss': loss.item(),
+                'step': global_step,
+                'epoch': epoch
+            })
 
-                        logging.info('Validation Dice score: {}'.format(val_score))
-                        try:
-                            experiment.log({
-                                'learning rate': optimizer.param_groups[0]['lr'],
-                                'validation Dice': val_score,
-                                'images': wandb.Image(images[0].cpu()),
-                                'masks': {
-                                    'true': wandb.Image(true_masks[0].float().cpu()),
-                                    'pred': wandb.Image(masks_pred.argmax(dim=1)[0].float().cpu()),
-                                },
-                                'step': global_step,
-                                'epoch': epoch,
-                                **histograms
-                            })
-                        except:
-                            pass
+            # Evaluation round
+            division_step = (n_train // (5 * batch_size))
+            if division_step > 0:
+                if global_step % division_step == 0:
+                    histograms = {}
+                    for tag, value in model.named_parameters():
+                        tag = tag.replace('/', '.')
+                        if not (torch.isinf(value) | torch.isnan(value)).any():
+                            histograms['Weights/' + tag] = wandb.Histogram(value.data.cpu())
+                        if not (torch.isinf(value.grad) | torch.isnan(value.grad)).any():
+                            histograms['Gradients/' + tag] = wandb.Histogram(value.grad.data.cpu())
+
+                    val_score = evaluate(model, val_loader, device)
+
+                    logging.info('Validation Dice score: {}'.format(val_score))
+                    try:
+                        experiment.log({
+                            'learning rate': optimizer.param_groups[0]['lr'],
+                            'validation Dice': val_score,
+                            'images': wandb.Image(images[0].cpu()),
+                            'masks': {
+                                'true': wandb.Image(true_masks[0].float().cpu()),
+                                'pred': wandb.Image(masks_pred.argmax(dim=1)[0].float().cpu()),
+                            },
+                            'step': global_step,
+                            'epoch': epoch,
+                            **histograms
+                        })
+                    except:
+                        pass
 """
         if save_checkpoint:
             Path(dir_checkpoint).mkdir(parents=True, exist_ok=True)
