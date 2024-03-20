@@ -51,7 +51,7 @@ class UnetNiiDataset(NiiDataset):
         
         # preprocess the image to the range of [0,1], CHW=(1, 256 ,256)
         nii_img = self._preprocess(nii_img)
-        nii_seg = self._tensor_mask(nii_seg, self.label_num)
+        nii_seg = self._tensor_mask(nii_seg[0, :, :], self.label_num)
 
         # shape of nii_img is (1, 256, 256), nii_seg is (6, 256, 256)
         return (nii_img, nii_seg)
