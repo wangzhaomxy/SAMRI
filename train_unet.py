@@ -11,7 +11,7 @@ import torch
 from torch.utils.data import DataLoader, random_split
 import wandb, logging
 from torch import optim
-import tqdm
+from tqdm import tqdm
 import torch.nn.functional as F
 
 
