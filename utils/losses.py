@@ -51,14 +51,14 @@ class DiceLoss(nn.Module):
         y_pred = y_pred.float()
 
         smooth = smooth=1e-10
-        intersection = torch.sum(y_true * y_pred)
+        intersection = (y_true * y_pred).sum()
         sum_of_squares_pred = torch.sum(torch.square(y_pred))
         sum_of_squares_true = torch.sum(torch.square(y_true))
         dice = 1 - (2 * intersection + smooth) / (sum_of_squares_pred + 
                                             sum_of_squares_true + smooth)
         return dice
     
-class BceDiceLoss(nn.Module):
+class CeDiceLoss(nn.Module):
     def __init__(self) -> None:
         super().__init__()
 
@@ -68,7 +68,7 @@ class BceDiceLoss(nn.Module):
 
         dicescore = DiceLoss()
         diceloss = dicescore(y_true, y_pred)
-        bcescore = nn.BCELoss()
+        bcescore = nn.CrossEntropyLoss()
         bceloss = bcescore(y_true, y_pred)
 
-        return bceloss + dicescore
+        return bceloss + diceloss
