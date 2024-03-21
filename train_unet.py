@@ -13,15 +13,14 @@ import wandb, logging
 from torch import optim
 from tqdm import tqdm
 import torch.nn.functional as F
-from datetime import datetime
+
 
 # load dataset
 in_channel = 1
 label_num = 7
-timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+
 
 file_path = IMAGE_PATH
-cp_save_path = MODEL_SAVE_PATH
 train_dataset = UnetNiiDataset(file_path)
 
 def train_model(
@@ -64,7 +63,7 @@ def train_model(
     optimizer = optim.Adam(model.parameters())
     criterion = CeDiceLoss()
     global_step = 0
-    best_vloss = 10000
+
     # Training
     for epoch in tqdm(range(1, epochs + 1)):
         
@@ -117,7 +116,6 @@ def train_model(
 
                 running_vloss += vloss.item()
                 avg_vloss = running_vloss / (i + 1)
-
                 experiment.log({
                 'validation loss': loss.item(),
                 'validation avg loss': avg_vloss,
@@ -126,17 +124,15 @@ def train_model(
             })
 
 
+"""
+        if save_checkpoint:
+            Path(dir_checkpoint).mkdir(parents=True, exist_ok=True)
+            state_dict = model.state_dict()
+            state_dict['mask_values'] = dataset.mask_values
+            torch.save(state_dict, str(dir_checkpoint / 'checkpoint_epoch{}.pth'.format(epoch)))
+            logging.info(f'Checkpoint {epoch} saved!')
 
-"""
-                if save_checkpoint:
-                    if avg_vloss < best_vloss:
-                        best_vloss = avg_vloss
-                        model_path = cp_save_path + 'Unet_{}_{}'.format(timestamp, 
-                                                                        global_step)
-                        torch.save(model.state_dict(), model_path)
 
-"""
-"""
 def get_args():
     parser = argparse.ArgumentParser(description='Train the UNet on images and target masks')
     parser.add_argument('--epochs', '-e', metavar='E', type=int, default=5, help='Number of epochs')
