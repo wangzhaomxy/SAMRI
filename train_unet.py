@@ -94,8 +94,8 @@ def train_model(
             avg_tloss = epoch_loss / (i + 1)
             experiment.log({
                 'train loss': loss.item(),
-                'train avg loss': avg_tloss,
-            })
+                'train avg loss': avg_tloss
+                            })
         
         # Evaluation round
         model.eval()
@@ -117,8 +117,8 @@ def train_model(
                 avg_vloss = running_vloss / (i + 1)
                 experiment.log({
                 'validation loss': loss.item(),
-                'validation avg loss': avg_vloss,
-            })
+                'validation avg loss': avg_vloss
+                                })
 
                 if save_checkpoint:
                     if avg_vloss < best_vloss:
