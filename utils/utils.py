@@ -4,7 +4,7 @@
 Permanent variables, universal functions, ect
 """
 
-IMAGE_PATH = '/home/s4670484/Documents/MSK/T2_preprocessed_resample_scale2_crop_cv_7c_slice_axis_0_class_7_thresh_7/set_1/train'
+IMAGE_PATH = '/home/s4670484/Documents/MSK/T2_preprocessed_resample_scale2_crop_cv_7c_slice_axis_0_class_7_thresh_7/set_1/train/'
     #"/home/s4670484/Documents/MSK/code_test/"
     # "/home/s4670484/Documents/MSK/T2_preprocessed_resample_scale2_crop_cv_7c_slice_axis_0_class_7_thresh_7/set_1/test/"
     # '/home/s4670484/Documents/MSK/T2_preprocessed_resample_scale2_crop_cv_7c_slice_axis_0_class_7_thresh_7/set_1/train'
