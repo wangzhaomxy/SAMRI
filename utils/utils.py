@@ -25,6 +25,6 @@ NUM_BBOXES = 1
 JITTER = 10
 
 SAVE_PATH = "/home/s4670484/Documents/result/med_sam/test/"
-
+MODEL_SAVE_PATH = "/home/s4670484/Documents/cp_temp/"
 LABEL_DICTIONARY = {1:"Femur", 2:"Articular Cartilage-F", 3:"Tibia", 4:"Articular Cartilage-T", 5:"Patella", 6:"Articular Cartilage-P"}
 LABEL_LIST = ["Femur", "Articular Cartilage-F", "Tibia", "Articular Cartilage-T", "Patella", "Articular Cartilage-P"]
