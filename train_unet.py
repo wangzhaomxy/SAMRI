@@ -62,7 +62,7 @@ def train_model(
 
     # Set up the optimizer and the loss.
     optimizer = optim.Adam(model.parameters())
-    criterion = CeDiceLoss()
+    criterion = nn.CrossEntropyLoss()
     global_step = 0
     best_vloss = 10000
     # Training
