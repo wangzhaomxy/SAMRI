@@ -68,7 +68,7 @@ class CeDiceLoss(nn.Module):
 
         dicescore = DiceLoss()
         diceloss = dicescore(y_true, y_pred)
-        bcescore = nn.CrossEntropyLoss()
-        bceloss = bcescore(y_true, y_pred)
+        cescore = nn.CrossEntropyLoss()
+        celoss = cescore(y_true, y_pred)
 
-        return bceloss + diceloss
+        return celoss + diceloss
