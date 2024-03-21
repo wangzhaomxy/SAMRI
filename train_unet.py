@@ -86,9 +86,7 @@ def train_model(
             )
 
             optimizer.zero_grad(set_to_none=True)
-
             loss.backward()
-
             optimizer.step()
 
             global_step += 1
