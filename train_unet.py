@@ -11,9 +11,8 @@ import torch
 from torch.utils.data import DataLoader, random_split
 import wandb, logging
 from torch import optim
-import torch.nn as nn
+import tqdm
 import torch.nn.functional as F
-import evaluate
 
 
 # load dataset
@@ -66,21 +65,15 @@ def train_model(
     global_step = 0
 
     # Training
-    for epoch in range(1, epochs + 1):
+    for epoch in tqdm(range(1, epochs + 1)):
+        
+        # Train round
         model.train()
         epoch_loss = 0
-
-        for batch in train_loader:
+        for i, batch in enumerate(train_loader):
             images, true_masks = batch[0], batch[1]
-
-            assert images.shape[1] == model.n_channels, \
-                f'Network has been defined with {model.n_channels} input channels, ' \
-                f'but loaded images have {images.shape[1]} channels. Please check that ' \
-                'the images are loaded correctly.'
-
             images = images.to(device=device, dtype=torch.float)
             true_masks = true_masks.to(device=device, dtype=torch.long)
-
             masks_pred = model(images)
 
             loss = criterion(
@@ -97,42 +90,40 @@ def train_model(
 
             global_step += 1
             epoch_loss += loss.item()
+            avg_tloss = epoch_loss / (i + 1)
             experiment.log({
                 'train loss': loss.item(),
+                'train avg loss': avg_tloss,
+                'step': global_step,
+                'epoch': epoch
+            })
+        
+        # Evaluation round
+        model.eval()
+        running_vloss = 0.0
+        with torch.no_grad():
+            for i, vbatch in enumerate(val_loader):
+                vinputs, vlabels = vbatch[0], vbatch[1]
+                vinputs = vinputs.to(device=device, dtype=torch.float)
+                vlabels = vlabels.to(device=device, dtype=torch.long)
+                voutputs = model(vinputs)
+
+                vloss = criterion(
+                            F.softmax(voutputs, dim=1).float(),
+                            F.one_hot(vlabels.squeeze_(1), model.n_classes
+                                    ).permute(0, 3, 1, 2).float(),
+                        )
+
+                running_vloss += vloss.item()
+                avg_vloss = running_vloss / (i + 1)
+                experiment.log({
+                'validation loss': loss.item(),
+                'validation avg loss': avg_vloss,
                 'step': global_step,
                 'epoch': epoch
             })
 
-            # Evaluation round
-            division_step = (n_train // (5 * batch_size))
-            if division_step > 0:
-                if global_step % division_step == 0:
-                    histograms = {}
-                    for tag, value in model.named_parameters():
-                        tag = tag.replace('/', '.')
-                        if not (torch.isinf(value) | torch.isnan(value)).any():
-                            histograms['Weights/' + tag] = wandb.Histogram(value.data.cpu())
-                        if not (torch.isinf(value.grad) | torch.isnan(value.grad)).any():
-                            histograms['Gradients/' + tag] = wandb.Histogram(value.grad.data.cpu())
 
-                    val_score = evaluate(model, val_loader, device)
-
-                    logging.info('Validation Dice score: {}'.format(val_score))
-                    try:
-                        experiment.log({
-                            'learning rate': optimizer.param_groups[0]['lr'],
-                            'validation Dice': val_score,
-                            'images': wandb.Image(images[0].cpu()),
-                            'masks': {
-                                'true': wandb.Image(true_masks[0].float().cpu()),
-                                'pred': wandb.Image(masks_pred.argmax(dim=1)[0].float().cpu()),
-                            },
-                            'step': global_step,
-                            'epoch': epoch,
-                            **histograms
-                        })
-                    except:
-                        pass
 """
         if save_checkpoint:
             Path(dir_checkpoint).mkdir(parents=True, exist_ok=True)
@@ -188,7 +179,3 @@ if __name__ == '__main__':
         device=device,
     )
         
-
-
-
-
