@@ -125,6 +125,9 @@ def train_model(
                 'epoch': epoch
             })
 
+
+
+"""
                 if save_checkpoint:
                     if avg_vloss < best_vloss:
                         best_vloss = avg_vloss
@@ -132,7 +135,7 @@ def train_model(
                                                                         global_step)
                         torch.save(model.state_dict(), model_path)
 
-
+"""
 """
 def get_args():
     parser = argparse.ArgumentParser(description='Train the UNet on images and target masks')
