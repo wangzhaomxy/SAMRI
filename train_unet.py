@@ -120,12 +120,12 @@ def train_model(
                 'validation avg loss': avg_vloss,
             })
 
-        if save_checkpoint:
-            if avg_vloss < best_vloss:
-                best_vloss = avg_vloss
-                model_path = cp_save_path + 'Unet_{}_{}'.format(timestamp, 
-                                                                global_step)
-                torch.save(model.state_dict(), model_path)
+                if save_checkpoint:
+                    if avg_vloss < best_vloss:
+                        best_vloss = avg_vloss
+                        model_path = cp_save_path + 'Unet_{}_{}'.format(
+                                                        timestamp, global_step)
+                        torch.save(model.state_dict(), model_path)
 
 
 """
