@@ -62,7 +62,7 @@ def train_model(
 
     # Set up the optimizer and the loss.
     optimizer = optim.Adam(model.parameters())
-    criterion = nn.CrossEntropyLoss()
+    criterion = CeDiceLoss()
     global_step = 0
     best_vloss = 10000
     # Training
@@ -94,8 +94,10 @@ def train_model(
             avg_tloss = epoch_loss / (i + 1)
             experiment.log({
                 'train loss': loss.item(),
-                'train avg loss': avg_tloss
-                            })
+                'train avg loss': avg_tloss,
+                'step': global_step,
+                'epoch': epoch
+            })
         
         # Evaluation round
         model.eval()
@@ -115,16 +117,19 @@ def train_model(
 
                 running_vloss += vloss.item()
                 avg_vloss = running_vloss / (i + 1)
+
                 experiment.log({
                 'validation loss': loss.item(),
-                'validation avg loss': avg_vloss
-                                })
+                'validation avg loss': avg_vloss,
+                'step': global_step,
+                'epoch': epoch
+            })
 
                 if save_checkpoint:
                     if avg_vloss < best_vloss:
                         best_vloss = avg_vloss
-                        model_path = cp_save_path + 'Unet_{}_{}'.format(
-                                                        timestamp, global_step)
+                        model_path = cp_save_path + 'Unet_{}_{}'.format(timestamp, 
+                                                                        global_step)
                         torch.save(model.state_dict(), model_path)
 
 
