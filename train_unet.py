@@ -6,7 +6,7 @@ Train the Unet models here.
 from utils.utils import *
 from comparisons.dataset import UnetNiiDataset
 from comparisons.models import UNet
-from utils.losses import BceDiceLoss, bce_dice_loss
+from utils.losses import *
 import torch
 from torch.utils.data import DataLoader, random_split
 import wandb, logging
@@ -17,13 +17,12 @@ import evaluate
 
 
 # load dataset
-label_num = 6
-file_path = IMAGE_PATH
-train_dataset = UnetNiiDataset(file_path, label_num)
-
 in_channel = 1
-out_channel = label_num
+label_num = 7
 
+
+file_path = IMAGE_PATH
+train_dataset = UnetNiiDataset(file_path)
 
 def train_model(
         model,
@@ -63,7 +62,7 @@ def train_model(
 
     # Set up the optimizer and the loss.
     optimizer = optim.Adam(model.parameters())
-    criterion = BceDiceLoss()
+    criterion = CeDiceLoss()
     global_step = 0
 
     # Training
@@ -84,11 +83,10 @@ def train_model(
 
             masks_pred = model(images)
 
-            loss = criterion(masks_pred, true_masks)
-            loss += bce_dice_loss(
+            loss = criterion(
                 F.softmax(masks_pred, dim=1).float(),
-                F.one_hot(true_masks, model.n_classes).permute(0, 3, 1, 2).float(),
-                multiclass=True
+                F.one_hot(true_masks.squeeze_(1), model.n_classes
+                          ).permute(0, 3, 1, 2).float(),
             )
 
             optimizer.zero_grad(set_to_none=True)
@@ -96,7 +94,6 @@ def train_model(
             loss.backward()
 
             optimizer.step()
-
 
             global_step += 1
             epoch_loss += loss.item()
@@ -169,11 +166,8 @@ if __name__ == '__main__':
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     logging.info(f'Using device {device}')
 
-    # Change here to adapt to your data
-    # n_channels=3 for RGB images
-    # n_classes is the number of probabilities you want to get per pixel
-    model = UNet(n_channels=1, n_classes=6)
-    model = model.to(memory_format=torch.channels_last)
+    model = UNet(n_channels=in_channel, n_classes=label_num)
+    model = model.to(device)
 
     logging.info(f'Network:\n'
                  f'\t{model.n_channels} input channels\n'
@@ -187,9 +181,6 @@ if __name__ == '__main__':
         model.load_state_dict(state_dict)
         logging.info(f'Model loaded from {args.load}')
     """
-
-    model.to(device=device)
-
     train_model(
         model=model,
         epochs=10,
