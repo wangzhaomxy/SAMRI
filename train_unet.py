@@ -21,7 +21,7 @@ in_channel = 1
 label_num = 7
 
 timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
-train_file_path = TRAIN_IMAGE_PATH[0]
+train_file_path = TRAIN_IMAGE_PATH
 cp_path = MODEL_SAVE_PATH
 train_dataset = UnetNiiDataset(train_file_path)
 
