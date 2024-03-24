@@ -9,7 +9,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import os
 join = os.path.join
-import torch
 from torch.utils.data import Dataset
 import glob
 import random
@@ -21,8 +20,11 @@ class NiiDataset(Dataset):
     def __init__(self, data_root):
         super().__init__()
         self.data_root = data_root
-        self.img_file = sorted(glob.glob(self.data_root + IMAGE_KEYS))
-        self.gt_file = sorted(glob.glob(self.data_root + MASK_KEYS))
+        self.img_file = []
+        self.gt_file = []
+        for path in self.data_root:
+            self.img_file += sorted(glob.glob(path + IMAGE_KEYS))
+            self.gt_file += sorted(glob.glob(path + MASK_KEYS))
         self.cur_name = ""
         # print(f"number of images: {len(self.img_file)}")
         """

@@ -145,7 +145,6 @@ if __name__ == '__main__':
                  f'\t{model.n_classes} output channels (classes)\n'
                  )
 
-
     train_model(
         model=model,
         epochs=20,
