@@ -3,16 +3,17 @@
 """
 Permanent variables, universal functions, ect
 """
+pre_path = "/home/s4670484/Documents/MSK/T2_preprocessed_resample_scale2_crop_cv_7c_slice_axis_0_class_7_thresh_7/"
 
-TRAIN_IMAGE_PATH = ['/home/s4670484/Documents/MSK/T2_preprocessed_resample_scale2_crop_cv_7c_slice_axis_0_class_7_thresh_7/set_1/train/',
-                    '/home/s4670484/Documents/MSK/T2_preprocessed_resample_scale2_crop_cv_7c_slice_axis_0_class_7_thresh_7/set_2/train/',
-                    '/home/s4670484/Documents/MSK/T2_preprocessed_resample_scale2_crop_cv_7c_slice_axis_0_class_7_thresh_7/set_3/train/',
+TRAIN_IMAGE_PATH = [pre_path + 'set_1/train/',
+                    pre_path + 'set_2/train/',
+                    pre_path + '/set_3/train/',
                     ]
     #"/home/s4670484/Documents/MSK/code_test/"
 
-TEST__IMAGE_PATH = ['/home/s4670484/Documents/MSK/T2_preprocessed_resample_scale2_crop_cv_7c_slice_axis_0_class_7_thresh_7/set_1/test/',
-                    '/home/s4670484/Documents/MSK/T2_preprocessed_resample_scale2_crop_cv_7c_slice_axis_0_class_7_thresh_7/set_2/test/',
-                    '/home/s4670484/Documents/MSK/T2_preprocessed_resample_scale2_crop_cv_7c_slice_axis_0_class_7_thresh_7/set_3/test/',
+TEST__IMAGE_PATH = [pre_path + 'set_1/test/',
+                    pre_path + 'set_2/test/',
+                    pre_path + 'set_3/test/',
                     ]
 IMAGE_KEYS = "*T2_img*"  # The image file names containing letters between *
 MASK_KEYS = "*A_seg*"   # The mask file names containing letters between *
