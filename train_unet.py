@@ -148,7 +148,7 @@ if __name__ == '__main__':
     train_model(
         model=model,
         epochs=50,
-        batch_size=512,
+        batch_size=64,
         device=device,
     )
         
