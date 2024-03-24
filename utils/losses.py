@@ -6,6 +6,7 @@ The loss functions that MRI-SAM uses.
 import numpy as np
 import torch.nn as nn
 import torch
+import torch.nn.functional as F
 
 def dice_similarity(y_true, y_pred, smooth=1e-10):
     """
@@ -48,7 +49,7 @@ class DiceLoss(nn.Module):
 
     def forward(self, y_true, y_pred):
         y_true = y_true.float()
-        y_pred = y_pred.float()
+        y_pred = F.softmax(y_pred, dim=1).float()
 
         smooth = smooth=1e-10
         intersection = (y_true * y_pred).sum()

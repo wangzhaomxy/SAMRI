@@ -80,9 +80,9 @@ def train_model(
             masks_pred = model(images)
 
             loss = criterion(
-                F.softmax(masks_pred, dim=1).float(),
                 F.one_hot(true_masks.squeeze_(1), model.n_classes
                           ).permute(0, 3, 1, 2).float(),
+                masks_pred,
             )
 
             optimizer.zero_grad(set_to_none=True)
@@ -110,10 +110,10 @@ def train_model(
                 voutputs = model(vinputs)
 
                 vloss = criterion(
-                            F.softmax(voutputs, dim=1).float(),
-                            F.one_hot(vlabels.squeeze_(1), model.n_classes
-                                    ).permute(0, 3, 1, 2).float(),
-                        )
+                    F.one_hot(true_masks.squeeze_(1), model.n_classes
+                            ).permute(0, 3, 1, 2).float(),
+                    masks_pred
+                                )
 
                 running_vloss += vloss.item()
                 avg_vloss = running_vloss / (i + 1)
