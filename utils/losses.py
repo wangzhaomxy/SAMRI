@@ -43,33 +43,36 @@ def bce_dice_loss(y_true, y_pred):
 
     return bceloss + dicescore
 
-class DiceLoss(nn.Module):
-    def __init__(self) -> None:
+class MultiClassDiceLoss(nn.Module):
+    def __init__(self, num_classes) -> None:
         super().__init__()
+        self.num_classes = num_classes
 
-    def forward(self, y_true, y_pred):
-        y_true = y_true.float()
+    def forward(self, y_pred, target):
         y_pred = F.softmax(y_pred, dim=1).float()
+        target = F.one_hot(target.squeeze_(1), self.num_classes).permute(
+                                                            0, 3, 1, 2).float()
 
-        smooth = smooth=1e-10
-        intersection = (y_true * y_pred).sum()
-        sum_of_squares_pred = torch.sum(torch.square(y_pred))
-        sum_of_squares_true = torch.sum(torch.square(y_true))
-        dice = 1 - (2 * intersection + smooth) / (sum_of_squares_pred + 
-                                            sum_of_squares_true + smooth)
-        return dice
+        smooth = smooth=1e-5
+        intersection = (target * y_pred).sum()
+        union_a = intersection
+        union_b = target.numel()
+        dice_coef = (2 * intersection) / (union_a + 
+                                            union_b + smooth)
+        return -dice_coef.log()
     
 class CeDiceLoss(nn.Module):
-    def __init__(self) -> None:
+    def __init__(self, num_classes) -> None:
         super().__init__()
+        self.num_classes = num_classes
 
-    def forward(self, y_true, y_pred):
-        y_true = y_true.float()
+    def forward(self,y_pred, target):
         y_pred = y_pred.float()
+        target = target.float()
 
-        dicescore = DiceLoss()
-        diceloss = dicescore(y_true, y_pred)
+        dicescore = MultiClassDiceLoss(self.num_classes)
+        diceloss = dicescore(y_pred, target)
         cescore = nn.CrossEntropyLoss()
-        celoss = cescore(y_true, y_pred)
+        celoss = cescore(y_pred, target)
 
         return celoss + diceloss

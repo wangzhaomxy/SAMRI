@@ -63,7 +63,7 @@ def train_model(
 
     # Set up the optimizer and the loss.
     optimizer = optim.Adam(model.parameters())
-    criterion = DiceLoss()
+    criterion = CeDiceLoss(num_classes=label_num)
     global_step = 0
     best_vloss = 100000
 
@@ -79,11 +79,7 @@ def train_model(
             true_masks = true_masks.to(device=device, dtype=torch.long)
             masks_pred = model(images)
 
-            loss = criterion(
-                F.one_hot(true_masks.squeeze_(1), model.n_classes
-                          ).permute(0, 3, 1, 2).float(),
-                masks_pred,
-            )
+            loss = criterion(masks_pred, true_masks)
 
             optimizer.zero_grad(set_to_none=True)
             loss.backward()
@@ -109,11 +105,7 @@ def train_model(
                 vlabels = vlabels.to(device=device, dtype=torch.long)
                 voutputs = model(vinputs)
 
-                vloss = criterion(
-                    F.one_hot(true_masks.squeeze_(1), model.n_classes
-                            ).permute(0, 3, 1, 2).float(),
-                    masks_pred
-                                )
+                vloss = criterion(masks_pred, true_masks)
 
                 running_vloss += vloss.item()
                 avg_vloss = running_vloss / (i + 1)
