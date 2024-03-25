@@ -50,8 +50,6 @@ class MultiClassDiceLoss(nn.Module):
 
     def forward(self, y_pred, target):
         y_pred = F.softmax(y_pred, dim=1).float()
-        target = F.one_hot(target.squeeze_(1), self.num_classes).permute(
-                                                            0, 3, 1, 2).float()
 
         smooth = smooth=1e-5
         intersection = (target * y_pred).sum()

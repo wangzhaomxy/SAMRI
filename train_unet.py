@@ -79,7 +79,9 @@ def train_model(
             true_masks = true_masks.to(device=device, dtype=torch.long)
             masks_pred = model(images)
 
-            loss = criterion(masks_pred, true_masks)
+            loss = criterion(masks_pred, 
+                             F.one_hot(true_masks.squeeze_(1),model.n_classes)
+                             .permute(0, 3, 1, 2).float())
 
             optimizer.zero_grad(set_to_none=True)
             loss.backward()
@@ -105,7 +107,9 @@ def train_model(
                 vlabels = vlabels.to(device=device, dtype=torch.long)
                 voutputs = model(vinputs)
 
-                vloss = criterion(masks_pred, true_masks)
+                vloss = criterion(masks_pred, 
+                             F.one_hot(true_masks.squeeze_(1),model.n_classes)
+                             .permute(0, 3, 1, 2).float())
 
                 running_vloss += vloss.item()
                 avg_vloss = running_vloss / (i + 1)
