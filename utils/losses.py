@@ -57,7 +57,7 @@ class MultiClassDiceLoss(nn.Module):
         union_b = target.numel()
         dice_coef = (2 * intersection) / (union_a + 
                                             union_b + smooth)
-        return -dice_coef.log()
+        return 1 - dice_coef
     
 class CeDiceLoss(nn.Module):
     def __init__(self, num_classes) -> None:
