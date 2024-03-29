@@ -50,11 +50,14 @@ class MultiClassDiceLoss(nn.Module):
 
     def forward(self, y_pred, target):
         y_pred = F.softmax(y_pred, dim=1).float()
-
+        
         smooth = smooth=1e-5
         intersection = (target * y_pred).sum()
+        print(intersection)
         union_a = y_pred.sum()
+        print(union_a)
         union_b = target.sum()
+        print(union_b)
         dice_coef = (2 * intersection) / (union_a + 
                                             union_b + smooth)
         return 1 - dice_coef
