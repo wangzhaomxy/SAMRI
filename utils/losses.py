@@ -49,8 +49,9 @@ class MultiClassDiceLoss(nn.Module):
         self.num_classes = num_classes
 
     def forward(self, y_pred, target):
+        print(y_pred.sum())
         y_pred = F.softmax(y_pred, dim=1).float()
-        
+        print(y_pred.sum())
         smooth = smooth=1e-5
         intersection = (target * y_pred).sum()
         print(intersection)
