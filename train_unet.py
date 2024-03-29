@@ -108,7 +108,7 @@ def train_model(
                 voutputs = model(vinputs)
 
                 vloss = criterion(voutputs, 
-                             F.one_hot(true_masks.squeeze_(1),model.n_classes)
+                             F.one_hot(vlabels.squeeze_(1),model.n_classes)
                              .permute(0, 3, 1, 2).float())
 
                 running_vloss += vloss.item()
