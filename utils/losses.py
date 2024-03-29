@@ -53,7 +53,7 @@ class MultiClassDiceLoss(nn.Module):
 
         smooth = smooth=1e-5
         intersection = (target * y_pred).sum(axis=(-4,-2,-1))
-        union_a = y_pred.sum(axis=(-4,-2,-1))
+        union_a = intersection
         union_b = target.sum(axis=(-4,-2,-1))
         dice_coef = (2 * intersection) / (union_a + 
                                             union_b + smooth)
