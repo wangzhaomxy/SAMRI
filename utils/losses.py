@@ -49,19 +49,15 @@ class MultiClassDiceLoss(nn.Module):
         self.num_classes = num_classes
 
     def forward(self, y_pred, target):
-        print(y_pred.sum())
         y_pred = F.softmax(y_pred, dim=1).float()
-        print(y_pred.sum())
+
         smooth = smooth=1e-5
-        intersection = (target * y_pred).sum()
-        print(intersection)
-        union_a = y_pred.sum()
-        print(union_a)
-        union_b = target.sum()
-        print(union_b)
+        intersection = (target * y_pred).sum(axis=(-4,-2,-1))
+        union_a = y_pred.sum(axis=(-4,-2,-1))
+        union_b = target.sum(axis=(-4,-2,-1))
         dice_coef = (2 * intersection) / (union_a + 
                                             union_b + smooth)
-        return 1 - dice_coef
+        return (1- dice_coef).mean()
     
 class CeDiceLoss(nn.Module):
     def __init__(self, num_classes) -> None:
