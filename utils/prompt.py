@@ -13,7 +13,7 @@ class MaskSplit():
     def __init__(self, mask):
         self.mask = mask[0, :, :]
         self.mask_number = int(np.max(self.mask))
-        self.masks = self._split_masks(self.mask)
+        self.masks = self._split_masks()
         """
         Args:
             mask (np.darray): the labeled ground truth mask. CHW=(1,255,255)
