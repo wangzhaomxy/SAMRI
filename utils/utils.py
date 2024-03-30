@@ -3,28 +3,31 @@
 """
 Permanent variables, universal functions, ect
 """
-pre_path = "/home/s4670484/Documents/MSK/T2_preprocessed_resample_scale2_crop_cv_7c_slice_axis_0_class_7_thresh_7/"
-
-TRAIN_IMAGE_PATH = [pre_path + 'set_1/train/',
-                    pre_path + 'set_2/train/',
-                    pre_path + '/set_3/train/',
+pre_path = "/home/s4670484/Documents/"
+img_path = "MSK/T2_preprocessed_resample_scale2_crop_cv_7c_slice_axis_0_class_7_thresh_7/"
+TRAIN_IMAGE_PATH = [pre_path + img_path + 'set_1/train/',
+                    pre_path + img_path + 'set_2/train/',
+                    pre_path + img_path + 'set_3/train/',
                     ]
     #"/home/s4670484/Documents/MSK/code_test/"
 
-TEST__IMAGE_PATH = [pre_path + 'set_1/test/',
-                    pre_path + 'set_2/test/',
-                    pre_path + 'set_3/test/',
+TEST_IMAGE_PATH = [pre_path + img_path + 'set_1/test/',
+                    pre_path + img_path + 'set_2/test/',
+                    pre_path + img_path + 'set_3/test/',
                     ]
 IMAGE_KEYS = "*T2_img*"  # The image file names containing letters between *
 MASK_KEYS = "*A_seg*"   # The mask file names containing letters between *
 
 
-ENCODER_TYPE = "vit_b"
-    # "vit_h"
-    # "vit_b"
-SAM_CHECKPOINT = {"vit_b":"/home/s4670484/Documents/Model_dir/sam_vit_b_01ec64.pth",
-                  "vit_h":"/home/s4670484/Documents/Model_dir/sam_vit_h_4b8939.pth",
-                  "med_sam":"/home/s4670484/Documents/Model_dir/medsam_vit_b.pth"}
+ENCODER_TYPE = {"vit_b":"vit_b",
+                  "vit_h":"vit_h",
+                  "med_sam":"vit_b"
+                  }
+
+SAM_CHECKPOINT = {"vit_b":pre_path + "Model_dir/sam_vit_b_01ec64.pth",
+                  "vit_h":pre_path + "Model_dir/sam_vit_h_4b8939.pth",
+                  "med_sam":pre_path + "Model_dir/medsam_vit_b.pth"
+                  }
 
 
 DEVICE = "cuda"
