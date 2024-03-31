@@ -14,6 +14,7 @@ import glob
 import random
 import nibabel as nib
 from utils.utils import IMAGE_KEYS, MASK_KEYS
+from skimage import exposure
 
 
 class NiiDataset(Dataset):
@@ -60,6 +61,7 @@ class NiiDataset(Dataset):
         
         # preprocess the image to np.ndarray type in unit8 format,(256 ,256 ,3)
         nii_img = self._preprocess(nii_img)
+        nii_img = exposure.equalize_adapthist(nii_img)
 
         # shape of nii_img is (256, 256, 3), nii_seg is (1, 256, 256)
         return (nii_img, nii_seg)
