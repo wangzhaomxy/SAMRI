@@ -14,7 +14,7 @@ import glob
 import random
 import nibabel as nib
 from utils.utils import IMAGE_KEYS, MASK_KEYS
-from skimage import exposure
+# from skimage import exposure
 
 
 class NiiDataset(Dataset):
@@ -96,8 +96,8 @@ class NiiDataset(Dataset):
         np_3c = np.array([sig_chann, sig_chann, sig_chann]).transpose(1,2,0)
         # normalize pixel number into [0,1]
         np_3c = (np_3c - np_3c.min()) / (np_3c.max() - np_3c.min())
-        np_3c = exposure.equalize_adapthist(np_3c,clip_limit=0.05)
         # transform image data into [0, 255] integer type, which is np.uint8
+        # np_3c = exposure.equalize_adapthist(np_3c,clip_limit=0.05)
         np_3c = np.round(np_3c * 255)
         return np_3c
     
