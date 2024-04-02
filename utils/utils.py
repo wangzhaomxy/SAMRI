@@ -3,7 +3,7 @@
 """
 Permanent variables, universal functions, ect
 """
-pre_path = "/home/s4670484/Documents/"
+pre_path = "/scratch/user/s4670484/"
 img_path = "MSK/T2_preprocessed_resample_scale2_crop_cv_7c_slice_axis_0_class_7_thresh_7/"
 TRAIN_IMAGE_PATH = [pre_path + img_path + 'set_1/train/',
                     pre_path + img_path + 'set_2/train/',
@@ -37,7 +37,7 @@ NUM_BBOXES = 1
 JITTER = 10
 
 SAVE_PATH = "/home/s4670484/Documents/result/med_sam/test/"
-MODEL_SAVE_PATH = "/home/s4670484/Documents/cp_temp/"
+MODEL_SAVE_PATH = pre_path + "cp_temp/"
 
 LABEL_DICTIONARY = {1:"Femur", 2:"Articular Cartilage-F", 3:"Tibia", 4:"Articular Cartilage-T", 5:"Patella", 6:"Articular Cartilage-P"}
 LABEL_LIST = ["Femur", "Articular Cartilage-F", "Tibia", "Articular Cartilage-T", "Patella", "Articular Cartilage-P"]
