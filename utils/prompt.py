@@ -36,7 +36,7 @@ class MaskSplit():
     
 def gen_points(mask, num_points=1):
     """
-    Generate a point tupple (H, W) or points [(H, W), ...] in a mask.
+    Generate a point list [H, W] or points [[H, W], ...] in a mask.
 
     Parameters:
         mask (np.array): the mask in the shape of HW=(255,255) logit type
@@ -45,7 +45,7 @@ def gen_points(mask, num_points=1):
                     points tuples in a list.
 
     Returns:
-        (np.array): a (W, H) point List if the num_points = 1;
+        (np.array): a [W, H] point List if the num_points = 1;
         OR
         (np.array)[[list], ...]: a list of point lists if the num_points > 1.
     """
