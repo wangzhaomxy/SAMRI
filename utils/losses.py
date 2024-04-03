@@ -74,3 +74,16 @@ class CeDiceLoss(nn.Module):
         celoss = cescore(y_pred, target)
 
         return celoss + diceloss
+
+class DiceLoss(nn.Module):
+    def __init__(self) -> None:
+        super().__init__()
+
+    def forward(self,y_pred, target, smooth=1e-10):
+        intersection = np.sum(y_pred * target).sum()
+        sum_of_pred = y_pred.sum()
+        sum_of_target = target.sum()
+        dice_coef = (2 * intersection + smooth) / (sum_of_pred + 
+                                            sum_of_target + smooth)
+        return 1 - dice_coef
+    
