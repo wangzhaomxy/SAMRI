@@ -111,6 +111,7 @@ def main():
                         optimizer.step()
                         
                         sub_loss += loss.item()
+                        experiment.log({"train_step_loss": sub_loss})
             epoch_loss += sub_loss / (len(prompts)*lenth)
             iter_num += 1
 
@@ -147,10 +148,10 @@ def main():
                                                             box=vsub_prompt[None, :],
                                                             multimask_output=False)
                             vsub_mask = torch.tensor(vsub_mask[None,:,:], dtype=torch.float, device=torch.device(device))
-                            val_loss = dice_loss(y_pred, vsub_mask) + 20 * bce_loss(y_pred, sub_mask)
+                            val_loss = dice_loss(y_pred, vsub_mask) + 20 * bce_loss(y_pred, vsub_mask)
 
                             val_sub_loss += val_loss.item()
-                val_loss += sub_loss / (len(prompts)*lenth)
+                val_loss += val_sub_loss / (len(prompts)*lenth)
                 iter_num += 1
 
         val_loss /= step
