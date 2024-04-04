@@ -5,7 +5,6 @@ The loss functions that SAMRI uses.
 """
 import numpy as np
 import torch.nn as nn
-import torch
 import torch.nn.functional as F
 
 def dice_similarity(y_true, y_pred, smooth=1e-10):
