@@ -148,7 +148,7 @@ def main():
                                                             box=vsub_prompt[None, :],
                                                             multimask_output=False)
                             vsub_mask = torch.tensor(vsub_mask[None,:,:], dtype=torch.float, device=torch.device(device))
-                            val_loss = dice_loss(y_pred, vsub_mask) + 20 * bce_loss(y_pred, vsub_mask)
+                            val_loss = dice_loss(y_pred.float(), vsub_mask) + 20 * bce_loss(y_pred.float(), vsub_mask)
 
                             val_sub_loss += val_loss.item()
                 val_loss += val_sub_loss / (len(prompts)*lenth)
