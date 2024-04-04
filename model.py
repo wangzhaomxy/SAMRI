@@ -21,14 +21,11 @@ from segment_anything.modeling import Sam
 class SAMRI(Sam):
     def __init__(
         self,
-        image_encoder: ImageEncoderViT,
-        mask_decoder: MaskDecoder,
-        prompt_encoder: PromptEncoder,
+        image_encoder,
+        mask_decoder,
+        prompt_encoder,
     ) -> None:
-        super().__init__(self,
-                         image_encoder=image_encoder,
-                         prompt_encoder=prompt_encoder,
-                         mask_decoder=mask_decoder)
+        super().__init__()
         self.image_encoder = image_encoder
         self.mask_decoder = mask_decoder
         self.prompt_encoder = prompt_encoder
