@@ -2,6 +2,8 @@
 
 """
 The SAMRI model
+Reference: The model is referenced from the segment anything model, 
+            link: https://github.com/facebookresearch/segment-anything
 """
 
 import torch
@@ -22,8 +24,11 @@ class SAMRI(Sam):
         image_encoder: ImageEncoderViT,
         mask_decoder: MaskDecoder,
         prompt_encoder: PromptEncoder,
-    ):
-        super().__init__()
+    ) -> None:
+        super().__init__(self,
+                         image_encoder=image_encoder,
+                         prompt_encoder=prompt_encoder,
+                         mask_decoder=mask_decoder)
         self.image_encoder = image_encoder
         self.mask_decoder = mask_decoder
         self.prompt_encoder = prompt_encoder
