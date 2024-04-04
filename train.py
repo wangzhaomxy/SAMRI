@@ -98,12 +98,12 @@ def main():
                                                         return_logits=True,
                                                         multimask_output=False)
                         if prompt == "bbox":
-                            y_pred = train_predictor.predict(
+                            y_pred, _, _  = train_predictor.predict(
                                                         box=sub_prompt[None, :],
                                                         return_logits=True,
                                                         multimask_output=False)
 
-                        sub_mask = torch.tensor(sub_mask, dtype=torch.float, device=torch.device(device))
+                        sub_mask = torch.tensor(sub_mask[None,:,:], dtype=torch.float, device=torch.device(device))
                         loss = dice_loss(y_pred, sub_mask) + 20 * bce_loss(y_pred, sub_mask)
                         
                         loss.backward()
@@ -146,7 +146,7 @@ def main():
                                 y_pred, _, _ = train_predictor.predict(
                                                             box=vsub_prompt[None, :],
                                                             multimask_output=False)
-                            vsub_mask = torch.tensor(vsub_mask, dtype=torch.float, device=torch.device(device))
+                            vsub_mask = torch.tensor(vsub_mask[None,:,:], dtype=torch.float, device=torch.device(device))
                             val_loss = dice_loss(y_pred, vsub_mask) + 20 * bce_loss(y_pred, sub_mask)
 
                             val_sub_loss += val_loss.item()
