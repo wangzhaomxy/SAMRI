@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-The loss functions that MRI-SAM uses.
+The loss functions that SAMRI uses.
 """
 import numpy as np
 import torch.nn as nn
@@ -44,12 +44,15 @@ def bce_dice_loss(y_true, y_pred):
     return bceloss + dicescore
 
 class MultiClassDiceLoss(nn.Module):
-    def __init__(self, num_classes) -> None:
+    def __init__(self, num_classes=3) -> None:
         super().__init__()
         self.num_classes = num_classes
 
     def forward(self, y_pred, target):
-        y_pred = F.softmax(y_pred, dim=1).float()
+        if self.num_classes == 1:
+            y_pred = F.sigmoid(y_pred, dim=1).float()
+        else:
+            y_pred = F.softmax(y_pred, dim=1).float()
 
         smooth = smooth=1e-5
         intersection = (target * y_pred).sum(axis=(-4,-2,-1))
