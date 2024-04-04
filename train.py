@@ -65,7 +65,7 @@ def main():
         samri_model.mask_decoder.parameters()
     )
 
-    dice_loss = MultiClassDiceLoss(num_classes=1)
+    dice_loss = DiceLoss()
     bce_loss = nn.BCEWithLogitsLoss(reduction="mean")
 
     #train

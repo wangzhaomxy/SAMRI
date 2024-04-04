@@ -49,11 +49,7 @@ class MultiClassDiceLoss(nn.Module):
         self.num_classes = num_classes
 
     def forward(self, y_pred, target):
-        if self.num_classes == 1:
-            y_pred = F.sigmoid(y_pred).float()
-        else:
-            y_pred = F.softmax(y_pred, dim=1).float()
-
+        y_pred = F.softmax(y_pred, dim=1).float()
         smooth = smooth=1e-5
         intersection = (target * y_pred).sum(axis=(-4,-2,-1))
         union_a = intersection
@@ -83,10 +79,10 @@ class DiceLoss(nn.Module):
         super().__init__()
 
     def forward(self,y_pred, target, smooth=1e-10):
-        intersection = np.sum(y_pred * target).sum()
-        sum_of_pred = y_pred.sum()
+        y_pred = F.sigmoid(y_pred).float()
+        intersection = (y_pred * target).sum()
         sum_of_target = target.sum()
-        dice_coef = (2 * intersection + smooth) / (sum_of_pred + 
+        dice_coef = (2 * intersection + smooth) / (intersection + 
                                             sum_of_target + smooth)
         return 1 - dice_coef
     
