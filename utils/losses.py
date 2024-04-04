@@ -50,7 +50,7 @@ class MultiClassDiceLoss(nn.Module):
 
     def forward(self, y_pred, target):
         if self.num_classes == 1:
-            y_pred = F.sigmoid(y_pred, dim=1).float()
+            y_pred = F.sigmoid(y_pred).float()
         else:
             y_pred = F.softmax(y_pred, dim=1).float()
 
