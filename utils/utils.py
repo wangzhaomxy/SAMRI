@@ -8,13 +8,13 @@ pre_path = "/scratch/user/s4670484/" # The main folder of files
 img_path = "MSK/T2_preprocessed_resample_scale2_crop_cv_7c_slice_axis_0_class_7_thresh_7/"
 
 TRAIN_IMAGE_PATH = [pre_path + img_path + 'set_1/train/',
-                    pre_path + img_path + 'set_2/train/',
-                    pre_path + img_path + 'set_3/train/',
+                    #pre_path + img_path + 'set_2/train/',
+                    #pre_path + img_path + 'set_3/train/',
                     ]
 
 TEST_IMAGE_PATH = [pre_path + img_path + 'set_1/test/',
-                    pre_path + img_path + 'set_2/test/',
-                    pre_path + img_path + 'set_3/test/',
+                    #pre_path + img_path + 'set_2/test/',
+                    #pre_path + img_path + 'set_3/test/',
                     ]
 
 IMAGE_KEYS = "*T2_img*"  # The image file names containing letters between *
