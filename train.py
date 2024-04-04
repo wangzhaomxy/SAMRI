@@ -32,7 +32,7 @@ num_epochs = NUM_EPOCHS
 train_image_path = TRAIN_IMAGE_PATH
 
 wandb.login()
-wandb.init(
+experiment = wandb.init(
     project="SAMRI",
     config={
         "batch_size": batch_size,
@@ -116,7 +116,7 @@ def main():
 
         epoch_loss /= step
         losses.append(epoch_loss)
-        wandb.log({"train_epoch_loss": epoch_loss})
+        experiment.log({"train_epoch_loss": epoch_loss})
         print(
             f'Time: {datetime.now().strftime("%Y%m%d-%H%M")}, Epoch: {epoch}, Loss: {epoch_loss}'
         )
@@ -154,7 +154,7 @@ def main():
                 iter_num += 1
 
         val_loss /= step
-        wandb.log({"val_epoch_loss": val_loss})
+        experiment.log({"val_epoch_loss": val_loss})
         ## save the best model
         if val_loss < best_loss:
             best_loss = val_loss
