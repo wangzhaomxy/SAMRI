@@ -23,7 +23,7 @@ from train_predictor import TrainSamPredictor
 
 # setup global parameters
 encoder_type = ENCODER_TYPE["vit_b"] # choose one from vit_b and vit_h.
-checkpoint = SAM_CHECKPOINT[encoder_type]
+sam_checkpoint = SAM_CHECKPOINT[encoder_type]
 batch_size = BATCH_SIZE
 data_path = TRAIN_IMAGE_PATH
 timestamp = datetime.now().strftime("%Y%m%d-%H%M")
@@ -53,7 +53,7 @@ def gen_batch(mask, prompt):
         yield (each_mask, each_prompt, lenth)
 
 def main():
-    sam_model = sam_model_registry[encoder_type](checkpoint=checkpoint)
+    sam_model = sam_model_registry[encoder_type](sam_checkpoint)
     samri_model = SAMRI(
         image_encoder=sam_model.image_encoder,
         mask_decoder=sam_model.mask_decoder,
