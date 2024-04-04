@@ -10,7 +10,6 @@ from tqdm import tqdm
 import torch
 import torch.nn as nn
 from segment_anything import sam_model_registry, SamPredictor
-import torch.nn.functional as F
 from datetime import datetime
 from utils.dataloader import NiiDataset
 import wandb
@@ -93,9 +92,16 @@ def main():
                         optimizer.zero_grad()
 
                         if prompt == "point":
-                            y_pred = samri_model(image, points=sub_prompt)
+                            y_pred, _, _ = train_predictor.predict(
+                                                        point_coords=sub_prompt,
+                                                        point_labels=[1],
+                                                        return_logits=True,
+                                                        multimask_output=False)
                         if prompt == "bbox":
-                            y_pred = samri_model(image, bbox=sub_prompt)
+                            y_pred = train_predictor.predict(
+                                                        box=sub_prompt[None, :],
+                                                        return_logits=True,
+                                                        multimask_output=False)
 
                         sub_mask = sub_mask.to(device)
                         loss = dice_loss(y_pred, sub_mask) + 20 * bce_loss(y_pred, sub_mask)
@@ -127,14 +133,19 @@ def main():
         val_loss = 0
         with torch.no_grad():
             for step, (vimage, vmask) in enumerate(val_set):
-                val_predictor.set_image(image)
+                val_predictor.set_image(vimage)
                 val_sub_loss = 0
                 for prompt in prompts:
                         for vsub_mask, vsub_prompt, lenth in gen_batch(vmask, prompt):
                             if prompt == "point":
-                                y_pred = samri_model(vimage, points=vsub_prompt)
+                                y_pred, _, _ = train_predictor.predict(
+                                                            point_coords=vsub_prompt,
+                                                            point_labels=[1],
+                                                            multimask_output=False)
                             if prompt == "bbox":
-                                y_pred = samri_model(vimage, bbox=vsub_prompt)
+                                y_pred, _, _ = train_predictor.predict(
+                                                            box=vsub_prompt[None, :],
+                                                            multimask_output=False)
                             sub_mask = sub_mask.to(device)
                             val_loss = dice_loss(y_pred, vsub_mask) + 20 * bce_loss(y_pred, sub_mask)
 
