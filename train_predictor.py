@@ -26,10 +26,7 @@ class TrainSamPredictor(SamPredictor):
         Arguments:
           sam_model (Sam): The model to use for mask prediction.
         """
-        super().__init__()
-        self.model = sam_model
-        self.transform = ResizeLongestSide(sam_model.image_encoder.img_size)
-        self.reset_image()
+        super().__init__(sam_model)
 
     def set_torch_image(
         self,
@@ -130,7 +127,7 @@ class TrainSamPredictor(SamPredictor):
             multimask_output,
             return_logits=return_logits,
         )
-        
+
         return masks[0], iou_predictions[0], low_res_masks[0]
 
     def predict_torch(
