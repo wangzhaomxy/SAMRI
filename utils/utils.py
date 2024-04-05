@@ -8,13 +8,13 @@ pre_path = "/scratch/user/s4670484/" # The main folder of files
 img_path = "MSK/T2_preprocessed_resample_scale2_crop_cv_7c_slice_axis_0_class_7_thresh_7/"
 
 TRAIN_IMAGE_PATH = [pre_path + img_path + 'set_1/train/',
-                    #pre_path + img_path + 'set_2/train/',
-                    #pre_path + img_path + 'set_3/train/',
+                    pre_path + img_path + 'set_2/train/',
+                    pre_path + img_path + 'set_3/train/',
                     ]
 
 TEST_IMAGE_PATH = [pre_path + img_path + 'set_1/test/',
-                    #pre_path + img_path + 'set_2/test/',
-                    #pre_path + img_path + 'set_3/test/',
+                    pre_path + img_path + 'set_2/test/',
+                    pre_path + img_path + 'set_3/test/',
                     ]
 
 IMAGE_KEYS = "*T2_img*"  # The image file names containing letters between *
@@ -22,13 +22,16 @@ MASK_KEYS = "*A_seg*"   # The mask file names containing letters between *
 
 ENCODER_TYPE = {"vit_b":"vit_b",
                   "vit_h":"vit_h",
-                  "med_sam":"vit_b"
+                  "med_sam":"vit_b",
+                  "samri":"vit_b"
                   }
 
 SAM_CHECKPOINT = {"vit_b":pre_path + "Model_dir/sam_vit_b_01ec64.pth",
                   "vit_h":pre_path + "Model_dir/sam_vit_h_4b8939.pth",
-                  "med_sam":pre_path + "Model_dir/medsam_vit_b.pth"
+                  "med_sam":pre_path + "Model_dir/medsam_vit_b.pth",
+                  "samri":pre_path + "Model_dir/samri_vit_b.pth"
                   }
+
 
 DEVICE = "cuda"
 BATCH_SIZE = 16
