@@ -147,6 +147,7 @@ def main():
                             val_loss = dice_loss(y_pred.float(), vsub_mask) + 20 * bce_loss(y_pred.float(), vsub_mask)
 
                             val_sub_loss += val_loss.item()
+                        experiment.log({"val_step_loss": val_sub_loss})
                 val_loss += val_sub_loss / (len(prompts)*lenth)
                 iter_num += 1
 
