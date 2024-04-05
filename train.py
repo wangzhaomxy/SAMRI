@@ -123,12 +123,7 @@ def main():
             f'Time: {datetime.now().strftime("%Y%m%d-%H%M")}, Epoch: {epoch}, Loss: {epoch_loss}'
         )
         ## save the latest model
-        checkpoint = {
-            "model": samri_model.state_dict(),
-            "optimizer": optimizer.state_dict(),
-            "epoch": epoch,
-        }
-        torch.save(checkpoint, join(model_save_path, "samri_model_latest.pth"))
+        torch.save(samri_model.state_dict(), join(model_save_path, "samri_model_latest.pth"))
         
         # validation part
         samri_model.eval()
@@ -160,12 +155,7 @@ def main():
         ## save the best model
         if val_loss < best_loss:
             best_loss = val_loss
-            checkpoint = {
-                "model": samri_model.state_dict(),
-                "optimizer": optimizer.state_dict(),
-                "epoch": epoch,
-            }
-            torch.save(checkpoint, join(model_save_path, "mri_sam_model_best.pth"))
+            torch.save(samri_model.state_dict(), join(model_save_path, "mri_sam_model_best.pth"))
 
 
 if __name__ == "__main__":

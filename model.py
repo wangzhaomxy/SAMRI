@@ -32,6 +32,7 @@ class SAMRI(Sam):
         # freeze prompt encoder
         for param in self.prompt_encoder.parameters():
             param.requires_grad = False
+        # freeze 
         for param in self.image_encoder.parameters():
             param.requires_grad = False
 
