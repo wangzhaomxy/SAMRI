@@ -134,7 +134,7 @@ def main():
         samri_model.eval()
         val_loss = 0
         with torch.no_grad():
-            for step, (vimage, vmask) in enumerate(val_set):
+            for step, (vimage, vmask) in enumerate(tqdm(val_set)):
                 val_predictor.set_image(vimage)
                 val_sub_loss = 0
                 for prompt in prompts:
