@@ -155,7 +155,7 @@ def main():
         ## save the best model
         if val_loss < best_loss:
             best_loss = val_loss
-            torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_best.pth"))
+            torch.save(samri_model.state_dict(), join(model_save_path, "samri_vith_best.pth"))
 
 
 if __name__ == "__main__":
