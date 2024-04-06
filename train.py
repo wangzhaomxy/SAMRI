@@ -21,7 +21,7 @@ from model import SAMRI
 from train_predictor import TrainSamPredictor
 
 # setup global parameters
-model_type = "vit_h"
+model_type = "samri"
 encoder_type = ENCODER_TYPE[model_type] # choose one from vit_b and vit_h.
 sam_checkpoint = SAM_CHECKPOINT[model_type]
 batch_size = BATCH_SIZE
