@@ -21,7 +21,7 @@ from model import SAMRI
 from train_predictor import TrainSamPredictor
 
 # setup global parameters
-encoder_type = ENCODER_TYPE["vit_b"] # choose one from vit_b and vit_h.
+encoder_type = ENCODER_TYPE["vit_h"] # choose one from vit_b and vit_h.
 sam_checkpoint = SAM_CHECKPOINT[encoder_type]
 batch_size = BATCH_SIZE
 data_path = TRAIN_IMAGE_PATH
@@ -112,7 +112,6 @@ def main():
                         optimizer.step()
                         
                         sub_loss += loss.item()
-                        experiment.log({"train_step_loss": sub_loss})
             epoch_loss += sub_loss / (len(prompts)*lenth)
             iter_num += 1
 
@@ -123,7 +122,7 @@ def main():
             f'Time: {datetime.now().strftime("%Y%m%d-%H%M")}, Epoch: {epoch}, Loss: {epoch_loss}'
         )
         ## save the latest model
-        torch.save(samri_model.state_dict(), join(model_save_path, "samri_model_latest.pth"))
+        torch.save(samri_model.state_dict(), join(model_save_path, "samri_vith_latest.pth"))
         
         # validation part
         samri_model.eval()
@@ -147,7 +146,6 @@ def main():
                             val_loss = dice_loss(y_pred.float(), vsub_mask) + 20 * bce_loss(y_pred.float(), vsub_mask)
 
                             val_sub_loss += val_loss.item()
-                        experiment.log({"val_step_loss": val_sub_loss})
                 val_loss += val_sub_loss / (len(prompts)*lenth)
                 iter_num += 1
 
@@ -156,7 +154,7 @@ def main():
         ## save the best model
         if val_loss < best_loss:
             best_loss = val_loss
-            torch.save(samri_model.state_dict(), join(model_save_path, "mri_sam_model_best.pth"))
+            torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_best.pth"))
 
 
 if __name__ == "__main__":
