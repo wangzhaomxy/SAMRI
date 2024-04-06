@@ -21,8 +21,9 @@ from model import SAMRI
 from train_predictor import TrainSamPredictor
 
 # setup global parameters
-encoder_type = ENCODER_TYPE["vit_h"] # choose one from vit_b and vit_h.
-sam_checkpoint = SAM_CHECKPOINT[encoder_type]
+model_type = "vit_h"
+encoder_type = ENCODER_TYPE[model_type] # choose one from vit_b and vit_h.
+sam_checkpoint = SAM_CHECKPOINT[model_type]
 batch_size = BATCH_SIZE
 data_path = TRAIN_IMAGE_PATH
 timestamp = datetime.now().strftime("%Y%m%d-%H%M")
