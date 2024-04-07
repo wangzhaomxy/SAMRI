@@ -33,8 +33,8 @@ class SAMRI(Sam):
         for param in self.prompt_encoder.parameters():
             param.requires_grad = False
         # freeze 
-        for param in self.image_encoder.parameters():
-            param.requires_grad = False
+        #for param in self.image_encoder.parameters():
+            #param.requires_grad = False
 
     def forward(
             self,

@@ -21,7 +21,7 @@ from model import SAMRI
 from train_predictor import TrainSamPredictor
 
 # setup global parameters
-model_type = "samri"
+model_type = "vit_b"
 encoder_type = ENCODER_TYPE[model_type] # choose one from vit_b and vit_h.
 sam_checkpoint = SAM_CHECKPOINT[model_type]
 batch_size = BATCH_SIZE
@@ -46,7 +46,7 @@ def gen_train_batch(mask, prompt):
     masks = MaskSplit(mask)
     lenth = 0
     for each_mask in masks:
-        for i in range(30):
+        for i in range(20):
             if prompt == "point":
                 each_prompt = gen_points(each_mask)
             if prompt == "bbox":
@@ -126,6 +126,7 @@ def main():
                         optimizer.step()
                         
                         sub_loss += loss.item()
+                        experiment.log({"train_epoch_loss": epoch_loss})
             epoch_loss += sub_loss / (len(prompts)*lenth)
             iter_num += 1
 
@@ -136,7 +137,7 @@ def main():
             f'Time: {datetime.now().strftime("%Y%m%d-%H%M")}, Epoch: {epoch}, Loss: {epoch_loss}'
         )
         ## save the latest model
-        torch.save(samri_model.state_dict(), join(model_save_path, "samri_vith_latest.pth"))
+        torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_ed_latest.pth"))
         
         # validation part
         samri_model.eval()
@@ -168,7 +169,7 @@ def main():
         ## save the best model
         if val_loss < best_loss:
             best_loss = val_loss
-            torch.save(samri_model.state_dict(), join(model_save_path, "samri_vith_best.pth"))
+            torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_ed_best.pth"))
 
 
 if __name__ == "__main__":
