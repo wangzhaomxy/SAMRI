@@ -34,7 +34,7 @@ class SAMRI(Sam):
             param.requires_grad = False
 
         for param in self.image_encoder.parameters():
-            param.requires_grad = True
+            param.requires_grad = False
 
         for param in self.mask_decoder.parameters():
             param.requires_grad = True
