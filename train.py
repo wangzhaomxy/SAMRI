@@ -76,8 +76,8 @@ def main():
     val_predictor = SamPredictor(samri_model)
 
     optimizer = torch.optim.Adam(
-        [samri_model.mask_decoder.parameters(),
-        samri_model.image_encoder.parameters()]
+        list(samri_model.mask_decoder.parameters()) +
+        list(samri_model.image_encoder.parameters())
     )
 
     dice_loss = DiceLoss()
