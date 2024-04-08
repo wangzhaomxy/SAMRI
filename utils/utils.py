@@ -23,7 +23,7 @@ MASK_KEYS = "*A_seg*"   # The mask file names containing letters between *
 ENCODER_TYPE = {"vit_b":"vit_b",
                   "vit_h":"vit_h",
                   "med_sam":"vit_b",
-                  "samri":"vit_h"
+                  "samri":"vit_b"
                   }
 
 SAM_CHECKPOINT = {"vit_b":pre_path + "Model_dir/sam_vit_b_01ec64.pth",
