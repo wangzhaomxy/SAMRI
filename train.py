@@ -46,7 +46,7 @@ def gen_train_batch(mask, prompt):
     masks = MaskSplit(mask)
     lenth = 0
     for each_mask in masks:
-        for i in range(1):
+        for i in range(5):
             if prompt == "point":
                 each_prompt = gen_points(each_mask)
             if prompt == "bbox":
@@ -137,7 +137,7 @@ def main():
             f'Time: {datetime.now().strftime("%Y%m%d-%H%M")}, Epoch: {epoch}, Loss: {epoch_loss}'
         )
         ## save the latest model
-        torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_latest1.pth"))
+        torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_latest.pth"))
         
         # validation part
         samri_model.eval()
@@ -169,7 +169,7 @@ def main():
         ## save the best model
         if val_loss < best_loss:
             best_loss = val_loss
-            torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_best1.pth"))
+            torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_best.pth"))
 
 
 if __name__ == "__main__":
