@@ -46,7 +46,7 @@ def gen_train_batch(mask, prompt):
     masks = MaskSplit(mask)
     lenth = 0
     for each_mask in masks:
-        for i in range(30):
+        for i in range(5):
             if prompt == "point":
                 each_prompt = gen_points(each_mask)
             if prompt == "bbox":
