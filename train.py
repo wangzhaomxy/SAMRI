@@ -137,7 +137,7 @@ def main():
             f'Time: {datetime.now().strftime("%Y%m%d-%H%M")}, Epoch: {epoch}, Loss: {epoch_loss}'
         )
         ## save the latest model
-        torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_ed_latest.pth"))
+        torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_latest1.pth"))
         
         # validation part
         samri_model.eval()
@@ -169,7 +169,7 @@ def main():
         ## save the best model
         if val_loss < best_loss:
             best_loss = val_loss
-            torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_ed_best.pth"))
+            torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_best1.pth"))
 
 
 if __name__ == "__main__":
