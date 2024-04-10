@@ -42,19 +42,7 @@ experiment = wandb.init(
     },
 )
 
-def gen_train_batch(mask, prompt):
-    masks = MaskSplit(mask)
-    lenth = 0
-    for each_mask in masks:
-        for i in range(5):
-            if prompt == "point":
-                each_prompt = gen_points(each_mask)
-            if prompt == "bbox":
-                each_prompt = gen_bboxes(each_mask)
-            lenth += 1
-            yield (each_mask, each_prompt, lenth)
-
-def gen_val_batch(mask, prompt):
+def gen_batch(mask, prompt):
     masks = MaskSplit(mask)
     lenth = 0
     for each_mask in masks:
@@ -103,7 +91,7 @@ def main():
             train_predictor.set_image(image)
             sub_loss = 0
             for prompt in prompts:
-                    for sub_mask, sub_prompt, lenth in gen_train_batch(mask, prompt):                        
+                    for sub_mask, sub_prompt, lenth in gen_batch(mask, prompt):                        
                         optimizer.zero_grad()
 
                         if prompt == "point":
@@ -147,7 +135,7 @@ def main():
                 val_predictor.set_image(vimage)
                 val_sub_loss = 0
                 for prompt in prompts:
-                        for vsub_mask, vsub_prompt, lenth in gen_val_batch(vmask, prompt):
+                        for vsub_mask, vsub_prompt, lenth in gen_batch(vmask, prompt):
                             if prompt == "point":
                                 y_pred, _, _ = train_predictor.predict(
                                                             point_coords=vsub_prompt,
