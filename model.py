@@ -25,10 +25,10 @@ class SAMRI(Sam):
         mask_decoder: MaskDecoder,
         prompt_encoder: PromptEncoder,
     ) -> None:
-        self.image_encoder = image_encoder,
-        self.prompt_encoder = prompt_encoder,
-        self.mask_decoder = mask_decoder
-
+        super().__init__(image_encoder = image_encoder,
+                         prompt_encoder = prompt_encoder,
+                         mask_decoder = mask_decoder
+                         )
         # freeze prompt encoder
         for param in self.prompt_encoder.parameters():
             param.requires_grad = False
