@@ -9,7 +9,7 @@ join = os.path.join
 from tqdm import tqdm
 import torch
 import torch.nn as nn
-from segment_anything import sam_model_registry, SamPredictor
+from segment_anything import sam_model_registry
 from datetime import datetime
 from utils.dataloader import NiiDataset
 import wandb
