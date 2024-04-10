@@ -101,7 +101,7 @@ def main():
                                                         multimask_output=False)
 
                         sub_mask = torch.tensor(sub_mask[None,:,:], dtype=torch.float, device=torch.device(device))
-                        loss = dice_loss(y_pred, sub_mask) + 20 * bce_loss(y_pred, sub_mask)
+                        loss = dice_loss(y_pred, sub_mask) + bce_loss(y_pred, sub_mask)
                         
                         loss.backward()
                         
