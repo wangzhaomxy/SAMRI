@@ -61,6 +61,7 @@ def main():
         prompt_encoder=sam_model.prompt_encoder,
     ).to(device)
     train_predictor = TrainSamPredictor(samri_model)
+    val_predictor = SamPredictor(samri_model)
 
     optimizer = torch.optim.Adam(
         samri_model.mask_decoder.parameters()
@@ -72,7 +73,12 @@ def main():
     #train
     iter_num = 0
     losses = []
+    best_loss = 1e10
     train_dataset = NiiDataset(train_image_path)
+    n_val = int(len(train_dataset) * 0.1)
+    n_train = len(train_dataset) - n_val
+    train_set, val_set = random_split(train_dataset, [n_train, n_val], 
+                                    generator=torch.Generator().manual_seed(0))
 
     start_epoch = 0
     prompts = ["point", "bbox"]
@@ -81,7 +87,7 @@ def main():
         # training part
         samri_model.train()
         epoch_loss = 0
-        for step, (image, mask) in enumerate(tqdm(train_dataset)):
+        for step, (image, mask) in enumerate(tqdm(train_set)):
             train_predictor.set_image(image)
             sub_loss = 0
             for prompt in prompts:
@@ -121,6 +127,38 @@ def main():
         ## save the latest model
         torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_latest.pth"))
         
+        # validation part
+        samri_model.eval()
+        val_loss = 0
+        with torch.no_grad():
+            for step, (vimage, vmask) in enumerate(tqdm(val_set)):
+                val_predictor.set_image(vimage)
+                val_sub_loss = 0
+                for prompt in prompts:
+                        for vsub_mask, vsub_prompt, lenth in gen_batch(vmask, prompt):
+                            if prompt == "point":
+                                y_pred, _, _ = train_predictor.predict(
+                                                            point_coords=vsub_prompt,
+                                                            point_labels=[1],
+                                                            multimask_output=False)
+                            if prompt == "bbox":
+                                y_pred, _, _ = train_predictor.predict(
+                                                            box=vsub_prompt[None, :],
+                                                            multimask_output=False)
+                            vsub_mask = torch.tensor(vsub_mask[None,:,:], dtype=torch.float, device=torch.device(device))
+                            val_loss = dice_loss(y_pred.float(), vsub_mask) + 20 * bce_loss(y_pred.float(), vsub_mask)
+
+                            val_sub_loss += val_loss.item()
+                val_loss += val_sub_loss / (len(prompts)*lenth)
+                iter_num += 1
+
+        val_loss /= step
+        experiment.log({"val_epoch_loss": val_loss})
+        ## save the best model
+        if val_loss < best_loss:
+            best_loss = val_loss
+            torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_best.pth"))
+
 
 if __name__ == "__main__":
     main()
