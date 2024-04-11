@@ -16,7 +16,8 @@ from segment_anything.modeling.mask_decoder import MaskDecoder
 from segment_anything.modeling.prompt_encoder import PromptEncoder
 
 from segment_anything.modeling import Sam
-from skimage import exposure
+# from skimage import exposure
+from torchvision.transforms.functional import equalize
 
 class SAMRI(Sam):
     def __init__(
@@ -121,7 +122,7 @@ class SAMRI(Sam):
         """Normalize pixel values and pad to a square input."""
         # Normalize colors
         # x = (x - self.pixel_mean) / self.pixel_std
-        x = exposure.equalize_adapthist(x,clip_limit=0.05)
+        x = equalize(x)
 
         # Pad
         h, w = x.shape[-2:]
