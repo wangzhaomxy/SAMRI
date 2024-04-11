@@ -7,16 +7,16 @@ Reference: The model is referenced from the segment anything model,
 """
 
 import torch
-from torch import nn
 from torch.nn import functional as F
 
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List
 
 from segment_anything.modeling.image_encoder import ImageEncoderViT
 from segment_anything.modeling.mask_decoder import MaskDecoder
 from segment_anything.modeling.prompt_encoder import PromptEncoder
 
 from segment_anything.modeling import Sam
+from skimage import exposure
 
 class SAMRI(Sam):
     def __init__(
@@ -116,3 +116,16 @@ class SAMRI(Sam):
                 }
             )
         return outputs
+    
+    def preprocess(self, x: torch.Tensor) -> torch.Tensor:
+        """Normalize pixel values and pad to a square input."""
+        # Normalize colors
+        # x = (x - self.pixel_mean) / self.pixel_std
+        x = exposure.equalize_adapthist(x,clip_limit=0.05)
+
+        # Pad
+        h, w = x.shape[-2:]
+        padh = self.image_encoder.img_size - h
+        padw = self.image_encoder.img_size - w
+        x = F.pad(x, (0, padw, 0, padh))
+        return x
