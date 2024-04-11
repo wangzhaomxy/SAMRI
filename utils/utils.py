@@ -28,10 +28,10 @@ ENCODER_TYPE = {"vit_b":"vit_b",
                   "samri":"vit_b"
                   }
 
-SAM_CHECKPOINT = {"vit_b":pre_path + "Model_dir/sam_vit_b_01ec64.pth",
-                  "vit_h":pre_path + "Model_dir/sam_vit_h_4b8939.pth",
-                  "med_sam":pre_path + "Model_dir/medsam_vit_b.pth",
-                  "samri":MODEL_SAVE_PATH
+SAM_CHECKPOINT = {"vit_b": pre_path + "Model_dir/sam_vit_b_01ec64.pth",
+                  "vit_h": pre_path + "Model_dir/sam_vit_h_4b8939.pth",
+                  "med_sam": pre_path + "Model_dir/medsam_vit_b.pth",
+                  "samri": MODEL_SAVE_PATH + "samri_vitb_latest.pth"
                   }
 
 
