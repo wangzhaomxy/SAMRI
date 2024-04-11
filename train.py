@@ -71,7 +71,7 @@ def main():
     #train
     iter_num = 0
     losses = []
-    train_dataset = NiiDataset(train_image_path)
+    train_dataset = NiiDataset([train_image_path[0]])
 
     start_epoch = 0
     prompts = ["point", "bbox"]
@@ -118,7 +118,7 @@ def main():
             f'Time: {datetime.now().strftime("%Y%m%d-%H%M")}, Epoch: {epoch}, Loss: {epoch_loss}'
         )
         ## save the latest model
-        torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_latest.pth"))
+        torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_small.pth"))
         
 
 if __name__ == "__main__":
