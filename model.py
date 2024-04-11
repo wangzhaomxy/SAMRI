@@ -122,7 +122,7 @@ class SAMRI(Sam):
         """Normalize pixel values and pad to a square input."""
         # Normalize colors
         x = equalize(x).float()
-        x = (x - self.pixel_mean) / self.pixel_std
+        # x = (x - self.pixel_mean) / self.pixel_std
 
         # Pad
         h, w = x.shape[-2:]

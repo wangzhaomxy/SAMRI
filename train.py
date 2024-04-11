@@ -21,12 +21,11 @@ from model import SAMRI
 from train_predictor import TrainSamPredictor
 
 # setup global parameters
-model_type = "vit_b"
+model_type = "samri"
 encoder_type = ENCODER_TYPE[model_type] # choose one from vit_b and vit_h.
 sam_checkpoint = SAM_CHECKPOINT[model_type]
 batch_size = BATCH_SIZE
 data_path = TRAIN_IMAGE_PATH
-timestamp = datetime.now().strftime("%Y%m%d-%H%M")
 model_save_path = MODEL_SAVE_PATH
 device = DEVICE
 num_epochs = NUM_EPOCHS
@@ -119,7 +118,7 @@ def main():
             f'Time: {datetime.now().strftime("%Y%m%d-%H%M")}, Epoch: {epoch}, Loss: {epoch_loss}'
         )
         ## save the latest model
-        torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_he_n_latest.pth"))
+        torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_latest.pth"))
         
 
 if __name__ == "__main__":
