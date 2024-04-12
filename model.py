@@ -121,8 +121,8 @@ class SAMRI(Sam):
     def preprocess(self, x: torch.Tensor) -> torch.Tensor:
         """Normalize pixel values and pad to a square input."""
         # Normalize colors
-        # x = equalize(x).float()
-        x = (x - self.pixel_mean) / self.pixel_std
+        x = equalize(x).float()
+        # x = (x - self.pixel_mean) / self.pixel_std
 
         # Pad
         h, w = x.shape[-2:]
