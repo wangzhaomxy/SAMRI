@@ -7,7 +7,7 @@ Permanent variables, universal functions, ect
 pre_path = "/scratch/user/s4670484/" # The main folder of files
 img_path = "MSK/T2_preprocessed_resample_scale2_crop_cv_7c_slice_axis_0_class_7_thresh_7/"
 SAVE_PATH = "/home/s4670484/Documents/"
-MODEL_SAVE_PATH = SAVE_PATH + "cp_temp/"
+MODEL_SAVE_PATH = pre_path + "cp_temp/"
 
 TRAIN_IMAGE_PATH = [pre_path + img_path + 'set_1/train/',
                     pre_path + img_path + 'set_2/train/',
@@ -31,7 +31,7 @@ ENCODER_TYPE = {"vit_b":"vit_b",
 SAM_CHECKPOINT = {"vit_b": pre_path + "Model_dir/sam_vit_b_01ec64.pth",
                   "vit_h": pre_path + "Model_dir/sam_vit_h_4b8939.pth",
                   "med_sam": pre_path + "Model_dir/medsam_vit_b.pth",
-                  "samri": pre_path + "Model_dir/samri_vitb_small.pth"
+                  "samri": pre_path + "Model_dir/samri_vitb.pth"
                   }
 
 
