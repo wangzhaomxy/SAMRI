@@ -12,7 +12,7 @@ from torch.utils.data import Dataset
 import glob
 import nibabel as nib
 from utils.utils import IMAGE_KEYS, MASK_KEYS
-# from skimage import exposure
+from skimage import exposure
 
 
 class NiiDataset(Dataset):
@@ -85,17 +85,24 @@ class NiiDataset(Dataset):
         np_image(np.darray): The input image, (C, H, W) = (1, 256, 256).
 
         returns:
-        (np.ndarray): The output image, (C, H, W) = (256, 256, 3), range [0,255]
+        (np.ndarray): The output image, (H, W, C) = (256, 256, 3), range [0,255]
 
         """
         # split out the image HxW.
         sig_chann = np_image[0, :, :]
         # convert 1 chanel to 3 chanels and transform into  HxWxC
         np_3c = np.array([sig_chann, sig_chann, sig_chann]).transpose(1,2,0)
+
+        # histogram matching
+        H, W = sig_chann.shape
+        pixel_mean = [123.675, 116.28, 103.53]
+        pixel_std = [58.395, 57.12, 57.375]
+        target_img = [np.random.normal(loc=m, scale=s, size=(H,W)) for m,s in zip(pixel_mean, pixel_std)].transpose(1,2,0)
+        np_3c = exposure.match_histograms(np_3c,target_img)
+        
         # normalize pixel number into [0,1]
         np_3c = (np_3c - np_3c.min()) / (np_3c.max() - np_3c.min())
         # transform image data into [0, 255] integer type, which is np.uint8
-        # np_3c = exposure.equalize_adapthist(np_3c,clip_limit=0.05)
         np_3c = np.round(np_3c * 255)
         return np_3c
     
