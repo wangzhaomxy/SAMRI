@@ -94,12 +94,12 @@ class NiiDataset(Dataset):
         np_3c = np.array([sig_chann, sig_chann, sig_chann]).transpose(1,2,0)
 
         # histogram matching
-        H, W = sig_chann.shape
-        pixel_mean = [123.675, 116.28, 103.53]
-        pixel_std = [58.395, 57.12, 57.375]
-        target_img = [np.random.normal(loc=m, scale=s, size=(H,W)) for m,s in zip(pixel_mean, pixel_std)].transpose(1,2,0)
-        np_3c = exposure.match_histograms(np_3c,target_img)
-        
+        # H, W = sig_chann.shape
+        # pixel_mean = [123.675, 116.28, 103.53]
+        # pixel_std = [58.395, 57.12, 57.375]
+        # target_img = [np.random.normal(loc=m, scale=s, size=(H,W)) for m,s in zip(pixel_mean, pixel_std)].transpose(1,2,0)
+        # np_3c = exposure.match_histograms(np_3c,target_img)
+
         # normalize pixel number into [0,1]
         np_3c = (np_3c - np_3c.min()) / (np_3c.max() - np_3c.min())
         # transform image data into [0, 255] integer type, which is np.uint8
