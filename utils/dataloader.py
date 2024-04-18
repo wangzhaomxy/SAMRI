@@ -97,7 +97,7 @@ class NiiDataset(Dataset):
         H, W = sig_chann.shape
         pixel_mean = [123.675, 116.28, 103.53]
         pixel_std = [58.395, 57.12, 57.375]
-        target_img = [np.random.normal(loc=m, scale=s, size=(H,W)) for m,s in zip(pixel_mean, pixel_std)].transpose(1,2,0)
+        target_img = np.array([np.random.normal(loc=m, scale=s, size=(H,W)) for m,s in zip(pixel_mean, pixel_std)]).transpose(1,2,0)
         np_3c = exposure.match_histograms(np_3c,target_img)
 
         # normalize pixel number into [0,1]
