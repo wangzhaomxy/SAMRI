@@ -57,7 +57,7 @@ class NiiDataset(Dataset):
         nii_img = self._load_nii(self.img_file[index])
         nii_seg = self._load_nii(self.gt_file[index])
         self.cur_name = self.img_file[index]
-        num_masks = nii_seg.max()
+        num_masks = int(nii_seg.max())
         
         # preprocess the image to np.ndarray type in unit8 format,(256 ,256 ,3)
         nii_img = self._preprocess(nii_img)
