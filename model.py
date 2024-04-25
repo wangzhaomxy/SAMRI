@@ -118,7 +118,8 @@ class SAMRI(Sam):
                     }
                 )
             else:
-                outputs.append(masks[0,:])
+                outputs.append(masks[0,:].sigmoid())
+                outputs = torch.stack(outputs, dim=0)
         return outputs
     
     def preprocess(self, x: torch.Tensor) -> torch.Tensor:
