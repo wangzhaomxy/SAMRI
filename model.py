@@ -42,7 +42,7 @@ class SAMRI(Sam):
             self,
             batched_input: List[Dict[str, Any]],
             multimask_output: bool,
-            return_logits: bool = False
+            train_mode: bool = False
         ) -> List[Dict[str, torch.Tensor]]:
         """
         Predicts masks end-to-end from provided images and prompts.
@@ -108,15 +108,17 @@ class SAMRI(Sam):
                 input_size=image_record["image"].shape[-2:],
                 original_size=image_record["original_size"],
             )
-            if not return_logits:
+            if not train_mode:
                 masks = masks > self.mask_threshold
-            outputs.append(
-                {
-                    "masks": masks,
-                    "iou_predictions": iou_predictions,
-                    "low_res_logits": low_res_masks,
-                }
-            )
+                outputs.append(
+                    {
+                        "masks": masks,
+                        "iou_predictions": iou_predictions,
+                        "low_res_logits": low_res_masks,
+                    }
+                )
+            else:
+                outputs.append(masks[0,:])
         return outputs
     
     def preprocess(self, x: torch.Tensor) -> torch.Tensor:
