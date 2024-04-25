@@ -82,8 +82,9 @@ class SAMRI(Sam):
                 shape BxCxHxW, where H=W=256. Can be passed as mask input
                 to subsequent iterations of prediction.
         """
-        input_images = torch.stack([self.preprocess(x["image"]) for x in batched_input], dim=0)
-        image_embeddings = self.image_encoder(input_images)
+        with torch.no_grad():
+            input_images = torch.stack([self.preprocess(x["image"]) for x in batched_input], dim=0)
+            image_embeddings = self.image_encoder(input_images)
 
         outputs = []
         for image_record, curr_embedding in zip(batched_input, image_embeddings):
@@ -123,15 +124,3 @@ class SAMRI(Sam):
             outputs = torch.stack(outputs, dim=0)
         return outputs
     
-    def preprocess(self, x: torch.Tensor) -> torch.Tensor:
-        """Normalize pixel values and pad to a square input."""
-        # Normalize colors
-        # x = equalize(x).float()
-        x = (x - self.pixel_mean) / self.pixel_std
-
-        # Pad
-        h, w = x.shape[-2:]
-        padh = self.image_encoder.img_size - h
-        padw = self.image_encoder.img_size - w
-        x = F.pad(x, (0, padw, 0, padh))
-        return x
