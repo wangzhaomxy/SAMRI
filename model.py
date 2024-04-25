@@ -42,6 +42,7 @@ class SAMRI(Sam):
             self,
             batched_input: List[Dict[str, Any]],
             multimask_output: bool,
+            return_logits: bool = False
         ) -> List[Dict[str, torch.Tensor]]:
         """
         Predicts masks end-to-end from provided images and prompts.
@@ -107,8 +108,8 @@ class SAMRI(Sam):
                 input_size=image_record["image"].shape[-2:],
                 original_size=image_record["original_size"],
             )
-
-            masks = masks > self.mask_threshold
+            if not return_logits:
+                masks = masks > self.mask_threshold
             outputs.append(
                 {
                     "masks": masks,
