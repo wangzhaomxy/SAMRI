@@ -16,7 +16,7 @@ from skimage import exposure
 
 
 class NiiDataset(Dataset):
-    def __init__(self, data_root):
+    def __init__(self, data_root, multi_mask=False):
         super().__init__()
         self.data_root = data_root
         self.img_file = []
@@ -25,6 +25,7 @@ class NiiDataset(Dataset):
             self.img_file += sorted(glob.glob(path + IMAGE_KEYS))
             self.gt_file += sorted(glob.glob(path + MASK_KEYS))
         self.cur_name = ""
+        self.multi_mask = multi_mask
         # print(f"number of images: {len(self.img_file)}")
         """
         Args:
@@ -56,12 +57,16 @@ class NiiDataset(Dataset):
         nii_img = self._load_nii(self.img_file[index])
         nii_seg = self._load_nii(self.gt_file[index])
         self.cur_name = self.img_file[index]
+        num_masks = nii_seg.max()
         
         # preprocess the image to np.ndarray type in unit8 format,(256 ,256 ,3)
         nii_img = self._preprocess(nii_img)
 
         # shape of nii_img is (256, 256, 3), nii_seg is (1, 256, 256)
-        return (nii_img, nii_seg)
+        if self.multi_mask:
+            return (nii_img, [nii_seg==i for i in range(1,num_masks+1)])
+        else:
+            return (nii_img, nii_seg)
 
 
     def _load_nii(self, nii_file):
@@ -94,11 +99,12 @@ class NiiDataset(Dataset):
         np_3c = np.array([sig_chann, sig_chann, sig_chann]).transpose(1,2,0)
 
         # histogram matching
-        H, W = sig_chann.shape
-        pixel_mean = [123.675, 116.28, 103.53]
-        pixel_std = [58.395, 57.12, 57.375]
-        target_img = np.array([np.random.normal(loc=m, scale=s, size=(H,W)) for m,s in zip(pixel_mean, pixel_std)]).transpose(1,2,0)
-        np_3c = exposure.match_histograms(np_3c,target_img)
+        # H, W = sig_chann.shape
+        # pixel_mean = [123.675, 116.28, 103.53]
+        # pixel_std = [58.395, 57.12, 57.375]
+        # target_img = np.array([np.random.normal(loc=m, scale=s, 
+        #     size=(H,W)) for m,s in zip(pixel_mean, pixel_std)]).transpose(1,2,0)
+        # np_3c = exposure.match_histograms(np_3c,target_img)
 
         # normalize pixel number into [0,1]
         np_3c = (np_3c - np_3c.min()) / (np_3c.max() - np_3c.min())
