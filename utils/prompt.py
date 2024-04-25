@@ -9,6 +9,11 @@ import random
 class MaskSplit():
     """
     Split the labeled ground truth masks into single logits mask. 
+
+    Args:
+        mask (np.darray): the labeled ground truth mask. CHW=(1,255,255)
+        mask_number (int): the number of the gt mask labels.
+        masks (list): the list of single mask with different lables, HW=(255,255)
     """
     def __init__(self, mask):
         self.mask = mask[0, :, :]
@@ -22,6 +27,9 @@ class MaskSplit():
         """
 
     def __len__(self):
+        """
+        The number of labels.
+        """
         return self.mask_number
     
     def __getitem__(self, index):
