@@ -71,7 +71,7 @@ def main():
     #train
     iter_num = 0
     losses = []
-    train_dataset = NiiDataset([train_image_path[0]])
+    train_dataset = NiiDataset(train_image_path)
 
     start_epoch = 0
     prompts = ["point", "bbox"]
