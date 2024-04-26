@@ -71,13 +71,13 @@ def main():
         samri_model.mask_decoder.parameters()
     )
 
-    dice_loss = DiceLoss()
+    dice_loss = BatchDiceLoss()
     bce_loss = nn.BCEWithLogitsLoss(reduction="mean")
 
     #train
     iter_num = 0
     losses = []
-    train_dataset = NiiDataset([train_image_path[0]])
+    train_dataset = NiiDataset(train_image_path, multi_mask=True)
 
     start_epoch = 0
     prompts = ["point", "bbox"]
@@ -90,7 +90,7 @@ def main():
         remain_data = []
         step = 0
         batch_data = []
-        for image, mask in enumerate(tqdm(train_dataset)):
+        for image, mask in tqdm(train_dataset):
             # Generate batch in multiple mask mode.
             num_masks = len(mask)
             if num_masks > batch_size:
@@ -107,58 +107,53 @@ def main():
                 batch_counter -= batch_size
                 batch_data += [(image, mask[i]) for i in range(num_masks - batch_counter)]
                 if batch_counter != 0:
-                    remain_data = [(image, mask[i]) for i in range(num_masks - batch_counter, num_masks+1)]
+                    remain_data = [(image, mask[i]) for i in range(num_masks - batch_counter, num_masks)]
+                
+                # Train model
+                step += 1
                 for prompt in prompts:
+                    step += 1
+                    optimizer.zero_grad()
                     if prompt == "point":
                         batch_input = [
                             {'image': prep_img(image, resize_transform),
-                             'point_coords':resize_transform.apply_coords_torch(),
+                             'point_coords':resize_transform.apply_coords_torch(torch.as_tensor([gen_points(mask[0,:])], device=device), original_size=image.shape[:2]),
+                             'point_labels':torch.as_tensor([[1]], device=device),
                              'original_size':image.shape[:2]
                              } 
                             for image, mask in batch_data
                         ]
                     if prompt == "bbox":
-                        batch_input = []
+                        batch_input = [
+                            {'image': prep_img(image, resize_transform),
+                             'boxes':resize_transform.apply_boxes_torch(torch.as_tensor([gen_bboxes(mask[0,:])], device=device), original_size=image.shape[:2]),
+                             'original_size':image.shape[:2]
+                             } 
+                            for image, mask in batch_data
+                        ]
+                    batch_gt_masks = torch.as_tensor(np.array([mask for _, mask in batch_data]), dtype=torch.float, device=device)
 
-            train_predictor.set_image(image)
-            sub_loss = 0
-            for prompt in prompts:
-                    for sub_mask, sub_prompt, lenth in gen_batch(mask, prompt):                        
-                        optimizer.zero_grad()
+                    y_pred = samri_model(batch_input, multimask_output=False, train_mode=True)
 
-                        if prompt == "point":
-                            y_pred, _, _ = train_predictor.predict(
-                                                        point_coords=sub_prompt,
-                                                        point_labels=[1],
-                                                        return_logits=True,
-                                                        multimask_output=False)
-                        if prompt == "bbox":
-                            y_pred, _, _  = train_predictor.predict(
-                                                        box=sub_prompt[None, :],
-                                                        return_logits=True,
-                                                        multimask_output=False)
+                    loss = dice_loss(y_pred, batch_gt_masks) + 20 * bce_loss(y_pred, batch_gt_masks)
 
-                        sub_mask = torch.tensor(sub_mask[None,:,:], dtype=torch.float, device=torch.device(device))
-                        loss = dice_loss(y_pred, sub_mask) + 20 * bce_loss(y_pred, sub_mask)
+                    loss.backward()
                         
-                        loss.backward()
-                        
-                        optimizer.step()
-                        
-                        sub_loss += loss.item()
-                        experiment.log({"train_epoch_loss": epoch_loss})
-            epoch_loss += sub_loss / (len(prompts)*lenth)
-            iter_num += 1
+                    optimizer.step()
+                    
+                    epoch_loss += loss.item()
+
+                    experiment.log({"sub_loss": loss.item()})
+                batch_data = []
 
         epoch_loss /= step
         losses.append(epoch_loss)
-        experiment.log({"train_epoch_loss": epoch_loss})
+        experiment.log({"train_epoch_loss": epoch_loss,
+                        "train_losses":losses})
         print(
             f'Time: {datetime.now().strftime("%Y%m%d-%H%M")}, Epoch: {epoch}, Loss: {epoch_loss}'
-        )
-        ## save the latest model
-        torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_small.pth"))
-        
+            )
+            
 
-if __name__ == "__main__":
-    main()
+
+           
