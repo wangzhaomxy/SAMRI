@@ -17,7 +17,6 @@ from utils.utils import *
 from utils.losses import *
 from utils.prompt import *
 from model import SAMRI
-from train_predictor import TrainSamPredictor
 from segment_anything.utils.transforms import ResizeLongestSide
 
 # setup global parameters
@@ -75,7 +74,6 @@ def main():
     bce_loss = nn.BCEWithLogitsLoss(reduction="mean")
 
     #train
-    iter_num = 0
     losses = []
     train_dataset = NiiDataset(train_image_path, multi_mask=True)
 
@@ -153,7 +151,10 @@ def main():
         print(
             f'Time: {datetime.now().strftime("%Y%m%d-%H%M")}, Epoch: {epoch}, Loss: {epoch_loss}'
             )
-            
+        ## save the latest model
+        torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_small.pth"))
 
 
+if __name__ == "__main__":
+    main()
            
