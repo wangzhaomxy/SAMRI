@@ -115,7 +115,7 @@ def main():
                     if prompt == "point":
                         batch_input = [
                             {'image': prep_img(image, resize_transform),
-                             'point_coords':resize_transform.apply_coords_torch(torch.as_tensor([gen_points(mask[0,:])], device=device), original_size=image.shape[:2]),
+                             'point_coords':resize_transform.apply_coords_torch(torch.as_tensor(np.array([gen_points(mask[0,:])]), device=device), original_size=image.shape[:2]),
                              'point_labels':torch.as_tensor([[1]], device=device),
                              'original_size':image.shape[:2]
                              } 
@@ -124,7 +124,7 @@ def main():
                     if prompt == "bbox":
                         batch_input = [
                             {'image': prep_img(image, resize_transform),
-                             'boxes':resize_transform.apply_boxes_torch(torch.as_tensor([gen_bboxes(mask[0,:])], device=device), original_size=image.shape[:2]),
+                             'boxes':resize_transform.apply_boxes_torch(torch.as_tensor(np.array([gen_bboxes(mask[0,:])]), device=device), original_size=image.shape[:2]),
                              'original_size':image.shape[:2]
                              } 
                             for image, mask in batch_data
