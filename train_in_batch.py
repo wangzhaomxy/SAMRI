@@ -20,7 +20,7 @@ from model import SAMRI
 from segment_anything.utils.transforms import ResizeLongestSide
 
 # setup global parameters
-model_type = "samri"
+model_type = "vit_b"
 encoder_type = ENCODER_TYPE[model_type] # choose one from vit_b and vit_h.
 sam_checkpoint = SAM_CHECKPOINT[model_type]
 batch_size = BATCH_SIZE
@@ -152,7 +152,7 @@ def main():
             f'Time: {datetime.now().strftime("%Y%m%d-%H%M")}, Epoch: {epoch}, Loss: {epoch_loss}'
             )
         ## save the latest model
-        torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_32.pth"))
+        torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb.pth"))
 
 
 if __name__ == "__main__":
