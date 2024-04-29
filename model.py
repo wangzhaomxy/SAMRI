@@ -84,6 +84,8 @@ class SAMRI(Sam):
         """
         
         input_images = torch.stack([self.preprocess(x["image"]) for x in batched_input], dim=0)
+        print(input_images.dtype)
+        print(input_images.shape)
         image_embeddings = self.image_encoder(input_images)
 
         outputs = []
