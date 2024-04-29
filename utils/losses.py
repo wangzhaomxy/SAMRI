@@ -80,6 +80,7 @@ class DiceLoss(nn.Module):
     def forward(self,y_pred, target, smooth=1e-10):
         y_pred = F.sigmoid(y_pred).float()
         intersection = (y_pred * target).sum()
+        sum_of_pred = y_pred.sum()
         sum_of_target = target.sum()
         dice_coef = (2 * intersection + smooth) / (sum_of_pred + 
                                             sum_of_target + smooth)
