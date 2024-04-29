@@ -84,45 +84,49 @@ class SAMRI(Sam):
         """
         
         input_images = torch.stack([self.preprocess(x["image"]) for x in batched_input], dim=0)
-        print(input_images.dtype)
-        print(input_images.shape)
         image_embeddings = self.image_encoder(input_images)
 
-        outputs = []
-        for image_record, curr_embedding in zip(batched_input, image_embeddings):
-            if "point_coords" in image_record:
-                points = (image_record["point_coords"], image_record["point_labels"])
+        if "point_coords" in batched_input:
+            if batched_input["point_coords"] != None:
+                point_coords = [point["point_coords"] for point in batched_input]
+                point_labels = [label["point_labels"] for label in batched_input]
+                points = (torch.stack(point_coords), torch.stack(point_labels))
             else:
                 points = None
-            sparse_embeddings, dense_embeddings = self.prompt_encoder(
-                points=points,
-                boxes=image_record.get("boxes", None),
-                masks=image_record.get("mask_inputs", None),
-            )
-            low_res_masks, iou_predictions = self.mask_decoder(
-                image_embeddings=curr_embedding.unsqueeze(0),
-                image_pe=self.prompt_encoder.get_dense_pe(),
-                sparse_prompt_embeddings=sparse_embeddings,
-                dense_prompt_embeddings=dense_embeddings,
-                multimask_output=multimask_output,
-            )
-            masks = self.postprocess_masks(
-                low_res_masks,
-                input_size=image_record["image"].shape[-2:],
-                original_size=image_record["original_size"],
-            )
-            if not train_mode:
-                masks = masks > self.mask_threshold
-                outputs.append(
-                    {
-                        "masks": masks,
-                        "iou_predictions": iou_predictions,
-                        "low_res_logits": low_res_masks,
-                    }
-                )
+        else:
+            points = None
+
+        if "bbox" in batched_input:
+            if batched_input["bbox"] != None:
+                bboxes = [box["boxes"][None, :] for box in batched_input]
+                bboxes = torch.stack(bboxes, dim=0)
             else:
-                outputs.append(masks[0,:])
+                bboxes = None
+        else:
+            bboxes = None
+        
+        sparse_embeddings, dense_embeddings = self.prompt_encoder(
+            points=points,
+            boxes=bboxes,
+            masks=None,
+        )
+        low_res_masks, iou_predictions = self.mask_decoder(
+            image_embeddings=image_embeddings,
+            image_pe=self.prompt_encoder.get_dense_pe(),
+            sparse_prompt_embeddings=sparse_embeddings,
+            dense_prompt_embeddings=dense_embeddings,
+            multimask_output=multimask_output,
+        )
+        masks = self.postprocess_masks(
+            low_res_masks,
+            input_size=input_images.shape[-2:],
+            original_size=batched_input[0]["original_size"],
+        )
+        
         if train_mode:
-            outputs = torch.stack(outputs, dim=0)
-        return outputs
+            return masks
+        else:
+            masks = masks > self.mask_threshold
+            return masks
+
     
