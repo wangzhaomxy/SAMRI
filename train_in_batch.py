@@ -8,13 +8,13 @@ import os
 join = os.path.join
 from tqdm import tqdm
 import torch
-import torch.nn as nn
 from segment_anything import sam_model_registry
 from datetime import datetime
 from utils.dataloader import NiiDataset
 import wandb
+from monai.losses import DiceLoss
+from torchvision.ops import sigmoid_focal_loss
 from utils.utils import *
-from utils.losses import *
 from utils.prompt import *
 from model import SAMRI
 from segment_anything.utils.transforms import ResizeLongestSide
@@ -70,13 +70,12 @@ def main():
         samri_model.mask_decoder.parameters()
     )
 
-    dice_loss = BatchDiceLoss()
-    bce_loss = nn.BCEWithLogitsLoss(reduction="mean")
+    dice_loss = DiceLoss(sigmoid=True, squared_pred=True, reduction="mean")
 
     #train
     losses = []
     train_dataset = NiiDataset(train_image_path, multi_mask=True)
-
+    scaler = torch.cuda.amp.GradScaler()
     start_epoch = 0
     prompts = ["point", "bbox"]
     for epoch in range(start_epoch, num_epochs):
@@ -110,8 +109,7 @@ def main():
                 # Train model
                 step += 1
                 for prompt in prompts:
-                    step += 1
-                    optimizer.zero_grad()
+                    step += 1                    
                     if prompt == "point":
                         batch_input = [
                             {'image': prep_img(image, resize_transform),
@@ -131,14 +129,16 @@ def main():
                         ]
                     batch_gt_masks = torch.as_tensor(np.array([mask for _, mask in batch_data]), dtype=torch.float, device=device)
 
-                    y_pred = samri_model(batch_input, multimask_output=False, train_mode=True)
+                    with torch.autocast(device_type="cuda", dtype=torch.float16):
+                        y_pred = samri_model(batch_input, multimask_output=False, train_mode=True)
 
-                    loss = dice_loss(y_pred, batch_gt_masks) + 20 * bce_loss(y_pred, batch_gt_masks)
+                        focal_loss = sigmoid_focal_loss(y_pred, batch_gt_masks, alpha=0.25, gamma=2,reduction="mean")
+                        loss = dice_loss(y_pred, batch_gt_masks) + 20 * focal_loss
 
-                    loss.backward()
-                        
-                    optimizer.step()
-                    
+                    scaler.scale(loss).backward()
+                    scaler.step(optimizer)
+                    scaler.update()
+                    optimizer.zero_grad()
                     epoch_loss += loss.item()
 
                     experiment.log({"sub_loss": loss.item()})
@@ -152,7 +152,7 @@ def main():
             f'Time: {datetime.now().strftime("%Y%m%d-%H%M")}, Epoch: {epoch}, Loss: {epoch_loss}'
             )
         ## save the latest model
-        torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_batch.pth"))
+        torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_batch32.pth"))
 
 
 if __name__ == "__main__":

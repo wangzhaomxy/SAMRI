@@ -13,10 +13,10 @@ from segment_anything import sam_model_registry
 from datetime import datetime
 from utils.dataloader import NiiDataset
 import wandb
+from monai.losses import DiceLoss
+from torchvision.ops import sigmoid_focal_loss
 from utils.utils import *
-from utils.losses import *
 from utils.prompt import *
-from torch.utils.data import random_split
 from model import SAMRI
 from train_predictor import TrainSamPredictor
 
@@ -65,8 +65,7 @@ def main():
         samri_model.mask_decoder.parameters()
     )
 
-    dice_loss = DiceLoss()
-    bce_loss = nn.BCEWithLogitsLoss(reduction="mean")
+    dice_loss = DiceLoss(sigmoid=True, squared_pred=True, reduction="mean")
 
     #train
     iter_num = 0
@@ -100,7 +99,8 @@ def main():
                                                         multimask_output=False)
 
                         sub_mask = torch.tensor(sub_mask[None,:,:], dtype=torch.float, device=torch.device(device))
-                        loss = dice_loss(y_pred, sub_mask) + 20 * bce_loss(y_pred, sub_mask)
+                        focal_loss = sigmoid_focal_loss(y_pred, sub_mask, alpha=0.25, gamma=2,reduction="mean")
+                        loss = dice_loss(y_pred, sub_mask) + 20 * focal_loss
                         
                         loss.backward()
                         

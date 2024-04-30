@@ -31,7 +31,7 @@ def iou(y_true, y_pred, smooth=1e-10):
     union = np.sum(np.bitwise_or(y_true, y_pred))
     return (intersection) /  (union + smooth)
 
-
+"""
 def bce_dice_loss(y_true, y_pred):
     y_true = y_true.float()
     y_pred = y_pred.float()
@@ -98,4 +98,4 @@ class BatchDiceLoss(nn.Module):
         dice_coef = (2 * intersection + smooth) / (sum_of_pred + 
                                             sum_of_target + smooth)
         return 1 - dice_coef.mean()
-    
+    """
