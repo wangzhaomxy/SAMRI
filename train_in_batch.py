@@ -152,7 +152,7 @@ def main():
             f'Time: {datetime.now().strftime("%Y%m%d-%H%M")}, Epoch: {epoch}, Loss: {epoch_loss}'
             )
         ## save the latest model
-        torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_batch32.pth"))
+        torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_h100.pth"))
 
 
 if __name__ == "__main__":
