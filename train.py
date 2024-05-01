@@ -68,7 +68,6 @@ def main():
     dice_loss = DiceLoss(sigmoid=True, squared_pred=True, reduction="mean")
 
     #train
-    iter_num = 0
     losses = []
     train_dataset = NiiDataset(train_image_path)
 
@@ -109,7 +108,6 @@ def main():
                         sub_loss += loss.item()
                         experiment.log({"train_epoch_loss": epoch_loss})
             epoch_loss += sub_loss / (len(prompts)*lenth)
-            iter_num += 1
 
         epoch_loss /= step
         losses.append(epoch_loss)

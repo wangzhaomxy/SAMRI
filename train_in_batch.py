@@ -74,6 +74,7 @@ def main():
 
     #train
     losses = []
+    best_loss = 1e5
     train_dataset = NiiDataset(train_image_path, multi_mask=True)
     scaler = torch.cuda.amp.GradScaler()
     start_epoch = 0
@@ -134,6 +135,7 @@ def main():
 
                         focal_loss = sigmoid_focal_loss(y_pred, batch_gt_masks, alpha=0.25, gamma=2,reduction="mean")
                         loss = dice_loss(y_pred, batch_gt_masks) + 20 * focal_loss
+                        loss /= 21
 
                     scaler.scale(loss).backward()
                     scaler.step(optimizer)
@@ -151,8 +153,14 @@ def main():
         print(
             f'Time: {datetime.now().strftime("%Y%m%d-%H%M")}, Epoch: {epoch}, Loss: {epoch_loss}'
             )
+        
+        ## save the best model
+        if epoch_loss < best_loss:
+            best_loss = epoch_loss
+            torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_best_l40.pth"))
+
         ## save the latest model
-        torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_l40.pth"))
+        torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_latest_l40.pth"))
 
 
 if __name__ == "__main__":
