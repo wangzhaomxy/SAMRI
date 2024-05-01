@@ -69,6 +69,7 @@ def main():
 
     #train
     losses = []
+    best_loss = 1e5
     train_dataset = NiiDataset(train_image_path)
 
     start_epoch = 0
@@ -115,8 +116,14 @@ def main():
         print(
             f'Time: {datetime.now().strftime("%Y%m%d-%H%M")}, Epoch: {epoch}, Loss: {epoch_loss}'
         )
+
+        ## save the best model
+        if epoch_loss < best_loss:
+            best_loss = epoch_loss
+            torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_best_one.pth"))
+
         ## save the latest model
-        torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_one.pth"))
+        torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_latest_one.pth"))
         
 
 if __name__ == "__main__":
