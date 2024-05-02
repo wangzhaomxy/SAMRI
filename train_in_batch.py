@@ -70,7 +70,7 @@ def main():
         samri_model.mask_decoder.parameters()
     )
 
-    dice_loss = DiceLoss(sigmoid=True, squared_pred=True, reduction="mean")
+    dice_loss = DiceLoss(sigmoid=True, squared_pred=True, reduction="mean", batch=True)
 
     #train
     losses = []

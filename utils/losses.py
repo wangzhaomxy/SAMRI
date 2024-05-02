@@ -93,8 +93,8 @@ class BatchDiceLoss(nn.Module):
     def forward(self,y_pred, target, smooth=1e-10):
         y_pred = F.sigmoid(y_pred).float()
         intersection = (y_pred * target).sum(axis=(-3,-2,-1))
-        sum_of_pred = y_pred.sum(axis=(-3,-2,-1))
-        sum_of_target = target.sum(axis=(-3,-2,-1))
+        sum_of_pred = y_pred.pow(2).sum(axis=(-3,-2,-1))
+        sum_of_target = target.pow(2).sum(axis=(-3,-2,-1))
         dice_coef = (2 * intersection + smooth) / (sum_of_pred + 
                                             sum_of_target + smooth)
         return 1 - dice_coef.mean()
