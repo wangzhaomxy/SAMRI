@@ -9,14 +9,14 @@ import numpy as np
 import os
 join = os.path.join
 from torch.utils.data import Dataset
-import glob
+import glob, random
 import nibabel as nib
 from utils.utils import IMAGE_KEYS, MASK_KEYS
 from skimage import exposure
 
 
 class NiiDataset(Dataset):
-    def __init__(self, data_root, multi_mask=False):
+    def __init__(self, data_root, shuffle = False, multi_mask=False):
         super().__init__()
         self.data_root = data_root
         self.img_file = []
@@ -24,6 +24,8 @@ class NiiDataset(Dataset):
         for path in self.data_root:
             self.img_file += sorted(glob.glob(path + IMAGE_KEYS))
             self.gt_file += sorted(glob.glob(path + MASK_KEYS))
+        if shuffle:
+            self.img_file, self.gt_file = self._shuffle(self.img_file, self.gt_file)
         self.cur_name = ""
         self.multi_mask = multi_mask
         # print(f"number of images: {len(self.img_file)}")
@@ -67,6 +69,23 @@ class NiiDataset(Dataset):
             return (nii_img, [nii_seg==i for i in range(1,num_masks+1)])
         else:
             return (nii_img, nii_seg)
+        
+    def _shuffle(self, data1, data2):
+        """
+        shuffle images and masks simultainiously.
+
+        Arguments:
+            data1 (list): list of images path.
+            data2 (list): list of masks path.
+
+        Returns:
+            (tuple(list,list)): the tuple of shuffled image path list and masks
+                                path list.
+        """
+        zipped_data = zip(data1,data2)
+        random.shuffle(zipped_data)
+        sd_data1, sd_data2 = zip(*zipped_data)
+        return (sd_data1, sd_data2)
 
 
     def _load_nii(self, nii_file):

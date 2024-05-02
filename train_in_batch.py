@@ -75,7 +75,6 @@ def main():
     #train
     losses = []
     best_loss = 1e5
-    train_dataset = NiiDataset(train_image_path, multi_mask=True)
     scaler = torch.cuda.amp.GradScaler()
     start_epoch = 0
     prompts = ["point", "bbox"]
@@ -88,6 +87,7 @@ def main():
         remain_data = []
         step = 0
         batch_data = []
+        train_dataset = NiiDataset(train_image_path, shuffle=True, multi_mask=True)
         for image, mask in tqdm(train_dataset):
             # Generate batch in multiple mask mode.
             num_masks = len(mask)
