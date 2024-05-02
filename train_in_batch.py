@@ -66,7 +66,7 @@ def main():
     ).to(device)
     resize_transform = ResizeLongestSide(samri_model.image_encoder.img_size)
 
-    optimizer = torch.optim.Adam(
+    optimizer = torch.optim.AdamW(
         samri_model.mask_decoder.parameters(),
         lr=8e-4, 
         weight_decay=0.1
