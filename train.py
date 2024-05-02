@@ -61,8 +61,10 @@ def main():
     ).to(device)
     train_predictor = TrainSamPredictor(samri_model)
 
-    optimizer = torch.optim.Adam(
-        samri_model.mask_decoder.parameters()
+    optimizer = torch.optim.AdamW(
+        samri_model.mask_decoder.parameters(),
+        lr=8e-4, 
+        weight_decay=0.1
     )
 
     dice_loss = DiceLoss(sigmoid=True, squared_pred=True, reduction="mean")
@@ -100,7 +102,7 @@ def main():
 
                         sub_mask = torch.tensor(sub_mask[None,:,:], dtype=torch.float, device=torch.device(device))
                         focal_loss = sigmoid_focal_loss(y_pred, sub_mask, alpha=0.25, gamma=2,reduction="mean")
-                        loss = dice_loss(y_pred, sub_mask) + focal_loss
+                        loss = dice_loss(y_pred, sub_mask) + 20 * focal_loss
                         
                         loss.backward()
                         
