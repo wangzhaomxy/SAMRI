@@ -82,7 +82,7 @@ class NiiDataset(Dataset):
             (tuple(list,list)): the tuple of shuffled image path list and masks
                                 path list.
         """
-        zipped_data = zip(data1,data2)
+        zipped_data = list(zip(data1,data2))
         random.shuffle(zipped_data)
         sd_data1, sd_data2 = zip(*zipped_data)
         return (sd_data1, sd_data2)
