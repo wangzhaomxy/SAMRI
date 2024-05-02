@@ -67,7 +67,9 @@ def main():
     resize_transform = ResizeLongestSide(samri_model.image_encoder.img_size)
 
     optimizer = torch.optim.Adam(
-        samri_model.mask_decoder.parameters()
+        samri_model.mask_decoder.parameters(),
+        lr=8e-4, 
+        weight_decay=0.1
     )
 
     dice_loss = DiceLoss(sigmoid=True, squared_pred=True, reduction="mean", batch=True)
