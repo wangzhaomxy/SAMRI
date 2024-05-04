@@ -29,7 +29,7 @@ model_save_path = MODEL_SAVE_PATH
 device = DEVICE
 num_epochs = NUM_EPOCHS
 train_image_path = TRAIN_IMAGE_PATH
-
+amp = True
 wandb.login()
 experiment = wandb.init(
     project="SAMRI",
@@ -68,8 +68,8 @@ def main():
 
     optimizer = torch.optim.AdamW(
         samri_model.mask_decoder.parameters(),
-        lr=1e-4, 
-        weight_decay=0.01
+        lr=1e-5, 
+        weight_decay=0.1
     )
 
     dice_loss = DiceLoss(sigmoid=True, squared_pred=True, reduction="mean", batch=True)
@@ -132,15 +132,24 @@ def main():
                         ]
                     batch_gt_masks = torch.as_tensor(np.array([mask for _, mask in batch_data]), dtype=torch.float, device=device)
 
-                    with torch.autocast(device_type="cuda", dtype=torch.float16):
-                        y_pred = samri_model(batch_input, multimask_output=False, train_mode=True)
+                    if amp:
+                        with torch.autocast(device_type="cuda", dtype=torch.float16):
+                            y_pred = samri_model(batch_input, multimask_output=False, train_mode=True)
 
+                            focal_loss = sigmoid_focal_loss(y_pred, batch_gt_masks, alpha=0.25, gamma=2,reduction="mean")
+                            loss = dice_loss(y_pred, batch_gt_masks) + 20 * focal_loss
+
+                        scaler.scale(loss).backward()
+                        scaler.step(optimizer)
+                        scaler.update()
+
+                    else:
+                        y_pred = samri_model(batch_input, multimask_output=False, train_mode=True)
                         focal_loss = sigmoid_focal_loss(y_pred, batch_gt_masks, alpha=0.25, gamma=2,reduction="mean")
                         loss = dice_loss(y_pred, batch_gt_masks) + 20 * focal_loss
+                        loss.backward()
+                        optimizer.step()
 
-                    scaler.scale(loss).backward()
-                    scaler.step(optimizer)
-                    scaler.update()
                     optimizer.zero_grad()
                     epoch_loss += loss.item()
 
@@ -158,10 +167,10 @@ def main():
         ## save the best model
         if epoch_loss < best_loss:
             best_loss = epoch_loss
-            torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_best_1e-4.pth"))
+            torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_best_1e-5.pth"))
 
         ## save the latest model
-        torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_latest_1e-4.pth"))
+        torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_latest_1e-5.pth"))
 
 
 if __name__ == "__main__":
