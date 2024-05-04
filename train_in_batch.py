@@ -110,7 +110,6 @@ def main():
                     remain_data = [(image, mask[i]) for i in range(num_masks - batch_counter, num_masks)]
                 
                 # Train model
-                step += 1
                 for prompt in prompts:
                     step += 1                    
                     if prompt == "point":
