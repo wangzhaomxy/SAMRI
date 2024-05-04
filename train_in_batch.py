@@ -29,7 +29,7 @@ model_save_path = MODEL_SAVE_PATH
 device = DEVICE
 num_epochs = NUM_EPOCHS
 train_image_path = TRAIN_IMAGE_PATH
-amp = True
+amp = False
 wandb.login()
 experiment = wandb.init(
     project="SAMRI",
@@ -68,7 +68,7 @@ def main():
 
     optimizer = torch.optim.AdamW(
         samri_model.mask_decoder.parameters(),
-        lr=1e-5, 
+        lr=8e-4, 
         weight_decay=0.1
     )
 
