@@ -34,8 +34,8 @@ class SAMRI(Sam):
         for param in self.prompt_encoder.parameters():
             param.requires_grad = False
         # freeze image encoder
-        for param in self.image_encoder.parameters():
-            param.requires_grad = False
+        #for param in self.image_encoder.parameters():
+           # param.requires_grad = False
 
 
     def forward(
@@ -122,7 +122,7 @@ class SAMRI(Sam):
             input_size=input_images.shape[-2:],
             original_size=batched_input[0]["original_size"],
         )
-        
+
         if train_mode:
             return masks
         else:
