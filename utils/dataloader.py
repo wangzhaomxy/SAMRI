@@ -16,7 +16,7 @@ from skimage import exposure
 
 
 class NiiDataset(Dataset):
-    def __init__(self, data_root, shuffle = False, multi_mask=False):
+    def __init__(self, data_root, shuffle=False, multi_mask=False):
         super().__init__()
         self.data_root = data_root
         self.img_file = []
