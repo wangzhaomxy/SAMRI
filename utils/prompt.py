@@ -87,7 +87,7 @@ def gen_bboxes(mask, num_bboxes=1, jitter=0):
         [[list], ...]: a list of bounding box lists if the num_bboxes > 1. 
     """
     h, w = np.nonzero(mask)
-    bbox = [np.min(w),np.min(h),np.max(w),np.max(h)]
+    bbox = [np.min(w), np.min(h), np.max(w), np.max(h)]
 
     if np.max(h) - np.min(h) > 30:
         bbox[1] = max(0, (np.min(h) + rand_shift(jitter)))
