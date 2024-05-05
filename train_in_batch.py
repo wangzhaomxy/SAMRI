@@ -166,10 +166,10 @@ def main():
         ## save the best model
         if epoch_loss < best_loss:
             best_loss = epoch_loss
-            torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_best_ampless.pth"))
+            torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_best_box.pth"))
 
         ## save the latest model
-        torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_latest_ampless.pth"))
+        torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_latest_box.pth"))
 
 
 if __name__ == "__main__":
