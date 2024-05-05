@@ -136,7 +136,7 @@ def main():
                             y_pred = samri_model(batch_input, multimask_output=False, train_mode=True)
 
                             focal_loss = sigmoid_focal_loss(y_pred, batch_gt_masks, alpha=0.25, gamma=2,reduction="mean")
-                            loss = dice_loss(y_pred, batch_gt_masks) + 20 * focal_loss
+                            loss = dice_loss(y_pred, batch_gt_masks) + focal_loss
 
                         scaler.scale(loss).backward()
                         scaler.step(optimizer)
@@ -145,7 +145,7 @@ def main():
                     else:
                         y_pred = samri_model(batch_input, multimask_output=False, train_mode=True)
                         focal_loss = sigmoid_focal_loss(y_pred, batch_gt_masks, alpha=0.25, gamma=2,reduction="mean")
-                        loss = dice_loss(y_pred, batch_gt_masks) + 20 * focal_loss
+                        loss = dice_loss(y_pred, batch_gt_masks) + focal_loss
                         loss.backward()
                         optimizer.step()
 

@@ -71,7 +71,7 @@ def gen_points(mask, num_points=1):
 
 def gen_bboxes(mask, num_bboxes=1, jitter=0):
     """
-    Generate a bounding box tupple with a shape of (min_h, min_w, max_h, max_w)
+    Generate a bounding box tupple with a shape of [min_w, min_h, max_w, max_h]
     or tupple list of multiple bounding boxes.
 
     Parameters:
@@ -87,11 +87,15 @@ def gen_bboxes(mask, num_bboxes=1, jitter=0):
         [[list], ...]: a list of bounding box lists if the num_bboxes > 1. 
     """
     h, w = np.nonzero(mask)
-    bbox = [max(0, (np.min(w) + rand_shift(jitter))), 
-            max(0, (np.min(h) + rand_shift(jitter))),
-            min(mask.shape[1], (np.max(w) + rand_shift(jitter))),
-            min(mask.shape[0], (np.max(h) + rand_shift(jitter)))
-            ]
+    bbox = [np.min(w),np.min(h),np.max(w),np.max(h)]
+
+    if np.max(h) - np.min(h) > 30:
+        bbox[1] = max(0, (np.min(h) + rand_shift(jitter)))
+        bbox[3] = min(mask.shape[0], (np.max(h) + rand_shift(jitter)))
+    if np.max(w) - np.min(w) > 30:
+        bbox[2] = max(0, (np.min(w) + rand_shift(jitter)))
+        bbox[4] = min(mask.shape[1], (np.max(w) + rand_shift(jitter)))
+        
     if num_bboxes == 1:
         return np.array(bbox)
     else:
