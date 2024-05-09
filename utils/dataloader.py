@@ -66,7 +66,7 @@ class NiiDataset(Dataset):
 
         # shape of nii_img is (256, 256, 3), nii_seg is (1, 256, 256)
         if self.multi_mask:
-            return (nii_img, [nii_seg==i for i in range(1,num_masks+1)])
+            return (nii_img, nii_seg)
         else:
             return (nii_img, nii_seg[random.randint(num_masks)])
         
