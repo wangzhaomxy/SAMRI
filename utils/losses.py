@@ -73,7 +73,7 @@ class CeDiceLoss(nn.Module):
 
         return celoss + diceloss
 
-class DiceLoss(nn.Module):
+class BiDiceLoss(nn.Module):
     def __init__(self) -> None:
         super().__init__()
 
