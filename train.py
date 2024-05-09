@@ -42,7 +42,6 @@ experiment = wandb.init(
 )
 
 def gen_batch(mask, prompt):
-    print(mask)
     masks = MaskSplit(mask)
     lenth = 0
     for each_mask in masks:
