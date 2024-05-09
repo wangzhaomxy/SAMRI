@@ -79,7 +79,7 @@ def main():
     best_loss = 1e5
     scaler = torch.cuda.amp.GradScaler()
     start_epoch = 0
-    prompts = ["bbox"] #["point", "bbox"]
+    prompts = ["point", "bbox"] # ["bbox"] #
     for epoch in range(start_epoch, num_epochs):
         print(f"The {epoch+1} / {num_epochs} epochs.")
         # training part
