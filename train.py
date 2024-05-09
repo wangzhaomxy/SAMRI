@@ -63,7 +63,7 @@ def main():
 
     optimizer = torch.optim.AdamW(
         samri_model.mask_decoder.parameters(),
-        lr=8e-4, 
+        lr=1e-4, 
         weight_decay=0.1
     )
 
@@ -72,7 +72,7 @@ def main():
     #train
     losses = []
     best_loss = 1e5
-    train_dataset = NiiDataset(train_image_path)
+    train_dataset = NiiDataset(train_image_path, multi_mask=True)
 
     start_epoch = 0
     prompts = ["point", "bbox"]
