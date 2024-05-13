@@ -41,9 +41,9 @@ experiment = wandb.init(
     },
 )
 
-def prep_img(image, tramsform, device=device):
-    image = tramsform.apply_image_torch(image)
-    return image.permute(2, 0, 1).contiguous()
+def prep_img(image, tramsform):
+    image = image.permute(2, 0, 1).contiguous()    
+    return tramsform.apply_image(image)
 
 def main():
     sam_model = sam_model_registry[encoder_type](sam_checkpoint)
