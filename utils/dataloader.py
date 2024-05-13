@@ -126,10 +126,21 @@ class NiiDataset(Dataset):
         # np_3c = exposure.match_histograms(np_3c,target_img)
 
         # normalize pixel number into [0,1]
-        np_3c = (np_3c - np_3c.min()) / (np_3c.max() - np_3c.min())
+        # np_3c = (np_3c - np_3c.min()) / (np_3c.max() - np_3c.min())
 
         # clip image intensity value between the 0.5th to 99.5th percentale.
-        np_3c = exposure.rescale_intensity(np_3c, in_range=(0.005, 0.995))
+        # np_3c = exposure.rescale_intensity(np_3c, in_range=(0.005, 0.995))
+        # use the MedSAM version.
+        lower_bound, upper_bound = np.percentile(
+                np_3c[np_3c > 0], 0.5
+            ), np.percentile(np_3c[np_3c > 0], 99.5)
+        image_data_pre = np.clip(np_3c, lower_bound, upper_bound)
+        image_data_pre = (
+            (image_data_pre - np.min(image_data_pre))
+            / (np.max(image_data_pre) - np.min(image_data_pre))
+            * 255.0
+        )
+        image_data_pre[np_3c == 0] = 0
 
         # transform image data into [0, 255] integer type, which is np.uint8
         np_3c = np.round(np_3c * 255)
