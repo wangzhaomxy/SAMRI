@@ -42,8 +42,7 @@ experiment = wandb.init(
 )
 
 def prep_img(image, tramsform, device=device):
-    image = tramsform.apply_image(image)
-    image = torch.as_tensor(image, device=device)
+    image = tramsform.apply_image_torch(image)
     return image.permute(2, 0, 1).contiguous()
 
 def main():
