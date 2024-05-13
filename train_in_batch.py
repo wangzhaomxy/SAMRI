@@ -45,18 +45,6 @@ def prep_img(image, tramsform, device=device):
     image = torch.as_tensor(image, device=device)
     return image.permute(2, 0, 1).contiguous()
 
-
-def gen_batch(mask, prompt):
-    masks = MaskSplit(mask)
-    lenth = 0
-    for each_mask in masks:
-        if prompt == "point":
-            each_prompt = gen_points(each_mask)
-        if prompt == "bbox":
-            each_prompt = gen_bboxes(each_mask)
-        lenth += 1
-        yield (each_mask, each_prompt, lenth)
-
 def main():
     sam_model = sam_model_registry[encoder_type](sam_checkpoint)
     samri_model = SAMRI(
