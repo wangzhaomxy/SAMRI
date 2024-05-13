@@ -92,21 +92,21 @@ def main():
                 if prompt == "point":
                     batch_input = [
                         {'image': prep_img(image, resize_transform),
-                            'point_coords':resize_transform.apply_coords_torch(torch.as_tensor(np.array([gen_points(mask[0,:])]), device=device), original_size=image.shape[:2]),
+                            'point_coords':resize_transform.apply_coords_torch(gen_points_torch(mask[0,:]), original_size=image.shape[:2]),
                             'point_labels':torch.as_tensor([[1]], device=device),
                             'original_size':image.shape[:2]
                             } 
-                        for image, mask in each_batch
+                        for image, mask in zip(each_batch[0], each_batch[1])
                     ]
                 if prompt == "bbox":
                     batch_input = [
                         {'image': prep_img(image, resize_transform),
-                            'boxes':resize_transform.apply_boxes_torch(torch.as_tensor(np.array([gen_bboxes(mask[0,:])]), device=device), original_size=image.shape[:2]),
+                            'boxes':resize_transform.apply_boxes_torch(gen_bboxes_torch(mask[0,:]), original_size=image.shape[:2]),
                             'original_size':image.shape[:2]
                             } 
-                        for image, mask in each_batch
+                        for image, mask in zip(each_batch[0], each_batch[1])
                     ]
-                batch_gt_masks = torch.as_tensor(np.array([mask for _, mask in each_batch]), dtype=torch.float, device=device)
+                batch_gt_masks = torch.as_tensor(each_batch[1], dtype=torch.float, device=device)
 
                 if amp:
                     with torch.autocast(device_type="cuda", dtype=torch.float16):
