@@ -158,11 +158,9 @@ def gen_bboxes_torch(mask, num_bboxes=1, jitter=0):
     if max_w - min_w > 30:
         bbox[0] = max(0, (min_w + rand_shift(jitter)))
         bbox[2] = min(mask.shape[1], (max_w + rand_shift(jitter)))
-        
-    bbox = torch.stack(bbox)
-    
+
     if num_bboxes == 1:
-        return bbox
+        return torch.as_tensor(bbox)
     else:
         bboxes = []
         for _ in range(num_bboxes):
