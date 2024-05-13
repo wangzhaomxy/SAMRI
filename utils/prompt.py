@@ -54,7 +54,7 @@ def gen_points(mask, num_points=1):
                     points tuples in a list.
 
     Returns:
-        (np.array): a [H, W] point List if the num_points = 1;
+        (np.array): a [W, H] point List if the num_points = 1;
         OR
         (np.array)[[list], ...]: a list of point lists if the num_points > 1.
     """
@@ -80,7 +80,7 @@ def gen_points_torch(mask, num_points=1):
                     points tuples in a list.
 
     Returns:
-        (np.array): a [H, W] point List if the num_points = 1;
+        (np.array): a [W, H] point List if the num_points = 1;
         OR
         (np.array)[[list], ...]: a list of point lists if the num_points > 1.
     """
@@ -90,7 +90,7 @@ def gen_points_torch(mask, num_points=1):
         return non_zero[p_idx]
     else:
         points = []
-        for _ in range(num_points):
+        for i in range(num_points):
             p_idx = random.randint(int(len(non_zero)*0.45), int(len(non_zero)*0.55))
             points.append(non_zero[p_idx])
         return torch.stack(points)
@@ -112,25 +112,23 @@ def gen_bboxes(mask, num_bboxes=1, jitter=0):
                 num_bboxes = 1;
         [[list], ...]: a list of bounding box lists if the num_bboxes > 1. 
     """
-    non_zero = np.nonzero(mask)
-    min_h, min_w = non_zero.min(axis=0).values
-    max_h, max_w = non_zero.max(axis=0).values
-    bbox = [min_w, min_h, max_w, max_h]
+    h, w = np.nonzero(mask)
+    bbox = [np.min(w), np.min(h), np.max(w), np.max(h)]
 
-    if max_h - min_h > 30:
-        bbox[1] = max(0, (min_h + rand_shift(jitter)))
-        bbox[3] = min(mask.shape[0], (max_h + rand_shift(jitter)))
-    if max_w - min_w > 30:
-        bbox[0] = max(0, (min_w + rand_shift(jitter)))
-        bbox[2] = min(mask.shape[1], (max_w + rand_shift(jitter)))
+    if np.max(h) - np.min(h) > 30:
+        bbox[1] = max(0, (np.min(h) + rand_shift(jitter)))
+        bbox[3] = min(mask.shape[0], (np.max(h) + rand_shift(jitter)))
+    if np.max(w) - np.min(w) > 30:
+        bbox[0] = max(0, (np.min(w) + rand_shift(jitter)))
+        bbox[2] = min(mask.shape[1], (np.max(w) + rand_shift(jitter)))
         
     if num_bboxes == 1:
-        return torch.stack(bbox)
+        return np.array(bbox)
     else:
         bboxes = []
         for _ in range(num_bboxes):
             bboxes.append(bbox)
-        return torch.stack(bboxes)
+        return np.array(bboxes)
 
 def gen_bboxes_torch(mask, num_bboxes=1, jitter=0):
     """
@@ -149,18 +147,22 @@ def gen_bboxes_torch(mask, num_bboxes=1, jitter=0):
                 num_bboxes = 1;
         [[list], ...]: a list of bounding box lists if the num_bboxes > 1. 
     """
-    h, w = torch.nonzero(mask)
-    bbox = [torch.min(w), torch.min(h), torch.max(w), torch.max(h)]
+    non_zero = torch.nonzero(mask)
+    min_h, min_w = non_zero.min(axis=0).values
+    max_h, max_w = non_zero.max(axis=0).values
+    bbox = [min_w, min_h, max_w, max_h]
 
-    if torch.max(h) - torch.min(h) > 30:
-        bbox[1] = max(0, (torch.min(h) + rand_shift(jitter)))
-        bbox[3] = min(mask.shape[0], (torch.max(h) + rand_shift(jitter)))
-    if torch.max(w) - torch.min(w) > 30:
-        bbox[0] = max(0, (torch.min(w) + rand_shift(jitter)))
-        bbox[2] = min(mask.shape[1], (torch.max(w) + rand_shift(jitter)))
+    if max_h - min_h > 30:
+        bbox[1] = max(0, (min_h + rand_shift(jitter)))
+        bbox[3] = min(mask.shape[0], (max_h + rand_shift(jitter)))
+    if max_w - min_w > 30:
+        bbox[0] = max(0, (min_w + rand_shift(jitter)))
+        bbox[2] = min(mask.shape[1], (max_w + rand_shift(jitter)))
         
+    bbox = torch.stack(bbox)
+    
     if num_bboxes == 1:
-        return torch.stack(bbox)
+        return bbox
     else:
         bboxes = []
         for _ in range(num_bboxes):
