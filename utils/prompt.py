@@ -159,7 +159,7 @@ def gen_bboxes_torch(mask, num_bboxes=1, jitter=0):
         bbox[0] = max(torch.tensor(0), (min_w + rand_shift(jitter)))
         bbox[2] = min(mask.shape[1], (max_w + rand_shift(jitter)))
     
-    torch.stack(bbox)
+    bbox = torch.stack(bbox)
     
     if num_bboxes == 1:
         return bbox
