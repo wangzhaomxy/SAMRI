@@ -127,6 +127,10 @@ class NiiDataset(Dataset):
 
         # normalize pixel number into [0,1]
         np_3c = (np_3c - np_3c.min()) / (np_3c.max() - np_3c.min())
+
+        # clip image intensity value between the 0.5th to 99.5th percentale.
+        np_3c = exposure.rescale_intensity(np_3c, in_range=(0.005, 0.995))
+
         # transform image data into [0, 255] integer type, which is np.uint8
         np_3c = np.round(np_3c * 255)
         return np_3c
