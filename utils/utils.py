@@ -36,8 +36,8 @@ SAM_CHECKPOINT = {"vit_b": pre_path + "Model_dir/sam_vit_b_01ec64.pth",
 
 
 DEVICE = "cuda"
-BATCH_SIZE = 7
-NUM_EPOCHS = 50
+BATCH_SIZE = 39
+NUM_EPOCHS = 200
 
 
 NUM_POINTS = 3
