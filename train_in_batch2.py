@@ -67,7 +67,7 @@ def main():
     optimizer = torch.optim.AdamW(
         samri_model.mask_decoder.parameters(),
         lr=1e-4, 
-        weight_decay=0.1
+        weight_decay=0.01
     )
 
     dice_loss = DiceLoss(sigmoid=True, squared_pred=True, reduction="mean", batch=True)
@@ -143,10 +143,10 @@ def main():
         ## save the best model
         if epoch_loss < best_loss:
             best_loss = epoch_loss
-            torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_best_rm.pth"))
+            torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_best_8.pth"))
 
         ## save the latest model
-        torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_latest_rm.pth"))
+        torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_latest_8.pth"))
 
 
 if __name__ == "__main__":
