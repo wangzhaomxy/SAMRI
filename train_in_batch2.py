@@ -87,7 +87,7 @@ def main():
 
         for batch_image, batch_mask in tqdm(batch_data):
             # Train model
-            batch_image = batch_image.detach().cpu().numpy()
+            batch_image = batch_image.detach().numpy()
             for prompt in prompts:
                 step += 1
                 if prompt == "point":
