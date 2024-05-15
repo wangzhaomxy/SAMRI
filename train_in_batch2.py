@@ -111,7 +111,7 @@ def main():
 
                 if amp:
                     with torch.autocast(device_type="cuda", dtype=torch.float16):
-                        y_pred = samri_model.predict()
+                        y_pred = samri_model(batch_input, multimask_output=False, train_mode=True)
 
                         focal_loss = sigmoid_focal_loss(y_pred, batch_gt_masks, alpha=0.25, gamma=2,reduction="mean")
                         loss = dice_loss(y_pred, batch_gt_masks) + focal_loss
