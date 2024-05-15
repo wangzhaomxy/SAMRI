@@ -107,7 +107,7 @@ def main():
                         } 
                         for image, mask in zip(batch_image, batch_mask)
                     ]
-                batch_gt_masks = batch_mask.float()
+                batch_gt_masks = batch_mask.float().to(device)
 
                 if amp:
                     with torch.autocast(device_type="cuda", dtype=torch.float16):
