@@ -43,13 +43,12 @@ experiment = wandb.init(
 
 def gen_batch(mask, prompt):
     masks = MaskSplit(mask)
-    lenth = 0
+    lenth = len(masks)
     for each_mask in masks:
         if prompt == "point":
             each_prompt = gen_points(each_mask)
         if prompt == "bbox":
             each_prompt = gen_bboxes(each_mask)
-        lenth += 1
         yield (each_mask, each_prompt, lenth)
 
 def main():
