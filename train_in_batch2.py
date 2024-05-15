@@ -41,6 +41,11 @@ experiment = wandb.init(
     },
 )
 
+def prep_img(image, tramsform, device=device):
+    image = tramsform.apply_image(image)
+    image = torch.as_tensor(image, device=device)
+    return image.permute(2, 0, 1).contiguous()
+
 def main():
     sam_model = sam_model_registry[encoder_type](sam_checkpoint)
     samri_model = SAMRI(
@@ -80,32 +85,33 @@ def main():
         epoch_loss = 0
         step = 0
 
-        for each_batch in tqdm(batch_data):
+        for batch_image, batch_mask in tqdm(batch_data):
             # Train model
+            batch_image = batch_image.detach().cpu().numpy()
             for prompt in prompts:
-                step += 1                    
+                step += 1
                 if prompt == "point":
                     batch_input = [
                         {'image': prep_img(image, resize_transform),
-                            'point_coords':resize_transform.apply_coords_torch(gen_points_torch(mask.squeeze(0)), original_size=image.shape[:2]),
-                            'point_labels':torch.as_tensor([[1]], device=device),
-                            'original_size':image.shape[:2]
-                            } 
-                        for image, mask in zip(each_batch[0], each_batch[1])
+                        'point_coords':resize_transform.apply_coords_torch(gen_points_torch(mask.squeeze(0)), original_size=batch_image.shape[:2]),
+                        'point_labels':torch.as_tensor([[1]], device=device),
+                        'original_size':image.shape[:2]
+                        } 
+                        for image, mask in zip(batch_image, batch_mask)
                     ]
                 if prompt == "bbox":
                     batch_input = [
                         {'image': prep_img(image, resize_transform),
-                            'boxes':resize_transform.apply_boxes_torch(gen_bboxes_torch(mask.squeeze(0)), original_size=image.shape[:2]),
-                            'original_size':image.shape[:2]
-                            } 
-                        for image, mask in zip(each_batch[0], each_batch[1])
+                        'boxes':resize_transform.apply_boxes_torch(gen_bboxes_torch(mask.squeeze(0)), original_size=batch_image.shape[:2]),
+                        'original_size':image.shape[:2]
+                        } 
+                        for image, mask in zip(batch_image, batch_mask)
                     ]
-                batch_gt_masks = each_batch[1].float()
+                batch_gt_masks = batch_mask.float()
 
                 if amp:
                     with torch.autocast(device_type="cuda", dtype=torch.float16):
-                        y_pred = samri_model(batch_input, multimask_output=False, train_mode=True)
+                        y_pred = samri_model.predict()
 
                         focal_loss = sigmoid_focal_loss(y_pred, batch_gt_masks, alpha=0.25, gamma=2,reduction="mean")
                         loss = dice_loss(y_pred, batch_gt_masks) + focal_loss

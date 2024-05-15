@@ -129,4 +129,3 @@ class SAMRI(Sam):
             masks = masks > self.mask_threshold
             return masks
 
-    
