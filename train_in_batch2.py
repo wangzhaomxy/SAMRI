@@ -132,21 +132,21 @@ def main():
 
                 experiment.log({"sub_loss": loss.item()})
 
-    epoch_loss /= step
-    losses.append(epoch_loss)
-    experiment.log({"train_epoch_loss": epoch_loss,
-                    "train_losses":losses})
-    print(
-        f'Time: {datetime.now().strftime("%Y%m%d-%H%M")}, Epoch: {epoch}, Loss: {epoch_loss}'
-        )
-    
-    ## save the best model
-    if epoch_loss < best_loss:
-        best_loss = epoch_loss
-        torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_best_rm.pth"))
+        epoch_loss /= step
+        losses.append(epoch_loss)
+        experiment.log({"train_epoch_loss": epoch_loss,
+                        "train_losses":losses})
+        print(
+            f'Time: {datetime.now().strftime("%Y%m%d-%H%M")}, Epoch: {epoch}, Loss: {epoch_loss}'
+            )
+        
+        ## save the best model
+        if epoch_loss < best_loss:
+            best_loss = epoch_loss
+            torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_best_rm.pth"))
 
-    ## save the latest model
-    torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_latest_rm.pth"))
+        ## save the latest model
+        torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_latest_rm.pth"))
 
 
 if __name__ == "__main__":
