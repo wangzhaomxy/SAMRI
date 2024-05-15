@@ -16,7 +16,17 @@ from skimage import exposure
 
 
 class NiiDataset(Dataset):
-    def __init__(self, data_root, shuffle=False, multi_mask=False):
+    def __init__(self, 
+                 data_root, 
+                 shuffle=False, 
+                 multi_mask=False):
+        """
+        Args:
+            data_root (str): The path of the dataset
+            shuffle (bool): If shuffle the data
+            multi_mask (bool): if Ture, return multi-labeld masks; if false, 
+                                return a random mask from masks.
+        """
         super().__init__()
         self.data_root = data_root
         self.img_file = []
