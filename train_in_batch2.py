@@ -30,7 +30,7 @@ model_save_path = MODEL_SAVE_PATH
 device = DEVICE
 num_epochs = NUM_EPOCHS
 train_image_path = TRAIN_IMAGE_PATH
-amp = True
+amp = False
 wandb.login()
 experiment = wandb.init(
     project="SAMRI",
@@ -143,10 +143,10 @@ def main():
         ## save the best model
         if epoch_loss < best_loss:
             best_loss = epoch_loss
-            torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_best_1.pth"))
+            torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_best_na.pth"))
 
         ## save the latest model
-        torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_latest_1.pth"))
+        torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_latest_na.pth"))
 
 
 if __name__ == "__main__":
