@@ -19,8 +19,8 @@ TEST_IMAGE_PATH = [pre_path + img_path + 'set_1/test/',
                     pre_path + img_path + 'set_3/test/',
                     ]
 
-IMAGE_KEYS = "*T2_img*"  # The image file names containing letters between *
-MASK_KEYS = "*A_seg*"   # The mask file names containing letters between *
+IMAGE_KEYS = "*label2*T2_img*"  # The image file names containing letters between *
+MASK_KEYS = "*label2*A_seg*"   # The mask file names containing letters between *
 
 ENCODER_TYPE = {"vit_b":"vit_b",
                   "vit_h":"vit_h",
