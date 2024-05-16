@@ -173,7 +173,7 @@ class SamPredictor:
             return_logits=return_logits,
         )
         if med_sam:
-            masks = (masks.sigmoid() > 0.5).astype(np.uint8)
+            masks = (masks.sigmoid() > 0.5)
         masks_np = masks[0].detach().cpu().numpy()
         iou_predictions_np = iou_predictions[0].detach().cpu().numpy()
         low_res_masks_np = low_res_masks[0].detach().cpu().numpy()
