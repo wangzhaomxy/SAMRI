@@ -60,11 +60,13 @@ def main():
     ).to(device)
     train_predictor = TrainSamPredictor(samri_model)
 
-    optimizer = torch.optim.AdamW(
-        samri_model.mask_decoder.parameters(),
-        lr=1e-4, 
-        weight_decay=0.1
-    )
+    # optimizer = torch.optim.AdamW(
+    #     samri_model.mask_decoder.parameters(),
+    #     lr=1e-4, 
+    #     weight_decay=0.1
+    # )
+
+    optimizer = torch.optim.Adam(samri_model.mask_decoder.parameters())
 
     dice_loss = DiceLoss(sigmoid=True, squared_pred=True, reduction="mean")
 
