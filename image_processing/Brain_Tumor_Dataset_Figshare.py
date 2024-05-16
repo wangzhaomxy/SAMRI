@@ -31,8 +31,8 @@ def read_mat_file(path):
     filename = os.path.basename(path)[:-4]
     # The entire dataset contains five keys: PID, image, label, tumorBorder, and
     # tumorMask. However, here we just need image, label and tumorMask for study.
-    image, label, tumormask = data['image'], data['label'].item(), data['tumorMask']
-    return filename, np.array(image), "label"+str(int(label)),np.array(tumormask)
+    image, label, tumormask = data['image'], data['label'], data['tumorMask']
+    return filename, np.array(image), "label"+str(int(np.array(label).item())),np.array(tumormask)
 
 def save_data(path, filename, image, label, mask):
     """
