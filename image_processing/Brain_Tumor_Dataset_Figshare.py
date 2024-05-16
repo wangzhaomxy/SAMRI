@@ -4,6 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import glob
 import nibabel as nib
+from tqdm import tqdm
 
 root_path = os.getcwd()
 data_path = "/data/"
@@ -46,6 +47,6 @@ def save_data(path, filename, image, label, mask):
     nib.save(new_image, image_name)
     nib.save(new_mask, mask_name)
 
-for data in data_name:
+for data in tqdm(data_name):
     filename, image, label, mask = read_mat_file(data)
     save_data(save_path, filename, image, label, mask)
