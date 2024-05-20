@@ -13,7 +13,7 @@ import glob, random
 import nibabel as nib
 from utils.utils import IMAGE_KEYS, MASK_KEYS
 from skimage import exposure
-
+import cv2
 
 class NiiDataset(Dataset):
     def __init__(self, 
@@ -38,6 +38,9 @@ class NiiDataset(Dataset):
             self.img_file, self.gt_file = self._shuffle(self.img_file, self.gt_file)
         self.cur_name = ""
         self.multi_mask = multi_mask
+        self.matching_img = cv2.imread("/home/s4670484/Documents/SAMRI/matching_img/dog.jpg")
+        self.matching_img = cv2.cvtColor(self.matching_img, cv2.COLOR_BGR2RGB)
+
         # print(f"number of images: {len(self.img_file)}")
         """
         Args:
@@ -128,29 +131,25 @@ class NiiDataset(Dataset):
         np_3c = np.array([sig_chann, sig_chann, sig_chann]).transpose(1,2,0)
 
         # histogram matching
-        # H, W = sig_chann.shape
-        # pixel_mean = [123.675, 116.28, 103.53]
-        # pixel_std = [58.395, 57.12, 57.375]
-        # target_img = np.array([np.random.normal(loc=m, scale=s, 
-        #     size=(H,W)) for m,s in zip(pixel_mean, pixel_std)]).transpose(1,2,0)
-        # np_3c = exposure.match_histograms(np_3c,target_img)
+        np_3c = exposure.match_histograms(np_3c,self.matching_img)
 
         # normalize pixel number into [0,1]
         # np_3c = (np_3c - np_3c.min()) / (np_3c.max() - np_3c.min())
 
         # clip image intensity value between the 0.5th to 99.5th percentale.
         # np_3c = exposure.rescale_intensity(np_3c, in_range=(0.005, 0.995))
-        # use the MedSAM version.
-        lower_bound, upper_bound = np.percentile(
-                np_3c[np_3c > 0], 0.5
-            ), np.percentile(np_3c[np_3c > 0], 99.5)
-        image_data_pre = np.clip(np_3c, lower_bound, upper_bound)
-        image_data_pre = (
-            (image_data_pre - np.min(image_data_pre))
-            / (np.max(image_data_pre) - np.min(image_data_pre))
-            * 255.0
-        )
-        image_data_pre[np_3c == 0] = 0
+
+        # use the MedSAM version for clipping image intensity.
+        # lower_bound, upper_bound = np.percentile(
+        #         np_3c[np_3c > 0], 0.5
+        #     ), np.percentile(np_3c[np_3c > 0], 99.5)
+        # image_data_pre = np.clip(np_3c, lower_bound, upper_bound)
+        # image_data_pre = (
+        #     (image_data_pre - np.min(image_data_pre))
+        #     / (np.max(image_data_pre) - np.min(image_data_pre))
+        #     * 255.0
+        # )
+        # image_data_pre[np_3c == 0] = 0
 
         # transform image data into [0, 255] integer type, which is np.uint8
         np_3c = np.round(np_3c * 255)
@@ -164,4 +163,5 @@ class NiiDataset(Dataset):
             (str): the image name.
         """
         return os.path.basename(self.cur_name)
+    
         

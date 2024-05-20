@@ -129,5 +129,6 @@ def main():
         torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_latest_one.pth"))
         
 
+
 if __name__ == "__main__":
     main()
