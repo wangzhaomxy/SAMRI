@@ -38,7 +38,7 @@ class NiiDataset(Dataset):
             self.img_file, self.gt_file = self._shuffle(self.img_file, self.gt_file)
         self.cur_name = ""
         self.multi_mask = multi_mask
-        self.matching_img = cv2.imread("/home/s4670484/Documents/SAMRI/matching_img/dog.jpg")
+        self.matching_img = cv2.imread("/home/s4670484/Documents/SAMRI/matching_img/groceries.jpg")
         self.matching_img = cv2.cvtColor(self.matching_img, cv2.COLOR_BGR2RGB)
 
         # print(f"number of images: {len(self.img_file)}")
