@@ -174,4 +174,11 @@ class NiiDataset(Dataset):
         image_data_pre[image == 0] = 0
         return image_data_pre
     
+    def _ft_pre(self):
+        """
+        Use fast Fourier Transformer to preprocessing image.
+        """
+        pass
+
+    
         
