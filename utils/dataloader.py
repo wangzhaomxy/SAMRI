@@ -131,6 +131,9 @@ class NiiDataset(Dataset):
         # Clipping image intensity
         # sig_chann = self._clip_img(sig_chann)
 
+        # Use the Fourier filter
+        sig_chann = self._ft_pre(sig_chann, rate=0.05)
+
         # convert 1 chanel to 3 chanels and transform into  HxWxC
         np_3c = np.array([sig_chann, sig_chann, sig_chann]).transpose(1,2,0)
 
@@ -174,11 +177,44 @@ class NiiDataset(Dataset):
         image_data_pre[image == 0] = 0
         return image_data_pre
     
-    def _ft_pre(self):
+    def _ft_pre(self, image, rate=0.05, mode="high"):
         """
         Use fast Fourier Transformer to preprocessing image.
         """
-        pass
+        # Compute the Fourier Transform
+        fourier = np.fft.fft2(image)
+        f_shift = np.fft.fftshift(fourier)
+
+        # Create a high-pass filter
+        rows, cols = image.shape
+        crow, ccol = rows//2, cols//2
+        filt_h = np.ones((rows, cols), np.uint8)
+        r = int(rate * crow/2)
+        filt_h[crow - r:crow + r, ccol - r:ccol + r] = 0
+
+        # Create a low-pass filter
+        filt_l = np.zeros((rows, cols), np.uint8)
+        lr = crow - r
+        lc = ccol - r
+        filt_l[crow - lr:crow + lr, ccol - lc:ccol + lc] = 1
+
+        # Choose a high-pass filter or low-pass filter
+        if mode == "high":
+            filt = filt_h
+        elif mode == "low":
+            filt = filt_l
+        else:
+            filt = np.ones((rows, cols), np.uint8)
+
+        # Apply the filter
+        f_filt = f_shift * filt
+        f_ishift = np.fft.ifftshift(f_filt)
+
+        # Inverse Fourier transformer
+        img_filted = np.fft.ifft2(f_ishift)
+        img_filted = np.abs(img_filted)
+
+        return img_filted
 
     
         
