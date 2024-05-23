@@ -129,7 +129,7 @@ class NiiDataset(Dataset):
         sig_chann = np_image[0, :, :]
 
         # Clipping image intensity
-        sig_chann = self._clip_img(sig_chann)
+        # sig_chann = self._clip_img(sig_chann)
 
         # convert 1 chanel to 3 chanels and transform into  HxWxC
         np_3c = np.array([sig_chann, sig_chann, sig_chann]).transpose(1,2,0)
