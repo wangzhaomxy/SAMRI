@@ -127,29 +127,21 @@ class NiiDataset(Dataset):
         """
         # split out the image HxW.
         sig_chann = np_image[0, :, :]
+
+        # Clipping image intensity
+        sig_chann = self._clip_img(sig_chann)
+
         # convert 1 chanel to 3 chanels and transform into  HxWxC
         np_3c = np.array([sig_chann, sig_chann, sig_chann]).transpose(1,2,0)
 
         # histogram matching
-        np_3c = exposure.match_histograms(np_3c,self.matching_img)
+        # np_3c = exposure.match_histograms(np_3c,self.matching_img)
 
         # normalize pixel number into [0,1]
         # np_3c = (np_3c - np_3c.min()) / (np_3c.max() - np_3c.min())
 
         # clip image intensity value between the 0.5th to 99.5th percentale.
         # np_3c = exposure.rescale_intensity(np_3c, in_range=(0.005, 0.995))
-
-        # use the MedSAM version for clipping image intensity.
-        # lower_bound, upper_bound = np.percentile(
-        #         np_3c[np_3c > 0], 0.5
-        #     ), np.percentile(np_3c[np_3c > 0], 99.5)
-        # image_data_pre = np.clip(np_3c, lower_bound, upper_bound)
-        # image_data_pre = (
-        #     (image_data_pre - np.min(image_data_pre))
-        #     / (np.max(image_data_pre) - np.min(image_data_pre))
-        #     * 255.0
-        # )
-        # image_data_pre[np_3c == 0] = 0
 
         # transform image data into [0, 255] integer type, which is np.uint8
         np_3c = np.round(np_3c * 255)
@@ -163,5 +155,21 @@ class NiiDataset(Dataset):
             (str): the image name.
         """
         return os.path.basename(self.cur_name)
+    
+    def _clip_img(self, image, lower_b=0.5, upper_b=99.5):
+        """
+        Clip the image intensity in the range of (lower_b, upper_b) percentale.
+        """
+        lower_bound, upper_bound = np.percentile(
+                image[image > 0], lower_b
+            ), np.percentile(image[image > 0], upper_b)
+        image_data_pre = np.clip(image, lower_bound, upper_bound)
+        image_data_pre = (
+            (image_data_pre - np.min(image_data_pre))
+            / (np.max(image_data_pre) - np.min(image_data_pre))
+            * 255.0
+        )
+        image_data_pre[image == 0] = 0
+        return image_data_pre
     
         
