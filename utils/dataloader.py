@@ -132,7 +132,7 @@ class NiiDataset(Dataset):
         # sig_chann = self._clip_img(sig_chann)
 
         # Use the Fourier filter
-        sig_chann = self._ft_pre(sig_chann, rate=0.2)
+        # sig_chann = self._ft_pre(sig_chann, rate=0.2)
 
         # convert 1 chanel to 3 chanels and transform into  HxWxC
         np_3c = np.array([sig_chann, sig_chann, sig_chann]).transpose(1,2,0)
