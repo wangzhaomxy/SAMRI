@@ -13,13 +13,13 @@ MODEL_SAVE_PATH = pre_path + "cp_temp/"
 TRAIN_IMAGE_PATH = [pre_path + img_path + 'set_1/train/',
                     pre_path + img_path + 'set_2/train/',
                     pre_path + img_path + 'set_3/train/',
-                    pre_path + img_path1 +'set_1/train',
+                    pre_path + img_path1 +'set_1/train/',
                     ]
 
 TEST_IMAGE_PATH = [pre_path + img_path + 'set_1/test/',
                     pre_path + img_path + 'set_2/test/',
                     pre_path + img_path + 'set_3/test/',
-                    pre_path + img_path1 +'set_1/test',
+                    pre_path + img_path1 +'set_1/test/',
                     ]
 
 IMAGE_KEYS = "*img*"  # The image file names containing letters between *
