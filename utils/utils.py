@@ -6,21 +6,24 @@ Permanent variables, universal functions, ect
 
 pre_path = "/scratch/user/s4670484/" # The main folder of files
 img_path = "MSK/T2_preprocessed_resample_scale2_crop_cv_7c_slice_axis_0_class_7_thresh_7/"
+img_path1 = "MSK/OAI_AKOA_FULL_WEI_pre_resample_crop_rename_cv_a0_c7_t7/"
 SAVE_PATH = "/home/s4670484/Documents/"
 MODEL_SAVE_PATH = pre_path + "cp_temp/"
 
 TRAIN_IMAGE_PATH = [pre_path + img_path + 'set_1/train/',
                     pre_path + img_path + 'set_2/train/',
                     pre_path + img_path + 'set_3/train/',
+                    pre_path + img_path1 +'set_1/train',
                     ]
 
 TEST_IMAGE_PATH = [pre_path + img_path + 'set_1/test/',
                     pre_path + img_path + 'set_2/test/',
                     pre_path + img_path + 'set_3/test/',
+                    pre_path + img_path1 +'set_1/test',
                     ]
 
-IMAGE_KEYS = "*T2_img*"  # The image file names containing letters between *
-MASK_KEYS = "*A_seg*"   # The mask file names containing letters between *
+IMAGE_KEYS = "*img*"  # The image file names containing letters between *
+MASK_KEYS = "*seg*"   # The mask file names containing letters between *
 
 ENCODER_TYPE = {"vit_b":"vit_b",
                   "vit_h":"vit_h",
