@@ -61,13 +61,13 @@ def main():
     ).to(device)
     train_predictor = TrainSamPredictor(samri_model)
 
-    optimizer = torch.optim.AdamW(
-        samri_model.mask_decoder.parameters(),
-        lr=1e-4, 
-        weight_decay=0.01
-    )
+    # optimizer = torch.optim.AdamW(
+    #     samri_model.mask_decoder.parameters(),
+    #     lr=1e-4, 
+    #     weight_decay=0.1
+    # )
 
-    # optimizer = torch.optim.Adam(samri_model.mask_decoder.parameters())
+    optimizer = torch.optim.Adam(samri_model.mask_decoder.parameters())
 
     dice_loss = DiceLoss(sigmoid=True, squared_pred=True, reduction="mean")
 
@@ -124,10 +124,10 @@ def main():
         ## save the best model
         if epoch_loss < best_loss:
             best_loss = epoch_loss
-            torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_best_MSKOAI.pth"))
+            torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_best_MSKOAI_A.pth"))
 
         ## save the latest model
-        torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_latest_MSKOAI.pth"))
+        torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_latest_MSKOAI_A.pth"))
         
 
 
