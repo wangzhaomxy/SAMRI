@@ -189,7 +189,7 @@ class NiiDataset(Dataset):
         rows, cols = image.shape
         crow, ccol = rows//2, cols//2
         filt_h = np.ones((rows, cols), np.uint8)
-        r = int(rate * crow/2)
+        r = int(rate * crow)
         filt_h[crow - r:crow + r, ccol - r:ccol + r] = 0
 
         # Create a low-pass filter

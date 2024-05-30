@@ -29,7 +29,7 @@ data_path = TRAIN_IMAGE_PATH
 model_save_path = MODEL_SAVE_PATH
 device = DEVICE
 num_epochs = NUM_EPOCHS
-train_image_path = TRAIN_IMAGE_PATH
+train_image_path = [TRAIN_IMAGE_PATH[3]]
 # train_image_path = ["/scratch/user/s4670484/Brain_Tumor_Dataset_Figshare/processed_data/"]
 
 wandb.login()
@@ -124,10 +124,10 @@ def main():
         ## save the best model
         if epoch_loss < best_loss:
             best_loss = epoch_loss
-            torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_best_MSKOAI_AW01.pth"))
+            torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_best_OAI.pth"))
 
         ## save the latest model
-        torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_latest_MSKOAI_AW01.pth"))
+        torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_latest_OAI.pth"))
         
 
 
