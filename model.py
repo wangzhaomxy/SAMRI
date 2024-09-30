@@ -8,6 +8,7 @@ Reference: The model is referenced from the segment anything model,
 
 import torch
 from torch.nn import functional as F
+import numpy as np
 
 from typing import Any, Dict, List
 
@@ -128,4 +129,24 @@ class SAMRI(Sam):
         else:
             masks = masks > self.mask_threshold
             return masks
+    
+    
+    def save_embedding(self, 
+                       batched_input: List[Dict[str, Any]],
+                       img_names: list, 
+                       output_path: str):
+      """
+      Save embeddings to the cach files with pytorch save function.
+
+      Args:
+          batched_input (List[Dict[str, Any]]): The input images with the shape
+              of Bx3xHxW. 
+          img_names (list): The image names with '.nii.gz' extention name.
+          output_path (str): The path of output folder.
+      """
+      input_images = torch.stack([self.preprocess(x["image"]) for x in batched_input], dim=0)
+      image_embeddings = self.image_encoder(input_images)
+      
+      for img_name, embedding in zip(img_names, image_embeddings):
+        torch.save(embedding, output_path+"/"+img_name[:-7]+".pt")
 
