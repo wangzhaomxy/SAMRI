@@ -5,10 +5,6 @@ The SAMRI model
 Reference: The model is referenced from the segment anything model, 
             link: https://github.com/facebookresearch/segment-anything
 """
-
-from functools import partial
-from pathlib import Path
-import urllib.request
 import torch
 
 from segment_anything.modeling import (
@@ -16,7 +12,6 @@ from segment_anything.modeling import (
     MaskDecoder,
     PromptEncoder,
     Sam,
-    TwoWayTransformer,
 )
 
 from typing import Any, Dict, List
@@ -150,7 +145,7 @@ class SAMRI(Sam):
           img_names (list): The image names with '.nii.gz' extention name.
           output_path (str): The path of output folder.
       """
-      input_images = torch.stack([self.preprocess(x) for x in batched_input], dim=0)
+      input_images = torch.stack([self.preprocess(x["image"]) for x in batched_input], dim=0)
       image_embeddings = self.image_encoder(input_images)
       
       for img_name, embedding in zip(img_names, image_embeddings):
