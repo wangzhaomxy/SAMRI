@@ -4,7 +4,7 @@
 Permanent variables, universal functions, ect
 """
 
-pre_path = "/scratch/user/s4670484/" # The main folder of files
+pre_path = "/scratch/user/s4670484/" # The main folder of datasets
 img_path = "MSK/T2_preprocessed_resample_scale2_crop_cv_7c_slice_axis_0_class_7_thresh_7/"
 img_path1 = "MSK/OAI_AKOA_FULL_WEI_pre_resample_crop_rename_cv_a0_c7_t7/"
 SAVE_PATH = "/home/s4670484/Documents/"
