@@ -32,7 +32,7 @@ class TrainSamPredictor(SamPredictor):
         self.reset_image()
         self.input_size = (1024, 1024)
         self.original_size = original_image_size
-        self.features = embedding
+        self.features = torch.as_tensor(embedding, device=self.device)
         self.is_image_set = True
         
     def predict(
