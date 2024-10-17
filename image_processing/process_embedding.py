@@ -14,7 +14,7 @@ base_path = "/scratch/project/samri/"
 img_path = base_path + "Datasets/SAMRI_train_test"
 save_path = base_path + "Embedding"
 
-folder_names = [fname_from_path(ds) + "/" for ds in glob(img_path + "/*")]
+folder_names = [fname_from_path(ds) + "/" for ds in sorted(glob(img_path + "/*"))]
 create_folders(save_path + "/", folder_names)
 
 model_type = 'samri'# Choose one from vit_b, vit_h, samri, and med_sam
