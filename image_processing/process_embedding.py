@@ -43,7 +43,6 @@ for fo_name in tqdm(folder_names):
     print(f"Processing the {fo_name} dataset...")
     img_folder = [img_path + "/" + fo_name + "training/"]
     dataset = NiiDataset(img_folder, multi_mask= True)
-    print(len(dataset))
     emb_save_path = save_path + "/" + fo_name
     for data, mask in tqdm(dataset):
         img_name = dataset.get_name()
