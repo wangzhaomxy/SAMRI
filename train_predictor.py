@@ -27,36 +27,14 @@ class TrainSamPredictor(SamPredictor):
           sam_model (Sam): The model to use for mask prediction.
         """
         super().__init__(sam_model)
-
-    def set_torch_image(
-        self,
-        transformed_image: torch.Tensor,
-        original_image_size: Tuple[int, ...],
-    ) -> None:
-        """
-        Calculates the image embeddings for the provided image, allowing
-        masks to be predicted with the 'predict' method. Expects the input
-        image to be already transformed to the format expected by the model.
-
-        Arguments:
-          transformed_image (torch.Tensor): The input image, with shape
-            1x3xHxW, which has been transformed with ResizeLongestSide.
-          original_image_size (tuple(int, int)): The size of the image
-            before transformation, in (H, W) format.
-        """
-        assert (
-            len(transformed_image.shape) == 4
-            and transformed_image.shape[1] == 3
-            and max(*transformed_image.shape[2:]) == self.model.image_encoder.img_size
-        ), f"set_torch_image input must be BCHW with long side {self.model.image_encoder.img_size}."
+        
+    def set_embedding(self, embedding, original_image_size):
         self.reset_image()
-
+        self.input_size = (1024, 1024)
         self.original_size = original_image_size
-        self.input_size = tuple(transformed_image.shape[-2:])
-        input_image = self.model.preprocess(transformed_image)
-        self.features = self.model.image_encoder(input_image)
+        self.features = embedding
         self.is_image_set = True
-
+        
     def predict(
         self,
         point_coords: Optional[np.ndarray] = None,

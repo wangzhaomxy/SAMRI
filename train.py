@@ -63,15 +63,15 @@ def main():
     losses = []
     train_dataset = EmbDataset(train_image_path)
 
-    start_epoch = 0
+    start_epoch = int(os.path.basename(sam_checkpoint)[:-4].split('_')[-1])
     prompts = ["point", "bbox"]
-    for epoch in range(start_epoch, num_epochs):
-        print(f"The {epoch+1} / {num_epochs} epochs.")
+    for epoch in range(start_epoch, start_epoch + num_epochs):
+        
         # training part
         samri_model.train()
         epoch_loss = 0
-        for step, (image, mask) in enumerate(tqdm(train_dataset)):
-            train_predictor.set_image(image)
+        for step, (embedding, mask, ori_size) in enumerate(tqdm(train_dataset)):
+            train_predictor.set_embedding(embedding, ori_size)
             sub_loss = 0
             for prompt in prompts:
                     for sub_mask, sub_prompt, lenth in gen_batch(mask, prompt):                        
@@ -103,12 +103,13 @@ def main():
         epoch_loss /= step
         losses.append(epoch_loss)
 
-        print(
+        ## save the latest model
+        if (epoch + 1) % 50 == 0:
+            print(f"The {epoch+1} / {num_epochs} epochs.")
+            print(
             f'Time: {datetime.now().strftime("%Y%m%d-%H%M")}, Epoch: {epoch}, Loss: {epoch_loss}'
         )
-
-        ## save the latest model
-        torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_latest.pth"))
+            torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_", epoch+1, ".pth"))
         
 
 
