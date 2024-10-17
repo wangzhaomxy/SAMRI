@@ -39,7 +39,7 @@ def save_embedding(img, mask, img_name, save_path):
     np.savez_compressed(save_path+"/"+img_name[:-7], img=embedding.cpu(), mask=mask, 
              ori_size=original_image_size)
     
-for fo_name in tqdm(folder_names()):
+for fo_name in tqdm(folder_names):
     img_folder = img_path + "/" + fo_name + "training"
     test_dataset = NiiDataset(img_folder, multi_mask= True)
     emb_save_path = save_path + "/" + fo_name
