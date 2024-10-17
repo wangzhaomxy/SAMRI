@@ -6,7 +6,7 @@ import nibabel as nib
 import cv2
 import json
 from tqdm import tqdm
-import SimpleITK as sitk
+# import SimpleITK as sitk
 
 
 def read_nii_file(path):
@@ -240,19 +240,19 @@ def process_nii_json(json_ds, root_path, ds_info, save_nii_path_out,
                     save_img_data(save_img_path_out, filename, image, mask, 
                                             modality=modality, sli_idx=sli_idx)
                     
-def load_itk(mhd_name):
-    """
-    Read a ".mhd" file using SimpleITK and teturn the image array
+# def load_itk(mhd_name):
+#     """
+#     Read a ".mhd" file using SimpleITK and teturn the image array
 
-    Args:
-        mhd_name (str): The ".mhd" file path.
+#     Args:
+#         mhd_name (str): The ".mhd" file path.
 
-    Returns:
-        np.array: The 3D image in numpy array format.
-    """
-    itkimage = sitk.ReadImage(mhd_name)
-    np_img = sitk.GetArrayFromImage(itkimage)
-    return np_img
+#     Returns:
+#         np.array: The 3D image in numpy array format.
+#     """
+#     itkimage = sitk.ReadImage(mhd_name)
+#     np_img = sitk.GetArrayFromImage(itkimage)
+#     return np_img
 
 def read_npz(path):
     """
