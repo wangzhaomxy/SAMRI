@@ -2,6 +2,8 @@
 """
 Train the Unet models here.
 """
+import sys
+sys.path.append("..")
 
 from utils.utils import *
 from comparisons.dataset import UnetNiiDataset

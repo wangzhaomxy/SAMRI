@@ -13,12 +13,14 @@ class MaskSplit():
 
     Args:
         mask (np.darray): the labeled ground truth mask. CHW=(1,255,255)
-        mask_number (int): the number of the gt mask labels.
-        masks (list): the list of single mask with different lables, HW=(255,255)
+        
+    
     """
     def __init__(self, mask):
         self.mask = mask[0, :, :]
-        self.mask_number = int(np.max(self.mask))
+        # mask_number (int): the number of the gt mask labels.
+        self.mask_number = len(np.unique(self.mask))
+        # masks (list): the list of single mask with different lables, HW=(255,255)
         self.masks = self._split_masks()
         """
         Args:
@@ -38,8 +40,9 @@ class MaskSplit():
     
     def _split_masks(self):
         masks = []
-        for i in range(1, self.mask_number+1):
-            masks.append(self.mask == i)
+        for label in np.unique(self.mask):
+            if label != 0:
+                masks.append(self.mask == label)
         return masks
     
     
