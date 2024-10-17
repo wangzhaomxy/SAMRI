@@ -3,7 +3,7 @@
 """
 Permanent variables, universal functions, ect
 """
-import glob
+from glob import glob
 root_path = "/scratch/project/samri/"
 EMBEDDING_PATH = root_path + "Embedding/" # The main folder of datasets
 TEST_PATH = root_path + "Datasets/SAMRI_train_test/"
