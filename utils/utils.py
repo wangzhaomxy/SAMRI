@@ -3,24 +3,15 @@
 """
 Permanent variables, universal functions, ect
 """
+import glob
+root_path = "/scratch/project/samri/"
+EMBEDDING_PATH = root_path + "Embedding/" # The main folder of datasets
+TEST_PATH = root_path + "Datasets/SAMRI_train_test/"
+MODEL_SAVE_PATH = root_path + "Model_save/"
 
-pre_path = "/scratch/user/s4670484/" # The main folder of datasets
-img_path = "MSK/T2_preprocessed_resample_scale2_crop_cv_7c_slice_axis_0_class_7_thresh_7/"
-img_path1 = "MSK/OAI_AKOA_FULL_WEI_pre_resample_crop_rename_cv_a0_c7_t7/"
-SAVE_PATH = "/home/s4670484/Documents/"
-MODEL_SAVE_PATH = pre_path + "cp_temp/"
+TRAIN_IMAGE_PATH = [ds + "/" for ds in sorted(glob(EMBEDDING_PATH + "*"))]
 
-TRAIN_IMAGE_PATH = [pre_path + img_path + 'set_1/train/',
-                    pre_path + img_path + 'set_2/train/',
-                    pre_path + img_path + 'set_3/train/',
-                    pre_path + img_path1 +'set_1/train/',
-                    ]
-
-TEST_IMAGE_PATH = [pre_path + img_path + 'set_1/test/',
-                    pre_path + img_path + 'set_2/test/',
-                    pre_path + img_path + 'set_3/test/',
-                    pre_path + img_path1 +'set_1/test/',
-                    ]
+TEST_IMAGE_PATH = [ds + "/testing/" for ds in sorted(glob(TEST_PATH + "*"))]
 
 IMAGE_KEYS = "*img*"  # The image file names containing letters between *
 MASK_KEYS = "*seg*"   # The mask file names containing letters between *
@@ -31,10 +22,11 @@ ENCODER_TYPE = {"vit_b":"vit_b",
                   "samri":"vit_b"
                   }
 
-SAM_CHECKPOINT = {"vit_b": pre_path + "Model_dir/sam_vit_b_01ec64.pth",
-                  "vit_h": pre_path + "Model_dir/sam_vit_h_4b8939.pth",
-                  "med_sam": pre_path + "Model_dir/medsam_vit_b.pth",
-                  "samri": pre_path + "Model_dir/samri_vitb.pth"
+ch_root = "/scratch/user/s4670484/Model_dir/"
+SAM_CHECKPOINT = {"vit_b": ch_root + "sam_vit_b_01ec64.pth",
+                  "vit_h": ch_root + "sam_vit_h_4b8939.pth",
+                  "med_sam": ch_root + "medsam_vit_b.pth",
+                  "samri": ch_root + "samri_vitb.pth"
                   }
 
 

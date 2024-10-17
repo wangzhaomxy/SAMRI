@@ -8,9 +8,10 @@ import os
 join = os.path.join
 from tqdm import tqdm
 import torch
+import torch.nn as nn
 from segment_anything import sam_model_registry
 from datetime import datetime
-from utils.dataloader import EmbDataset
+from utils.dataloader import NiiDataset
 import wandb
 from monai.losses import DiceLoss
 from torchvision.ops import sigmoid_focal_loss
@@ -18,19 +19,28 @@ from utils.utils import *
 from utils.prompt import *
 from model import SAMRI
 from train_predictor import TrainSamPredictor
-import glob
 
 # setup global parameters
-model_type = "samri"
+model_type = "vit_b"
 encoder_type = ENCODER_TYPE[model_type] # choose one from vit_b and vit_h.
-sam_checkpoint = sorted(glob.glob(MODEL_SAVE_PATH + "*"))[-1]
+sam_checkpoint = SAM_CHECKPOINT[model_type]
 batch_size = BATCH_SIZE
 data_path = TRAIN_IMAGE_PATH
 model_save_path = MODEL_SAVE_PATH
 device = DEVICE
 num_epochs = NUM_EPOCHS
-train_image_path = [TRAIN_IMAGE_PATH[0]]
+train_image_path = [TRAIN_IMAGE_PATH[3]]
+# train_image_path = ["/scratch/user/s4670484/Brain_Tumor_Dataset_Figshare/processed_data/"]
 
+wandb.login()
+experiment = wandb.init(
+    project="SAMRI",
+    config={
+        "batch_size": batch_size,
+        "data_path": data_path,
+        "model_type": encoder_type,
+    },
+)
 
 def gen_batch(mask, prompt):
     masks = MaskSplit(mask)
@@ -57,11 +67,14 @@ def main():
         weight_decay=0.1
     )
 
+    # optimizer = torch.optim.Adam(samri_model.mask_decoder.parameters())
+
     dice_loss = DiceLoss(sigmoid=True, squared_pred=True, reduction="mean")
 
     #train
     losses = []
-    train_dataset = EmbDataset(train_image_path)
+    best_loss = 1e5
+    train_dataset = NiiDataset(train_image_path, multi_mask=True)
 
     start_epoch = 0
     prompts = ["point", "bbox"]
@@ -98,17 +111,23 @@ def main():
                         optimizer.step()
                         
                         sub_loss += loss.item()
+                        experiment.log({"train_epoch_loss": epoch_loss})
             epoch_loss += sub_loss / (len(prompts)*lenth)
 
         epoch_loss /= step
         losses.append(epoch_loss)
-
+        experiment.log({"train_epoch_loss": epoch_loss})
         print(
             f'Time: {datetime.now().strftime("%Y%m%d-%H%M")}, Epoch: {epoch}, Loss: {epoch_loss}'
         )
 
+        ## save the best model
+        if epoch_loss < best_loss:
+            best_loss = epoch_loss
+            torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_best_OAI.pth"))
+
         ## save the latest model
-        torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_latest.pth"))
+        torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_latest_OAI.pth"))
         
 
 
