@@ -40,9 +40,10 @@ def save_embedding(img, mask, img_name, save_path):
              ori_size=original_image_size)
     
 for fo_name in tqdm(folder_names):
-    img_folder = img_path + "/" + fo_name + "training"
-    test_dataset = NiiDataset(img_folder, multi_mask= True)
+    print(f"Processing the {fo_name} dataset...")
+    img_folder = img_path + "/" + fo_name + "training/"
+    dataset = NiiDataset(img_folder, multi_mask= True)
     emb_save_path = save_path + "/" + fo_name
-    for data, mask in tqdm(test_dataset):
-        img_name = test_dataset.get_name()
+    for data, mask in tqdm(dataset):
+        img_name = dataset.get_name()
         save_embedding(img=data, mask=mask, img_name=img_name, save_path=emb_save_path)
