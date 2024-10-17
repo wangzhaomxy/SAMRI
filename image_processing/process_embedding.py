@@ -1,4 +1,6 @@
 import os
+os.chdir("/home/s4670484/Documents/SAMRI/")
+
 import numpy as np
 from segment_anything import sam_model_registry, SamPredictor
 from utils.utils import *
@@ -8,7 +10,6 @@ from model import SAMRI
 from image_processing.data_processing_code.processing_utile import create_folders, fname_from_path
 from glob import glob
 
-os.chdir("/home/s4670484/Documents/SAMRI/")
 base_path = "/scratch/project/samri/"
 img_path = base_path + "Datasets/SAMRI_train_test"
 save_path = base_path + "Embedding"
