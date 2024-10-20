@@ -75,6 +75,7 @@ def main():
                 file = np.load(name)
                 train_dataset.append(file)
                 file.close()
+            print(sub_set)
             print(len(train_dataset))
             print(type(train_dataset[0]))
             print(train_dataset[0]["img"])
