@@ -60,7 +60,7 @@ def main():
 
     # train
     losses = []
-    train_files = emb_name_split(train_image_path)
+    train_files = emb_name_split(train_image_path, num_of_subset=20)
     rounds = num_epochs // NUM_EPO_PER_ROUND
     start_epoch = int(os.path.basename(sam_checkpoint)[:-4].split('_')[-1])
     prompts = ["point", "bbox"]
@@ -82,8 +82,12 @@ def main():
                 samri_model.train()
                 epoch_loss = 0
                 for step, npz_data in enumerate(tqdm(train_dataset)):
-                    embedding, mask, ori_size = npz_data["img"], npz_data["mask"], npz_data["ori_size"]
-                    train_predictor.set_embedding(embedding, ori_size)
+                    print(npz_data)
+                    embedding = npz_data["img"]
+                    mask = npz_data["mask"]
+                    ori_size = npz_data["ori_size"]
+                    # embedding, mask, ori_size = npz_data["img"], npz_data["mask"], npz_data["ori_size"]
+                    train_predictor.set_embedding(embedding, tuple(ori_size))
                     sub_loss = 0
                     for prompt in prompts:
                             for sub_mask, sub_prompt, lenth in gen_batch(mask, prompt):                        
