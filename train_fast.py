@@ -85,6 +85,7 @@ def main():
                     embedding, mask, ori_size = npz_data["img"], npz_data["mask"], tuple(npz_data["ori_size"])
                     print(mask.shape)
                     print(ori_size)
+                    print(sub_set[stp])
                     train_predictor.set_embedding(embedding, ori_size)
                     sub_loss = 0
                     for prompt in prompts:
