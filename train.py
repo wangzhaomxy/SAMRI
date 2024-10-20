@@ -30,7 +30,7 @@ model_save_path = MODEL_SAVE_PATH
 device = DEVICE
 num_epochs = NUM_EPOCHS
 train_image_path = TRAIN_IMAGE_PATH
-
+train_image_path.remove('/scratch/project/samri/Embedding/totalseg_mr/')
 
 def gen_batch(mask, prompt):
     masks = MaskSplit(mask)
@@ -106,7 +106,7 @@ def main():
         torch.save(samri_model.state_dict(), join(model_save_path, "samri_latest.pth"))
         
         ## save the latest model
-        if (epoch + 1) % 50 == 0:
+        if (epoch + 1) % 10 == 0:
             print(f"The {epoch+1} / {num_epochs} epochs.")
             print(
             f'Time: {datetime.now().strftime("%Y%m%d-%H%M")}, Epoch: {epoch}, Loss: {epoch_loss}'
