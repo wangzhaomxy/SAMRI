@@ -29,7 +29,7 @@ data_path = TRAIN_IMAGE_PATH
 model_save_path = MODEL_SAVE_PATH
 device = DEVICE
 num_epochs = NUM_EPOCHS
-train_image_path = [TRAIN_IMAGE_PATH[0]]
+train_image_path = TRAIN_IMAGE_PATH
 
 
 def gen_batch(mask, prompt):
