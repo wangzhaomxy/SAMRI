@@ -82,7 +82,7 @@ def main():
                 samri_model.train()
                 epoch_loss = 0
                 for step, npz_data in enumerate(tqdm(train_dataset)):
-                    print(npz_data)
+                    print(type(npz_data))
                     embedding = npz_data["img"]
                     mask = npz_data["mask"]
                     ori_size = npz_data["ori_size"]
