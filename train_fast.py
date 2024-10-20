@@ -71,7 +71,7 @@ def main():
         for i, sub_set in enumerate(train_files):
             print("Reading data...")
             train_dataset = []
-            for name in sub_set:
+            for name in tqdm(sub_set):
                 file = np.load(name)
                 train_dataset.append(file)
                 file.close()
