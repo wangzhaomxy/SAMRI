@@ -62,7 +62,7 @@ def main():
     losses = []
     
     train_image_path.remove('/scratch/project/samri/Embedding/totalseg_mr/')
-    train_files = emb_name_split(train_image_path, num_of_subset=1000)
+    train_files = emb_name_split(train_image_path, num_of_subset=2)
     rounds = num_epochs // NUM_EPO_PER_ROUND
     start_epoch = int(os.path.basename(sam_checkpoint)[:-4].split('_')[-1])
     prompts = ["point", "bbox"]
