@@ -33,6 +33,7 @@ SAM_CHECKPOINT = {"vit_b": ch_root + "sam_vit_b_01ec64.pth",
 DEVICE = "cuda"
 BATCH_SIZE = 29
 NUM_EPOCHS = 1000
+NUM_EPO_PER_ROUND = 100
 
 
 NUM_POINTS = 3

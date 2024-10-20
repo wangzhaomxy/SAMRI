@@ -10,8 +10,7 @@ from tqdm import tqdm
 import torch
 from segment_anything import sam_model_registry
 from datetime import datetime
-from utils.dataloader import EmbDataset
-import wandb
+from utils.dataloader import emb_name_split
 from monai.losses import DiceLoss
 from torchvision.ops import sigmoid_focal_loss
 from utils.utils import *
@@ -59,60 +58,62 @@ def main():
 
     dice_loss = DiceLoss(sigmoid=True, squared_pred=True, reduction="mean")
 
-    #train
+    # train
     losses = []
-    train_dataset = EmbDataset(train_image_path)
-
+    train_files = emb_name_split(train_image_path)
+    rounds = num_epochs // NUM_EPO_PER_ROUND
     start_epoch = int(os.path.basename(sam_checkpoint)[:-4].split('_')[-1])
     prompts = ["point", "bbox"]
-    for epoch in range(start_epoch, start_epoch + num_epochs):
+    
+    for rou in range(rounds):
+        print(f"The {rou+1} / {rounds} rounds.")
         
-        # training part
-        samri_model.train()
-        epoch_loss = 0
-        for step, (embedding, mask, ori_size) in enumerate(tqdm(train_dataset)):
-            train_predictor.set_embedding(embedding, ori_size)
-            sub_loss = 0
-            for prompt in prompts:
-                    for sub_mask, sub_prompt, lenth in gen_batch(mask, prompt):                        
-                        optimizer.zero_grad()
+        for sub_set in train_files:
+            train_dataset = [np.load(file) for file in sub_set]
+            
+            for epoch in range(NUM_EPO_PER_ROUND):
+                # training part
+                samri_model.train()
+                epoch_loss = 0
+                for step, (embedding, mask, ori_size) in enumerate(tqdm(train_dataset)):
+                    train_predictor.set_embedding(embedding, ori_size)
+                    sub_loss = 0
+                    for prompt in prompts:
+                            for sub_mask, sub_prompt, lenth in gen_batch(mask, prompt):                        
+                                optimizer.zero_grad()
 
-                        if prompt == "point":
-                            y_pred, _, _ = train_predictor.predict(
-                                                        point_coords=sub_prompt,
-                                                        point_labels=[1],
-                                                        return_logits=True,
-                                                        multimask_output=False)
-                        if prompt == "bbox":
-                            y_pred, _, _  = train_predictor.predict(
-                                                        box=sub_prompt[None, :],
-                                                        return_logits=True,
-                                                        multimask_output=False)
+                                if prompt == "point":
+                                    y_pred, _, _ = train_predictor.predict(
+                                                                point_coords=sub_prompt,
+                                                                point_labels=[1],
+                                                                return_logits=True,
+                                                                multimask_output=False)
+                                if prompt == "bbox":
+                                    y_pred, _, _  = train_predictor.predict(
+                                                                box=sub_prompt[None, :],
+                                                                return_logits=True,
+                                                                multimask_output=False)
 
-                        sub_mask = torch.tensor(sub_mask[None,:,:], dtype=torch.float, device=torch.device(device))
-                        focal_loss = sigmoid_focal_loss(y_pred, sub_mask, alpha=0.25, gamma=2,reduction="mean")
-                        loss = dice_loss(y_pred, sub_mask) + focal_loss
-                        
-                        loss.backward()
-                        
-                        optimizer.step()
-                        
-                        sub_loss += loss.item()
-            epoch_loss += sub_loss / (len(prompts)*lenth)
+                                sub_mask = torch.tensor(sub_mask[None,:,:], dtype=torch.float, device=torch.device(device))
+                                focal_loss = sigmoid_focal_loss(y_pred, sub_mask, alpha=0.25, gamma=2,reduction="mean")
+                                loss = dice_loss(y_pred, sub_mask) + focal_loss
+                                
+                                loss.backward()
+                                
+                                optimizer.step()
+                                
+                                sub_loss += loss.item()
+                    epoch_loss += sub_loss / (len(prompts)*lenth)
 
-        epoch_loss /= step
-        losses.append(epoch_loss)
+                epoch_loss /= step
+                losses.append(epoch_loss)
 
-        torch.save(samri_model.state_dict(), join(model_save_path, "samri_latest.pth"))
-        
-        ## save the latest model
-        if (epoch + 1) % 50 == 0:
-            print(f"The {epoch+1} / {num_epochs} epochs.")
-            print(
+
+        print(
             f'Time: {datetime.now().strftime("%Y%m%d-%H%M")}, Epoch: {epoch}, Loss: {epoch_loss}'
         )
-            torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_", epoch+1, ".pth"))
-        
+        torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_fast", (rou+1)*NUM_EPO_PER_ROUND, ".pth"))
+            
 
 
 if __name__ == "__main__":
