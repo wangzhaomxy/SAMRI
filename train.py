@@ -103,6 +103,8 @@ def main():
         epoch_loss /= step
         losses.append(epoch_loss)
 
+        torch.save(samri_model.state_dict(), join(model_save_path, "samri_latest.pth"))
+        
         ## save the latest model
         if (epoch + 1) % 50 == 0:
             print(f"The {epoch+1} / {num_epochs} epochs.")
