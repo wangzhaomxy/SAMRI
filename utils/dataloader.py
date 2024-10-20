@@ -235,7 +235,7 @@ class EmbDataset(Dataset):
             self.npz_files += sorted(glob.glob(path + "*"))
 
         if shuffle:
-            self.npz_files = random.shuffle(self.npz_file)
+            self.npz_files = random.shuffle(self.npz_files)
         self.cur_name = ""
 
         """
@@ -275,3 +275,17 @@ class EmbDataset(Dataset):
         """
         return os.path.basename(self.cur_name)
     
+
+def emb_name_split(data_root, 
+             num_of_subset=2, 
+             shuffle=True):
+    npz_files = []
+    for path in data_root:
+        npz_files += sorted(glob.glob(path + "*"))
+    
+    if shuffle:
+        npz_files = random.shuffle(npz_files)
+    
+    sub_num = len(npz_files) // num_of_subset
+    
+    return [npz_files[i*sub_num:(i+1)*sub_num] for i in range(num_of_subset)]
