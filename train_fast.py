@@ -68,13 +68,15 @@ def main():
     for rou in range(rounds):
         print(f"The {rou+1} / {rounds} rounds.")
         
-        for sub_set in train_files:
+        for i, sub_set in enumerate(train_files):
+            print("Reading data...")
             train_dataset = []
             for name in sub_set:
                 file = np.load(name)
                 train_dataset.append(file)
                 file.close()
             
+            print(f"Training subset {i+1}...")
             for epoch in range(NUM_EPO_PER_ROUND):
                 # training part
                 samri_model.train()
