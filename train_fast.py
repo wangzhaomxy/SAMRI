@@ -73,6 +73,7 @@ def main():
             for name in sub_set:
                 file = np.load(name)
                 train_dataset.append(file)
+                file.close()
             
             for epoch in range(NUM_EPO_PER_ROUND):
                 # training part
