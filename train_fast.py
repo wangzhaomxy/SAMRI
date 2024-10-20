@@ -69,7 +69,10 @@ def main():
         print(f"The {rou+1} / {rounds} rounds.")
         
         for sub_set in train_files:
-            train_dataset = [np.load(file) for file in sub_set]
+            train_dataset = []
+            for name in sub_set:
+                file = np.load(name)
+                train_dataset.append(file)
             
             for epoch in range(NUM_EPO_PER_ROUND):
                 # training part
@@ -112,7 +115,7 @@ def main():
         print(
             f'Time: {datetime.now().strftime("%Y%m%d-%H%M")}, Epoch: {epoch}, Loss: {epoch_loss}'
         )
-        torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_fast", (rou+1)*NUM_EPO_PER_ROUND, ".pth"))
+        torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_fast", start_epoch+(rou+1)*NUM_EPO_PER_ROUND, ".pth"))
             
 
 
