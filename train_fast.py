@@ -60,6 +60,8 @@ def main():
 
     # train
     losses = []
+    
+    train_image_path.remove('/scratch/project/samri/Embedding/totalseg_mr/')
     train_files = emb_name_split(train_image_path, num_of_subset=1000)
     rounds = num_epochs // NUM_EPO_PER_ROUND
     start_epoch = int(os.path.basename(sam_checkpoint)[:-4].split('_')[-1])
@@ -83,9 +85,6 @@ def main():
                 epoch_loss = 0
                 for stp, npz_data in enumerate(tqdm(train_dataset)):
                     embedding, mask, ori_size = npz_data["img"], npz_data["mask"], tuple(npz_data["ori_size"])
-                    print(mask.shape)
-                    print(ori_size)
-                    print(sub_set[stp])
                     train_predictor.set_embedding(embedding, ori_size)
                     sub_loss = 0
                     for prompt in prompts:
