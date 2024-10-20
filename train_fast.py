@@ -83,6 +83,8 @@ def main():
                 epoch_loss = 0
                 for stp, npz_data in enumerate(tqdm(train_dataset)):
                     embedding, mask, ori_size = npz_data["img"], npz_data["mask"], tuple(npz_data["ori_size"])
+                    print(mask.shape)
+                    print(ori_size)
                     train_predictor.set_embedding(embedding, ori_size)
                     sub_loss = 0
                     for prompt in prompts:
