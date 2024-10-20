@@ -69,12 +69,16 @@ def main():
         print(f"The {rou+1} / {rounds} rounds.")
         
         for i, sub_set in enumerate(train_files):
-            print("Reading data...")
+            print("Loading data...")
             train_dataset = []
             for name in tqdm(sub_set):
                 file = np.load(name)
                 train_dataset.append(file)
                 file.close()
+            print(len(train_dataset))
+            print(type(train_dataset[0]))
+            print(train_dataset[0]["img"])
+            
             
             print(f"Training subset {i+1}...")
             for epoch in range(NUM_EPO_PER_ROUND):
