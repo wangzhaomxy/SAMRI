@@ -81,7 +81,8 @@ def main():
                 # training part
                 samri_model.train()
                 epoch_loss = 0
-                for step, (embedding, mask, ori_size) in enumerate(tqdm(train_dataset)):
+                for step, npz_data in enumerate(tqdm(train_dataset)):
+                    embedding, mask, ori_size = npz_data["img"], npz_data["mask"], npz_data["ori_size"]
                     train_predictor.set_embedding(embedding, ori_size)
                     sub_loss = 0
                     for prompt in prompts:
