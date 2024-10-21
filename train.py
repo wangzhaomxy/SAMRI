@@ -11,7 +11,7 @@ import torch
 from segment_anything import sam_model_registry
 from datetime import datetime
 from utils.dataloader import EmbDataset
-import wandb
+from torch.utils.data import DataLoader
 from monai.losses import DiceLoss
 from torchvision.ops import sigmoid_focal_loss
 from utils.utils import *
@@ -62,6 +62,7 @@ def main():
     #train
     losses = []
     train_dataset = EmbDataset(train_image_path)
+    train_loader = DataLoader(train_dataset)
 
     start_epoch = int(os.path.basename(sam_checkpoint)[:-4].split('_')[-1])
     prompts = ["point", "bbox"]
@@ -70,7 +71,7 @@ def main():
         # training part
         samri_model.train()
         epoch_loss = 0
-        for step, (embedding, mask, ori_size) in enumerate(tqdm(train_dataset)):
+        for step, (embedding, mask, ori_size) in enumerate(tqdm(train_loader)):
             train_predictor.set_embedding(embedding, ori_size)
             sub_loss = 0
             for prompt in prompts:
