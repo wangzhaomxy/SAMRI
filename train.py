@@ -112,7 +112,7 @@ def main():
             print(
             f'Time: {datetime.now().strftime("%Y%m%d-%H%M")}, Epoch: {epoch}, Loss: {epoch_loss}'
         )
-            torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_", epoch+1, ".pth"))
+            torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_", str(epoch+1), ".pth"))
         
 
 
