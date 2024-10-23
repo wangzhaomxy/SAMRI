@@ -61,7 +61,7 @@ def main():
 
     #train
     losses = []
-    train_dataset = EmbDataset(train_image_path)
+    train_dataset = EmbDataset([train_image_path[0]])
     # train_loader = DataLoader(train_dataset)
 
     start_epoch = int(os.path.basename(sam_checkpoint)[:-4].split('_')[-1])
@@ -108,11 +108,8 @@ def main():
         
         ## save the latest model
         if (epoch + 1) % 1 == 0:
-            print(f"The {epoch+1} / {num_epochs} epochs.")
-            print(
-            f'Time: {datetime.now().strftime("%Y%m%d-%H%M")}, Epoch: {epoch}, Loss: {epoch_loss}'
-        )
-            torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_", str(epoch+1), ".pth"))
+            print(f"The {epoch+1} / {num_epochs} epochs,  Loss: {epoch_loss}.")
+            torch.save(samri_model.state_dict(), join(model_save_path, f"samri_vitb_{str(epoch+1)}.pth"))
         
 
 
