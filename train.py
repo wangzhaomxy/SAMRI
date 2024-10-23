@@ -9,7 +9,6 @@ join = os.path.join
 from tqdm import tqdm
 import torch
 from segment_anything import sam_model_registry
-from datetime import datetime
 from utils.dataloader import EmbDataset
 from torch.utils.data import DataLoader
 from monai.losses import DiceLoss
@@ -61,7 +60,7 @@ def main():
 
     #train
     losses = []
-    train_dataset = EmbDataset([train_image_path[0]])
+    train_dataset = EmbDataset([train_image_path[5]])
     # train_loader = DataLoader(train_dataset)
 
     start_epoch = int(os.path.basename(sam_checkpoint)[:-4].split('_')[-1])
