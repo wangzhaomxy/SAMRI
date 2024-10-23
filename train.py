@@ -62,7 +62,7 @@ def main():
     #train
     losses = []
     train_dataset = EmbDataset(train_image_path)
-    train_loader = DataLoader(train_dataset)
+    # train_loader = DataLoader(train_dataset)
 
     start_epoch = int(os.path.basename(sam_checkpoint)[:-4].split('_')[-1])
     prompts = ["point", "bbox"]
@@ -71,7 +71,7 @@ def main():
         # training part
         samri_model.train()
         epoch_loss = 0
-        for step, (embedding, mask, ori_size) in enumerate(tqdm(train_loader)):
+        for step, (embedding, mask, ori_size) in enumerate(tqdm(train_dataset)):
             train_predictor.set_embedding(embedding, ori_size)
             sub_loss = 0
             for prompt in prompts:
