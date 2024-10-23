@@ -73,7 +73,7 @@ def main():
         for step, (embedding, mask, ori_size) in enumerate(tqdm(train_loader)):
             embedding = embedding.squeeze(0)
             mask = mask.squeeze(0).numpy()
-            ori_size = (ori_size[0].numpy()[0], ori_size[0].numpy()[0])
+            ori_size = (ori_size[0].numpy()[0], ori_size[1].numpy()[0])
             train_predictor.set_embedding(embedding, ori_size)
             sub_loss = 0
             for prompt in prompts:
