@@ -29,7 +29,7 @@ model_save_path = MODEL_SAVE_PATH
 device = DEVICE
 num_epochs = NUM_EPOCHS
 train_image_path = TRAIN_IMAGE_PATH
-
+train_image_path.remove('/scratch/project/samri/Embedding/totalseg_mr/')
 
 def gen_batch(mask, prompt):
     masks = MaskSplit(mask)
@@ -61,7 +61,7 @@ def main():
     # train
     losses = []
     
-    train_image_path.remove('/scratch/project/samri/Embedding/totalseg_mr/')
+    
     train_files = emb_name_split(train_image_path, num_of_subset=3)
     rounds = num_epochs // NUM_EPO_PER_ROUND
     start_epoch = int(os.path.basename(sam_checkpoint)[:-4].split('_')[-1])

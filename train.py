@@ -60,7 +60,7 @@ def main():
 
     #train
     losses = []
-    train_dataset = EmbDataset([train_image_path])
+    train_dataset = EmbDataset(train_image_path)
     # train_loader = DataLoader(train_dataset)
 
     start_epoch = int(os.path.basename(sam_checkpoint)[:-4].split('_')[-1])
