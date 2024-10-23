@@ -9,8 +9,8 @@ join = os.path.join
 from tqdm import tqdm
 import torch
 from segment_anything import sam_model_registry
-from datetime import datetime
-from utils.dataloader import emb_name_split
+from utils.dataloader import EmbDataset
+from torch.utils.data import DataLoader
 from monai.losses import DiceLoss
 from torchvision.ops import sigmoid_focal_loss
 from utils.utils import *
@@ -58,71 +58,58 @@ def main():
 
     dice_loss = DiceLoss(sigmoid=True, squared_pred=True, reduction="mean")
 
-    # train
+    #train
     losses = []
-    
-    
-    train_files = emb_name_split(train_image_path, num_of_subset=3)
-    rounds = num_epochs // NUM_EPO_PER_ROUND
+    train_dataset = EmbDataset(train_image_path)
+    # train_loader = DataLoader(train_dataset)
+
     start_epoch = int(os.path.basename(sam_checkpoint)[:-4].split('_')[-1])
     prompts = ["point", "bbox"]
-    
-    for rou in range(rounds):
-        print(f"The {rou+1} / {rounds} rounds.")
+    for epoch in range(start_epoch, start_epoch + num_epochs):
         
-        for i, sub_set in enumerate(train_files):
-            print("Loading data...")
-            train_dataset = []
-            for name in tqdm(sub_set):
-                file = np.load(name)
-                train_dataset.append({"img":file["img"], "mask":file["mask"], "ori_size":file["ori_size"]})
-                file.close()
-            
-            print(f"Training subset {i+1}...")
-            for epoch in range(NUM_EPO_PER_ROUND):
-                # training part
-                samri_model.train()
-                epoch_loss = 0
-                for stp, npz_data in enumerate(tqdm(train_dataset)):
-                    embedding, mask, ori_size = npz_data["img"], npz_data["mask"], tuple(npz_data["ori_size"])
-                    train_predictor.set_embedding(embedding, ori_size)
-                    sub_loss = 0
-                    for prompt in prompts:
-                            for sub_mask, sub_prompt, lenth in gen_batch(mask, prompt):                        
-                                optimizer.zero_grad()
+        # training part
+        samri_model.train()
+        epoch_loss = 0
+        for step, (embedding, mask, ori_size) in enumerate(tqdm(train_dataset)):
+            train_predictor.set_embedding(embedding, ori_size)
+            sub_loss = 0
+            for prompt in prompts:
+                    for sub_mask, sub_prompt, lenth in gen_batch(mask, prompt):                        
+                        optimizer.zero_grad()
 
-                                if prompt == "point":
-                                    y_pred, _, _ = train_predictor.predict(
-                                                                point_coords=sub_prompt,
-                                                                point_labels=[1],
-                                                                return_logits=True,
-                                                                multimask_output=False)
-                                if prompt == "bbox":
-                                    y_pred, _, _  = train_predictor.predict(
-                                                                box=sub_prompt[None, :],
-                                                                return_logits=True,
-                                                                multimask_output=False)
+                        if prompt == "point":
+                            y_pred, _, _ = train_predictor.predict(
+                                                        point_coords=sub_prompt,
+                                                        point_labels=[1],
+                                                        return_logits=True,
+                                                        multimask_output=False)
+                        if prompt == "bbox":
+                            y_pred, _, _  = train_predictor.predict(
+                                                        box=sub_prompt[None, :],
+                                                        return_logits=True,
+                                                        multimask_output=False)
 
-                                sub_mask = torch.tensor(sub_mask[None,:,:], dtype=torch.float, device=torch.device(device))
-                                focal_loss = sigmoid_focal_loss(y_pred, sub_mask, alpha=0.25, gamma=2,reduction="mean")
-                                loss = dice_loss(y_pred, sub_mask) + focal_loss
-                                
-                                loss.backward()
-                                
-                                optimizer.step()
-                                
-                                sub_loss += loss.item()
-                    epoch_loss += sub_loss / (len(prompts)*lenth)
+                        sub_mask = torch.tensor(sub_mask[None,:,:], dtype=torch.float, device=torch.device(device))
+                        focal_loss = sigmoid_focal_loss(y_pred, sub_mask, alpha=0.25, gamma=2,reduction="mean")
+                        loss = dice_loss(y_pred, sub_mask) + focal_loss
+                        
+                        loss.backward()
+                        
+                        optimizer.step()
+                        
+                        sub_loss += loss.item()
+            epoch_loss += sub_loss / (len(prompts)*lenth)
 
-                epoch_loss /= stp
-                losses.append(epoch_loss)
+        epoch_loss /= step
+        losses.append(epoch_loss)
 
-
-        print(
-            f'Time: {datetime.now().strftime("%Y%m%d-%H%M")}, Epoch: {epoch}, Loss: {epoch_loss}'
-        )
-        torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_fast", start_epoch+(rou+1)*NUM_EPO_PER_ROUND, ".pth"))
-            
+        # torch.save(samri_model.state_dict(), join(model_save_path, "samri_latest.pth"))
+        
+        ## save the latest model
+        if (epoch + 1) % 1 == 0:
+            print(f"The {epoch+1} / {num_epochs} epochs,  Loss: {epoch_loss}.")
+            torch.save(samri_model.state_dict(), join(model_save_path, f"samri_vitb_{str(epoch+1)}.pth"))
+        
 
 
 if __name__ == "__main__":
