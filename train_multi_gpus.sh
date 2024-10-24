@@ -7,7 +7,7 @@
 #SBATCH --time=24:00:00
 #SBATCH --partition=gpu_cuda
 #SBATCH --gres=gpu:l40:3
-#SBATCH --account=AccountString
+#SBATCH --account=a_auto_mr_disease
 #SBATCH -o slurm-%j.output
 #SBATCH -e slurm-%j.error
 
