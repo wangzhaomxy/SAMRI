@@ -6,7 +6,7 @@
 #SBATCH --job-name=SAMRI
 #SBATCH --time=24:00:00
 #SBATCH --partition=gpu_cuda
-#SBATCH --gres=gpu:l40:2
+#SBATCH --gres=gpu:l40:3
 #SBATCH --account=a_auto_mr_disease
 #SBATCH -o /home/s4670484/Documents/slurm-%j.output
 #SBATCH -e /home/s4670484/Documents/slurm-%j.error
