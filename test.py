@@ -1,4 +1,4 @@
 import torch
 
-torch.cuda.is_available()
-torch.cuda.device_count()
+print(torch.cuda.is_available())
+print(torch.cuda.device_count())
