@@ -73,6 +73,7 @@ def main():
         samri_model.train()
         epoch_loss = 0
         for i in range(prompt_loops):
+            print(f"Prompt_loop{i+1}/{prompt_loops}")
             for step, (embedding, mask, ori_size) in enumerate(tqdm(train_loader)):
                 embedding = embedding.squeeze(0)
                 mask = mask.squeeze(0).numpy()
