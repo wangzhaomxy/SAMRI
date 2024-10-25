@@ -112,6 +112,7 @@ def main():
         if (epoch + 1) % 1 == 0:
             print(f"The {epoch+1} / {num_epochs} epochs,  Loss: {epoch_loss}.")
             torch.save(samri_model.state_dict(), join(model_save_path, f"samri_vitb_{str(epoch+1)}.pth"))
+            print(f"Checkpoint <samri_vitb_{str(epoch+1)}.pth> has been saved.")
         
 
 
