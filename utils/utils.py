@@ -34,12 +34,10 @@ DEVICE = "cuda"
 BATCH_SIZE = 29
 NUM_EPOCHS = 1000
 NUM_EPO_PER_ROUND = 100
-
-
+PROMPT_LOOPS = 10
 NUM_POINTS = 3
 NUM_BBOXES = 1
 JITTER = 10
-
 
 
 LABEL_DICTIONARY = {1:"Femur", 2:"Articular Cartilage-F", 3:"Tibia", 4:"Articular Cartilage-T", 5:"Patella", 6:"Articular Cartilage-P"}
