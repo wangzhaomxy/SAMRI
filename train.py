@@ -18,6 +18,7 @@ from utils.prompt import *
 from model import SAMRI
 from train_predictor import TrainSamPredictor
 import glob
+import math
 
 # setup global parameters
 model_type = "samri"
@@ -28,6 +29,7 @@ data_path = TRAIN_IMAGE_PATH
 model_save_path = MODEL_SAVE_PATH
 device = DEVICE
 num_epochs = NUM_EPOCHS
+prompt_loops = PROMPT_LOOPS
 train_image_path = TRAIN_IMAGE_PATH
 train_image_path.remove('/scratch/project/samri/Embedding/totalseg_mr/')
 
@@ -61,7 +63,7 @@ def main():
     #train
     losses = []
     train_dataset = EmbDataset(train_image_path)
-    # train_loader = DataLoader(train_dataset)
+    train_loader = DataLoader(train_dataset)
 
     start_epoch = int(os.path.basename(sam_checkpoint)[:-4].split('_')[-1])
     prompts = ["point", "bbox"]
@@ -70,37 +72,41 @@ def main():
         # training part
         samri_model.train()
         epoch_loss = 0
-        for step, (embedding, mask, ori_size) in enumerate(tqdm(train_dataset)):
-            train_predictor.set_embedding(embedding, ori_size)
-            sub_loss = 0
-            for prompt in prompts:
-                    for sub_mask, sub_prompt, lenth in gen_batch(mask, prompt):                        
-                        optimizer.zero_grad()
+        for i in range(prompt_loops):
+            for step, (embedding, mask, ori_size) in enumerate(tqdm(train_loader)):
+                embedding = embedding.squeeze(0)
+                mask = mask.squeeze(0).numpy()
+                ori_size = (ori_size[0].numpy()[0], ori_size[1].numpy()[0])
+                train_predictor.set_embedding(embedding, ori_size)
+                sub_loss = 0
+                for prompt in prompts:
+                    for j in range(prompt_loops-i):
+                        for sub_mask, sub_prompt, lenth in gen_batch(mask, prompt):                        
+                            optimizer.zero_grad()
 
-                        if prompt == "point":
-                            y_pred, _, _ = train_predictor.predict(
-                                                        point_coords=sub_prompt,
-                                                        point_labels=[1],
-                                                        return_logits=True,
-                                                        multimask_output=False)
-                        if prompt == "bbox":
-                            y_pred, _, _  = train_predictor.predict(
-                                                        box=sub_prompt[None, :],
-                                                        return_logits=True,
-                                                        multimask_output=False)
+                            if prompt == "point":
+                                y_pred, _, _ = train_predictor.predict(
+                                                            point_coords=sub_prompt,
+                                                            point_labels=[1],
+                                                            return_logits=True,
+                                                            multimask_output=False)
+                            if prompt == "bbox":
+                                y_pred, _, _  = train_predictor.predict(
+                                                            box=sub_prompt[None, :],
+                                                            return_logits=True,
+                                                            multimask_output=False)
 
-                        sub_mask = torch.tensor(sub_mask[None,:,:], dtype=torch.float, device=torch.device(device))
-                        focal_loss = sigmoid_focal_loss(y_pred, sub_mask, alpha=0.25, gamma=2,reduction="mean")
-                        loss = dice_loss(y_pred, sub_mask) + focal_loss
-                        
-                        loss.backward()
-                        
-                        optimizer.step()
-                        
-                        sub_loss += loss.item()
-            epoch_loss += sub_loss / (len(prompts)*lenth)
-
-        epoch_loss /= step
+                            sub_mask = torch.tensor(sub_mask[None,:,:], dtype=torch.float, device=torch.device(device))
+                            focal_loss = sigmoid_focal_loss(y_pred, sub_mask, alpha=0.25, gamma=2,reduction="mean")
+                            loss = dice_loss(y_pred, sub_mask) + 10 * focal_loss
+                            
+                            loss.backward()
+                            
+                            optimizer.step()
+                            
+                            sub_loss += loss.item()
+                    epoch_loss += sub_loss / (len(prompts)*lenth*(j+1))
+        epoch_loss /= (step+1)*(prompt_loops)
         losses.append(epoch_loss)
 
         # torch.save(samri_model.state_dict(), join(model_save_path, "samri_latest.pth"))
