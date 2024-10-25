@@ -103,7 +103,7 @@ def main():
                         sub_loss += loss.item()
             epoch_loss += sub_loss / (len(prompts)*lenth)
 
-        epoch_loss /= step
+        epoch_loss /= (step+1)
         losses.append(epoch_loss)
 
         # torch.save(samri_model.state_dict(), join(model_save_path, "samri_latest.pth"))
