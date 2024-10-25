@@ -4,7 +4,7 @@
 #SBATCH --cpus-per-task=1
 #SBATCH --mem=32G
 #SBATCH --job-name=SAMRI
-#SBATCH --time=24:00:00
+#SBATCH --time=96:00:00
 #SBATCH --partition=gpu_cuda
 #SBATCH --gres=gpu:l40:3
 #SBATCH --account=a_auto_mr_disease
