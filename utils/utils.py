@@ -41,7 +41,7 @@ def get_checkpoint(path):
     print("cp_list", cp_list)
     cp_names = [(os.path.basename(cp)[:-4]) for cp in cp_list]
     print("cp_names", cp_names)
-    start_epoch = max([int(cp.split('_')[-1]) for cp in cp_names if cp != ""])
+    start_epoch = [int(cp.split('_')[-1]) for cp in cp_names if cp != ""]
     cp_name = glob(path + f"*_{str(start_epoch)}.pth*")[0]
     print(start_epoch, " and ", cp_name)
     return cp_name, start_epoch
