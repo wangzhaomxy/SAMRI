@@ -86,7 +86,7 @@ def main(gpu, world_size, num_epochs, save_every):
     #train
     losses = []
     train_dataset = EmbDataset(train_image_path)
-    train_loader = DataLoader(train_dataset, shuffle=False, sampler=DistributedSampler(train_dataset))
+    train_loader = DataLoader(train_dataset, shuffle=False, sampler=DistributedSampler(train_dataset), prefetch_factor=5)
 
     prompts = ["point", "bbox"]
     for epoch in range(start_epoch, num_epochs):
