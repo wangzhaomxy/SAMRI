@@ -72,7 +72,7 @@ def main(gpu, world_size, num_epochs, save_every):
     samri_model = DDP(samri_model,device_ids=[gpu])
 
     optimizer = torch.optim.AdamW(
-        samri_model.mask_decoder.parameters(),
+        samri_model.module.mask_decoder.parameters(),
         lr=1e-4, 
         weight_decay=0.1
     )
@@ -126,13 +126,11 @@ def main(gpu, world_size, num_epochs, save_every):
 
         epoch_loss /= (step+1)
         losses.append(epoch_loss)
-
-        # torch.save(samri_model.state_dict(), join(model_save_path, "samri_latest.pth"))
         
         ## save the latest model
         if (epoch + 1) % save_every == 0 and gpu == 0:
             print(f"The {epoch+1} / {num_epochs} epochs,  Loss: {epoch_loss}.")
-            torch.save(samri_model.state_dict(), join(model_save_path, f"samri_vitb_{str(epoch+1)}.pth"))
+            torch.save(samri_model.module.state_dict(), join(model_save_path, f"samri_vitb_{str(epoch+1)}.pth"))
     destroy_process_group()    
 
 
