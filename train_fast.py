@@ -118,7 +118,7 @@ def main(gpu, world_size, num_epochs, save_every):
                                                         return_logits=True,
                                                         multimask_output=False)
 
-                        sub_mask = torch.tensor(sub_mask[None,:,:], dtype=torch.float, device=torch.device(device))
+                        sub_mask = torch.tensor(sub_mask[None,:,:], dtype=torch.float)
                         focal_loss = sigmoid_focal_loss(y_pred, sub_mask, alpha=0.25, gamma=2,reduction="mean")
                         loss = dice_loss(y_pred, sub_mask) + 10 * focal_loss
                         
