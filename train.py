@@ -40,7 +40,7 @@ def gen_batch(mask, prompt):
             each_prompt = gen_bboxes(each_mask)
         yield (each_mask, each_prompt, lenth)
 
-def main(model_save_path=model_save_path):
+def main():
     sam_checkpoint, start_epoch = get_checkpoint(model_save_path)
     sam_model = sam_model_registry[encoder_type](sam_checkpoint)
     samri_model = SAMRI(
