@@ -132,8 +132,8 @@ def main(gpu, world_size, num_epochs, save_every):
         ## save the latest model
         if (epoch + 1) % save_every == 0 and gpu == 1:
             print(f"The {epoch+1} / {num_epochs} epochs,  Loss: {epoch_loss}.")
-            torch.save(samri_model.module.state_dict(), join(model_save_path, f"samri_vitb_mult{str(epoch+1)}.pth"))
-            print(f"Checkpoint <samri_vitb_mult{str(epoch+1)}.pth> has been saved.")
+            torch.save(samri_model.module.state_dict(), join(model_save_path, f"samri_vitb_mult_{str(epoch+1)}.pth"))
+            print(f"Checkpoint <samri_vitb_mult_{str(epoch+1)}.pth> has been saved.")
     destroy_process_group()
 
 
