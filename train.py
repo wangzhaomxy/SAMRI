@@ -62,9 +62,6 @@ def main():
     losses = []
     train_dataset = EmbDataset(train_image_path)
     train_loader = DataLoader(train_dataset)
-
-    cp_names = [(os.path.basename(cp)[:-4]) for cp in sam_checkpoint]
-    start_epoch = max([int(cp.split('_')[-1]) for cp in cp_names if cp != ""])
     prompts = ["point", "bbox"]
     for epoch in range(start_epoch, num_epochs):
         
