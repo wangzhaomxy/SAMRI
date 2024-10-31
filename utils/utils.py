@@ -4,6 +4,8 @@
 Permanent variables, universal functions, ect
 """
 from glob import glob
+import os
+
 root_path = "/scratch/project/samri/"
 EMBEDDING_PATH = root_path + "Embedding/" # The main folder of datasets
 TEST_PATH = root_path + "Datasets/SAMRI_train_test/"
