@@ -48,7 +48,7 @@ def gen_batch(mask, prompt):
 
 def main(gpu, world_size, num_epochs, save_every):
     torch.cuda.set_device(gpu)
-    torch.distributed.init_process_group(backend="nccl", rank=rank, world_size=world_size)
+    torch.distributed.init_process_group(backend="nccl", rank=gpu, world_size=world_size)
     
     sam_model = sam_model_registry[encoder_type](sam_checkpoint)
     samri_model = SAMRI(
