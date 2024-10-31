@@ -8,6 +8,10 @@ root_path = "/scratch/project/samri/"
 EMBEDDING_PATH = root_path + "Embedding/" # The main folder of datasets
 TEST_PATH = root_path + "Datasets/SAMRI_train_test/"
 MODEL_SAVE_PATH = root_path + "Model_save/"
+DEVICE = "cuda"
+BATCH_SIZE = 29
+NUM_EPOCHS = 1000
+JITTER = 10
 
 TRAIN_IMAGE_PATH = [ds + "/" for ds in sorted(glob(EMBEDDING_PATH + "*"))]
 
@@ -30,17 +34,9 @@ SAM_CHECKPOINT = {"vit_b": ch_root + "sam_vit_b_01ec64.pth",
                   }
 
 
-DEVICE = "cuda"
-BATCH_SIZE = 29
-NUM_EPOCHS = 1000
-NUM_EPO_PER_ROUND = 100
-PROMPT_LOOPS = 4
-NUM_POINTS = 3
-NUM_BBOXES = 1
-JITTER = 10
-
-
-LABEL_DICTIONARY = {1:"Femur", 2:"Articular Cartilage-F", 3:"Tibia", 4:"Articular Cartilage-T", 5:"Patella", 6:"Articular Cartilage-P"}
-LABEL_LIST = ["Femur", "Articular Cartilage-F", "Tibia", "Articular Cartilage-T", "Patella", "Articular Cartilage-P"]
-
-
+def get_checkpoint(path):
+    cp_list = sorted(glob.glob(path + "*"))
+    cp_names = [(os.path.basename(cp)[:-4]) for cp in cp_list]
+    start_epoch = max([int(cp.split('_')[-1]) for cp in cp_names if cp != ""])
+    cp_name = glob.glob(path + f"*_{str(start_epoch)}.pth*")[0]
+    return cp_name, start_epoch

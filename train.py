@@ -22,7 +22,6 @@ import glob
 # setup global parameters
 model_type = "samri"
 encoder_type = ENCODER_TYPE[model_type] # choose one from vit_b and vit_h.
-sam_checkpoint = sorted(glob.glob(MODEL_SAVE_PATH + "*"))
 batch_size = BATCH_SIZE
 data_path = TRAIN_IMAGE_PATH
 model_save_path = MODEL_SAVE_PATH
@@ -42,6 +41,7 @@ def gen_batch(mask, prompt):
         yield (each_mask, each_prompt, lenth)
 
 def main():
+    sam_checkpoint, start_epoch = get_checkpoint(model_save_path)
     sam_model = sam_model_registry[encoder_type](sam_checkpoint)
     samri_model = SAMRI(
         image_encoder=sam_model.image_encoder,

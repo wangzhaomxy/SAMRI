@@ -27,7 +27,6 @@ from torch.distributed import init_process_group, destroy_process_group
 # setup global parameters
 model_type = "samri"
 encoder_type = ENCODER_TYPE[model_type] # choose one from vit_b and vit_h.
-sam_checkpoint = sorted(glob.glob(MODEL_SAVE_PATH +"mult/" + "*"))
 batch_size = BATCH_SIZE
 data_path = TRAIN_IMAGE_PATH
 model_save_path = MODEL_SAVE_PATH + "mult/"
@@ -60,7 +59,7 @@ def ddp_setup(rank: int, world_size: int):
 
 def main(gpu, world_size, num_epochs, save_every):
     ddp_setup(rank=gpu, world_size=world_size)
-    
+    sam_checkpoint, start_epoch = get_checkpoint(model_save_path)
     sam_model = sam_model_registry[encoder_type](sam_checkpoint)
     samri_model = SAMRI(
         image_encoder=sam_model.image_encoder,
@@ -89,8 +88,6 @@ def main(gpu, world_size, num_epochs, save_every):
     train_dataset = EmbDataset(train_image_path)
     train_loader = DataLoader(train_dataset, shuffle=False, sampler=DistributedSampler(train_dataset))
 
-    cp_names = [(os.path.basename(cp)[:-4]) for cp in sam_checkpoint]
-    start_epoch = max([int(cp.split('_')[-1]) for cp in cp_names if cp != ""])
     prompts = ["point", "bbox"]
     for epoch in range(start_epoch, num_epochs):
         # training part
