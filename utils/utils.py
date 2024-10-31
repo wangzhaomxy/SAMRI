@@ -35,8 +35,8 @@ SAM_CHECKPOINT = {"vit_b": ch_root + "sam_vit_b_01ec64.pth",
 
 
 def get_checkpoint(path):
-    cp_list = sorted(glob.glob(path + "*"))
+    cp_list = sorted(glob(path + "*"))
     cp_names = [(os.path.basename(cp)[:-4]) for cp in cp_list]
     start_epoch = max([int(cp.split('_')[-1]) for cp in cp_names if cp != ""])
-    cp_name = glob.glob(path + f"*_{str(start_epoch)}.pth*")[0]
+    cp_name = glob(path + f"*_{str(start_epoch)}.pth*")[0]
     return cp_name, start_epoch
