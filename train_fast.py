@@ -86,7 +86,7 @@ def main(gpu, world_size, num_epochs, save_every):
     #train
     losses = []
     train_dataset = EmbDataset(train_image_path)
-    train_loader = DataLoader(train_dataset, shuffle=False, sampler=DistributedSampler(train_dataset), prefetch_factor=5)
+    train_loader = DataLoader(train_dataset, shuffle=False, sampler=DistributedSampler(train_dataset))
 
     prompts = ["point", "bbox"]
     for epoch in range(start_epoch, num_epochs):
@@ -130,7 +130,7 @@ def main(gpu, world_size, num_epochs, save_every):
         losses.append(epoch_loss)
         
         ## save the latest model
-        if (epoch + 1) % save_every == 0 and gpu == 1:
+        if (epoch + 1) % save_every == 0 and gpu == 0:
             print(f"The {epoch+1} / {num_epochs} epochs,  Loss: {epoch_loss}.")
             torch.save(samri_model.module.state_dict(), join(model_save_path, f"samri_vitb_mult_{str(epoch+1)}.pth"))
             print(f"Checkpoint <samri_vitb_mult_{str(epoch+1)}.pth> has been saved.")
