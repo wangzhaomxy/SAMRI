@@ -69,7 +69,12 @@ def main(gpu, world_size, num_epochs, save_every):
     ).cuda()
     train_predictor = TrainSamPredictor(samri_model)
 
-    samri_model = DDP(samri_model,device_ids=[gpu])
+    samri_model = DDP(
+                    samri_model,
+                    device_ids=[gpu],
+                    gradient_as_bucket_view=True,
+                    find_unused_parameters=True
+                    )
 
     optimizer = torch.optim.AdamW(
         samri_model.module.mask_decoder.parameters(),
