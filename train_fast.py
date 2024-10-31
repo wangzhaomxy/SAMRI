@@ -46,9 +46,20 @@ def gen_batch(mask, prompt):
             each_prompt = gen_bboxes(each_mask)
         yield (each_mask, each_prompt, lenth)
 
+def ddp_setup(rank: int, world_size: int):
+    """
+    Args:
+    rank: Unique identifier of each process
+    world_size: Total number of processes
+    """
+    os.environ["MASTER_ADDR"] = "localhost"
+    os.environ["MASTER_PORT"] = "12355"
+    torch.cuda.set_device(rank)
+    init_process_group(backend="nccl", rank=rank, world_size=world_size)
+
+
 def main(gpu, world_size, num_epochs, save_every):
-    torch.cuda.set_device(gpu)
-    torch.distributed.init_process_group(backend="nccl", rank=gpu, world_size=world_size)
+    ddp_setup(rank=gpu, world_size=world_size)
     
     sam_model = sam_model_registry[encoder_type](sam_checkpoint)
     samri_model = SAMRI(
