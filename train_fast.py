@@ -66,7 +66,7 @@ def main(gpu, world_size, num_epochs, save_every):
         image_encoder=sam_model.image_encoder,
         mask_decoder=sam_model.mask_decoder,
         prompt_encoder=sam_model.prompt_encoder,
-    )
+    ).cuda()
     train_predictor = TrainSamPredictor(samri_model)
 
     samri_model = DDP(samri_model, 
