@@ -27,10 +27,10 @@ from torch.distributed import init_process_group, destroy_process_group
 # setup global parameters
 model_type = "samri"
 encoder_type = ENCODER_TYPE[model_type] # choose one from vit_b and vit_h.
-sam_checkpoint = sorted(glob.glob(MODEL_SAVE_PATH + "*"))[-1]
+sam_checkpoint = sorted(glob.glob(MODEL_SAVE_PATH +"mult/" + "*"))[-1]
 batch_size = BATCH_SIZE
 data_path = TRAIN_IMAGE_PATH
-model_save_path = MODEL_SAVE_PATH
+model_save_path = MODEL_SAVE_PATH + "mult/"
 num_epochs = NUM_EPOCHS
 train_image_path = TRAIN_IMAGE_PATH
 train_image_path.remove('/scratch/project/samri/Embedding/totalseg_mr/')
@@ -92,7 +92,6 @@ def main(gpu, world_size, num_epochs, save_every):
     start_epoch = int(os.path.basename(sam_checkpoint)[:-4].split('_')[-1])
     prompts = ["point", "bbox"]
     for epoch in range(start_epoch, start_epoch + num_epochs):
-        
         # training part
         samri_model.train()
         epoch_loss = 0
@@ -135,7 +134,7 @@ def main(gpu, world_size, num_epochs, save_every):
         ## save the latest model
         if (epoch + 1) % save_every == 0 and gpu == 0:
             print(f"The {epoch+1} / {num_epochs} epochs,  Loss: {epoch_loss}.")
-            torch.save(samri_model.module.state_dict(), join(model_save_path, f"samri_vitb_{str(epoch+1)}.pth"))
+            torch.save(samri_model.module.state_dict(), join(model_save_path, f"samri_vitb_mult{str(epoch+1)}.pth"))
     destroy_process_group()    
 
 
