@@ -66,7 +66,7 @@ def main():
     cp_names = [(os.path.basename(cp)[:-4]) for cp in sam_checkpoint]
     start_epoch = max([int(cp.split('_')[-1]) for cp in cp_names if cp != ""])
     prompts = ["point", "bbox"]
-    for epoch in range(start_epoch, start_epoch + num_epochs):
+    for epoch in range(start_epoch, num_epochs):
         
         # training part
         samri_model.train()
