@@ -77,7 +77,7 @@ def main(gpu, world_size, num_epochs, save_every):
 
     optimizer = torch.optim.AdamW(
         samri_model.module.mask_decoder.parameters(),
-        lr=1e-4, 
+        lr=1e-4/world_size, 
         weight_decay=0.1
     )
 
