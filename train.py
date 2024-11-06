@@ -61,7 +61,7 @@ def main():
     #train
     losses = []
     train_dataset = EmbDataset(train_image_path)
-    train_loader = DataLoader(train_dataset, prefetch_factor=5)
+    train_loader = DataLoader(train_dataset)
     prompts = ["point", "bbox"]
     for epoch in range(start_epoch, num_epochs):
         
