@@ -16,5 +16,6 @@ module load anaconda3
 source $EBROOTANACONDA3/etc/profile.d/conda.sh
 conda activate samri
 
+nvidia-smi
 python train_fast.py
 
