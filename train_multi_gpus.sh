@@ -1,10 +1,10 @@
 #!/bin/bash --login
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=12
+#SBATCH --cpus-per-task=8
 #SBATCH --mem=32G
 #SBATCH --job-name=SAMRI
-#SBATCH --time=168:00:00
+#SBATCH --time=96:00:00
 #SBATCH --partition=gpu_cuda
 #SBATCH --gres=gpu:l40:3
 #SBATCH --account=a_auto_mr_disease
