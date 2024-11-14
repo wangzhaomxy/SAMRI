@@ -1,9 +1,9 @@
 #!/bin/bash --login
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=12
+#SBATCH --cpus-per-task=1
 #SBATCH --mem=32G
-#SBATCH --job-name=SAMRI_12
+#SBATCH --job-name=SAMRI
 #SBATCH --time=96:00:00
 #SBATCH --partition=gpu_cuda
 #SBATCH --gres=gpu:h100:3
