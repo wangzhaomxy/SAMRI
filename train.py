@@ -11,13 +11,13 @@ import torch
 from segment_anything import sam_model_registry
 from utils.dataloader import EmbDataset
 from torch.utils.data import DataLoader
-from monai.losses import DiceLoss
+from utils.losses import DiceLoss
 from torchvision.ops import sigmoid_focal_loss
 from utils.utils import *
 from utils.prompt import *
 from model import SAMRI
 from train_predictor import TrainSamPredictor
-import glob
+
 
 # setup global parameters
 model_type = "samri"
