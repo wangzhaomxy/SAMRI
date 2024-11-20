@@ -65,7 +65,7 @@ def gen_points(mask, num_points=1):
     print("h:", h, " w ", w)
     if num_points == 1:
         p_idx = random.randint(int(len(h)*0.45), int(len(h)*0.55))
-        print(p_idx)
+        print("p_idx:",p_idx)
         return np.array([[w[p_idx], h[p_idx]]])
     else:
         points = []
