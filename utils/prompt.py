@@ -62,10 +62,8 @@ def gen_points(mask, num_points=1):
         (np.array)[[list], ...]: a list of point lists if the num_points > 1.
     """
     h, w = np.nonzero(mask)
-    print("h:", h, " w ", w)
     if num_points == 1:
         p_idx = random.randint(int(len(h)*0.45), int(len(h)*0.55))
-        print("p_idx:",p_idx)
         return np.array([[w[p_idx], h[p_idx]]])
     else:
         points = []
