@@ -19,8 +19,8 @@ TRAIN_IMAGE_PATH = [ds + "/" for ds in sorted(glob(EMBEDDING_PATH + "*"))]
 
 TEST_IMAGE_PATH = [ds + "/testing/" for ds in sorted(glob(TEST_PATH + "*"))]
 
-IMAGE_KEYS = "*img*"  # The image file names containing letters between *
-MASK_KEYS = "*seg*"   # The mask file names containing letters between *
+IMAGE_KEYS = "*_img_*"  # The image file names containing letters between *
+MASK_KEYS = "*_seg_*"   # The mask file names containing letters between *
 
 ENCODER_TYPE = {"vit_b":"vit_b",
                   "vit_h":"vit_h",
