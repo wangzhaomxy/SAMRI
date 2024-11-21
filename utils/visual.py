@@ -40,7 +40,7 @@ def get_dice_from_ds(model, test_dataset):
 
     Args:
         model (SAM model): The SAM model loaded from Checkpoint.
-        test_dataset (Dataset): The pytorch dataset from torch.Dataset.
+        test_dataset (Dataset): The pytorch dataset from torch.Dataset.ß
 
     Returns:
         ([p_record], [b_record]): 
