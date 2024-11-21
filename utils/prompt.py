@@ -184,4 +184,3 @@ def rand_shift(jitter):
     """
     return random.randint(-jitter, jitter)
     
-        
