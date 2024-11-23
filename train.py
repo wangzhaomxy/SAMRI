@@ -50,6 +50,16 @@ def main():
     ).to(device)
     train_predictor = TrainSamPredictor(samri_model)
 
+    print(
+            "Number of total parameters: ",
+            sum(p.numel() for p in samri_model.parameters()),
+        )  
+    print(
+        "Number of trainable parameters: ",
+        sum(p.numel() for p in samri_model.parameters() if p.requires_grad),
+    )
+    print("Number of decoder parameters: ", sum(samri_model.mask_decoder.parameters().numel()))
+    
     optimizer = torch.optim.AdamW(
         samri_model.mask_decoder.parameters(),
         lr=1e-5, 

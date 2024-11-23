@@ -67,6 +67,15 @@ def main(gpu, world_size, num_epochs, save_every):
     ).cuda()
     train_predictor = TrainSamPredictor(samri_model)
 
+    print(
+        "Number of total parameters: ",
+        sum(p.numel() for p in samri_model.parameters()),
+    )  
+    print(
+        "Number of trainable parameters: ",
+        sum(p.numel() for p in samri_model.parameters() if p.requires_grad),
+    )
+    
     samri_model = DDP(
                     samri_model,
                     device_ids=[gpu],
