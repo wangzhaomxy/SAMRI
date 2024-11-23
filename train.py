@@ -11,8 +11,8 @@ import torch
 from segment_anything import sam_model_registry
 from utils.dataloader import EmbDataset
 from torch.utils.data import DataLoader
-from utils.losses import DiceLoss
-from torchvision.ops import sigmoid_focal_loss
+from utils.losses import DiceLoss, sigmoid_focal_loss, DiceFocalLoss
+# from torchvision.ops import sigmoid_focal_loss
 from utils.utils import *
 from utils.prompt import *
 from model import SAMRI
@@ -66,8 +66,15 @@ def main():
         weight_decay=0.1
     )
 
-    dice_loss = DiceLoss(sigmoid=True, squared_pred=True, reduction="mean")
-
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=50)
+    
+    # dice_loss = DiceLoss(sigmoid=True, squared_pred=True, reduction="mean")
+    dice_focal_loass = DiceFocalLoss(sigmoid=True, 
+                                     squared_pred=True, 
+                                     reduction="mean",
+                                     lambda_dice=1,
+                                     lambda_focal=10)
+    
     #train
     losses = []
     train_dataset = EmbDataset(train_image_path)
@@ -101,16 +108,16 @@ def main():
                                                         multimask_output=False)
 
                         sub_mask = torch.tensor(sub_mask[None,:,:], dtype=torch.float, device=torch.device(device))
-                        focal_loss = sigmoid_focal_loss(y_pred, sub_mask, alpha=0.25, gamma=2,reduction="mean")
-                        loss = dice_loss(y_pred, sub_mask) + 10 * focal_loss
-                        
+                        # focal_loss = sigmoid_focal_loss(y_pred, sub_mask, alpha=0.25, gamma=2,reduction="mean")
+                        # loss = dice_loss(y_pred, sub_mask) + 10 * focal_loss
+                        loss = dice_focal_loass(y_pred, sub_mask)
                         loss.backward()
                         
                         optimizer.step()
                         
                         sub_loss += loss.item()
             epoch_loss += sub_loss / (len(prompts)*lenth)
-
+        scheduler.step()
         epoch_loss /= (step+1)
         losses.append(epoch_loss)
 
