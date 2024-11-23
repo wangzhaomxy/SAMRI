@@ -58,7 +58,7 @@ def main():
         "Number of trainable parameters: ",
         sum(p.numel() for p in samri_model.parameters() if p.requires_grad),
     )
-    print("Number of decoder parameters: ", sum(samri_model.mask_decoder.parameters()))
+    print("Number of decoder parameters: ", sum(p.numel() for p in samri_model.mask_decoder.parameters()))
     
     optimizer = torch.optim.AdamW(
         samri_model.mask_decoder.parameters(),
