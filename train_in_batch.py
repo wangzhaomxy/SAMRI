@@ -85,25 +85,28 @@ def main():
         for step, (embedding, mask, ori_size) in enumerate(tqdm(train_loader)):
             # Generate batch in multiple mask mode.
             masks = MaskSplit(mask)
+            ori_size = (ori_size[0].numpy()[0], ori_size[1].numpy()[0])
             num_masks = len(masks)
             if num_masks > batch_size:
                 raise RuntimeError("Too small batch size. It should be larger than label numbers.")
             batch_counter += num_masks
             if batch_counter < batch_size:
                 if not remain_data:
-                    batch_data += [(embedding, masks[i]) for i in range(num_masks)]
+                    batch_data += [(embedding, masks[i], ori_size) for i in range(num_masks)]
                 else:
                     batch_data += remain_data
-                    batch_data += [(embedding, masks[i]) for i in range(num_masks)]
+                    batch_data += [(embedding, masks[i], ori_size) for i in range(num_masks)]
                     remain_data = []
             else:
                 batch_counter -= batch_size
-                batch_data += [(embedding, masks[i]) for i in range(num_masks - batch_counter)]
+                batch_data += [(embedding, masks[i], ori_size) for i in range(num_masks - batch_counter)]
                 if batch_counter != 0:
-                    remain_data = [(embedding, masks[i]) for i in range(num_masks - batch_counter, num_masks)]
+                    remain_data = [(embedding, masks[i], ori_size) for i in range(num_masks - batch_counter, num_masks)]
                 
                 # Train model
                 for prompt in prompts:
+                    print("Shape of embeddings: ",batch_data[0][0].shape)
+                    print("Shape of masks: ", batch_data[0][1].shape)
                     step += 1                    
                     if prompt == "point":
                         batch_input = [
@@ -112,7 +115,7 @@ def main():
                              'point_labels':torch.as_tensor([[1]], device=device),
                              'original_size':ori_size
                              } 
-                            for image, mask in batch_data
+                            for image, mask, ori_size in batch_data
                         ]
                     if prompt == "bbox":
                         batch_input = [
@@ -120,7 +123,7 @@ def main():
                              'boxes':resize_transform.apply_boxes_torch(torch.as_tensor(np.array([gen_bboxes(mask)]), device=device), original_size=ori_size),
                              'original_size':ori_size
                              } 
-                            for image, mask in batch_data
+                            for image, mask, ori_size in batch_data
                         ]
                     batch_gt_masks = torch.stack([mask for _, mask in batch_data],dim=0)
                     y_pred = samri_model(batch_input, multimask_output=False, train_mode=True, embedding_inputs=True)
