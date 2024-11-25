@@ -103,6 +103,8 @@ def main():
                 if batch_counter != 0:
                     remain_data = [(embedding, masks[i], ori_size) for i in range(num_masks - batch_counter, num_masks)]
                 
+                print(len(batch_data))
+                print(batch_data[0][2])
                 # Train model
                 for prompt in prompts:
                     step += 1                    
