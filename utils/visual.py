@@ -12,6 +12,7 @@ from segment_anything import SamPredictor
 from utils.utils import *
 from utils.prompt import *
 from utils.losses import dice_similarity
+from skimage import transform
 
 
 def show_mask(mask, ax, random_color=False):
@@ -34,7 +35,7 @@ def show_box(box, ax):
     w, h = box[2] - box[0], box[3] - box[1]
     ax.add_patch(plt.Rectangle((x0, y0), w, h, edgecolor='green', facecolor=(0,0,0,0), lw=2))    
 
-def get_dice_from_ds(model, test_dataset):
+def get_dice_from_ds(model, test_dataset, resize=False):
     """
     Get point prompt 
 
@@ -53,6 +54,25 @@ def get_dice_from_ds(model, test_dataset):
 
     for image, mask in tqdm(test_dataset):
         # Image embedding inference
+        if resize:
+            image = transform.resize(
+                image,
+                (1024, 1024),
+                order=3,
+                preserve_range=True,
+                mode="constant",
+                anti_aliasing=True,
+            )
+            
+            mask = transform.resize(
+                mask,
+                (1024, 1024),
+                order=0,
+                preserve_range=True,
+                mode="constant",
+                anti_aliasing=False,
+            )
+        
         predictor.set_image(image)
         masks = MaskSplit(mask)
 
