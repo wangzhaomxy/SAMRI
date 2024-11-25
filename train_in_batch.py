@@ -86,7 +86,7 @@ def main():
         for step, (embedding, mask, ori_size) in enumerate(tqdm(train_loader)):
             # Generate batch in multiple mask mode.
             embedding = embedding.squeeze()
-            masks = MaskSplit(mask.squeeze())
+            masks = MaskSplit(mask.squeeze(0))
             ori_size = (ori_size[0].numpy()[0], ori_size[1].numpy()[0])
             num_masks = len(masks)
             if num_masks > batch_size:
