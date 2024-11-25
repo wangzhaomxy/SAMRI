@@ -87,7 +87,7 @@ def main():
             # Generate batch in multiple mask mode.
             print(embedding.shape)
             print(mask.shape)
-            print(ori_size.shape)
+            print(ori_size)
             masks = MaskSplit(mask)
             ori_size = (ori_size[0].numpy()[0], ori_size[1].numpy()[0])
             num_masks = len(masks)
