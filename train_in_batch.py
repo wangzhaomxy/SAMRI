@@ -109,7 +109,7 @@ def main():
                     step += 1                    
                     if prompt == "point":
                         batch_input = [
-                            {'image': image,
+                            {'image': image.to(device),
                              'point_coords':resize_transform.apply_coords_torch(torch.as_tensor(np.array([gen_points(mask.squeeze(0).numpy())]), device=device), original_size=ori_size),
                              'point_labels':torch.as_tensor([[1]], device=device),
                              'original_size':ori_size
@@ -118,7 +118,7 @@ def main():
                         ]
                     if prompt == "bbox":
                         batch_input = [
-                            {'image': image,
+                            {'image': image.to(device),
                              'boxes':resize_transform.apply_boxes_torch(torch.as_tensor(np.array([gen_bboxes(mask.squeeze(0).numpy())]), device=device), original_size=ori_size),
                              'original_size':ori_size
                              } 
