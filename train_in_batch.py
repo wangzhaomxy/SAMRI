@@ -105,8 +105,6 @@ def main():
                 
                 # Train model
                 for prompt in prompts:
-                    print("Shape of embeddings: ",batch_data[0][0].shape)
-                    print("Shape of masks: ", batch_data[0][1].shape)
                     step += 1                    
                     if prompt == "point":
                         batch_input = [
@@ -127,6 +125,8 @@ def main():
                         ]
                     batch_gt_masks = torch.stack([mask for _, mask in batch_data],dim=0)
                     y_pred = samri_model(batch_input, multimask_output=False, train_mode=True, embedding_inputs=True)
+                    print("GT shape: ",batch_gt_masks.shape)
+                    print("Y_pred shape: ", y_pred.shape)
                     loss = dice_focal_loass(y_pred, batch_gt_masks)
                     print("1: ",loss)
                     print("2: ",dice_focal_loass(y_pred, y_pred))
