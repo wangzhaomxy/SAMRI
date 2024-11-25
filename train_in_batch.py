@@ -128,7 +128,7 @@ def main():
                     
                     y_pred = samri_model(batch_input, multimask_output=False, train_mode=True, embedding_inputs=True)
                     print("Y_pred shape: ", y_pred.shape)
-                    batch_gt_masks = np.asarray([mask.numpy() for _,mask,_ in batch_data])
+                    batch_gt_masks = np.array([mask.numpy() for _,mask,_ in batch_data])
                     print("GT shape: ",batch_gt_masks.shape)
                     loss = dice_focal_loass(y_pred, batch_gt_masks)
                     print("1: ",loss)

@@ -123,11 +123,19 @@ class SAMRI(Sam):
             dense_prompt_embeddings=dense_embeddings,
             multimask_output=multimask_output,
         )
-        masks = self.postprocess_masks(
-            low_res_masks,
-            input_size=input_images.shape[-2:],
-            original_size=batched_input[0]["original_size"],
-        )
+        
+        if embedding_inputs:
+            masks = self.postprocess_masks(
+                low_res_masks,
+                input_size=[1024,1024],
+                original_size=batched_input[0]["original_size"],
+            )
+        else:
+            masks = self.postprocess_masks(
+                low_res_masks,
+                input_size=input_images.shape[-2:],
+                original_size=batched_input[0]["original_size"],
+            )
 
         if train_mode:
             return masks
