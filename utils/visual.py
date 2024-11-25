@@ -64,6 +64,7 @@ def get_dice_from_ds(model, test_dataset, resize=False):
                 anti_aliasing=True,
             )
             print(image.shape)
+            print(mask.shape)
             mask = transform.resize(
                 mask,
                 (1024, 1024),
