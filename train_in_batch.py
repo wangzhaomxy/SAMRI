@@ -85,6 +85,8 @@ def main():
         train_loader = DataLoader(train_dataset, shuffle=True)
         for step, (embedding, mask, ori_size) in enumerate(tqdm(train_loader)):
             # Generate batch in multiple mask mode.
+            print(embedding.shape)
+            print(mask.shape)
             masks = MaskSplit(mask)
             ori_size = (ori_size[0].numpy()[0], ori_size[1].numpy()[0])
             num_masks = len(masks)
