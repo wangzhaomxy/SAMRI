@@ -124,7 +124,7 @@ def main():
                             for image, mask, ori_size in batch_data
                         ]
                     print([mask.shape for _,mask,_ in batch_data])
-                    batch_gt_masks = torch.as_tensor([mask for _,mask,_ in batch_data], dtype=torch.float, device=device)
+                    batch_gt_masks = torch.as_tensor([mask.numpy() for _,mask,_ in batch_data], dtype=torch.float, device=device)
                     y_pred = samri_model(batch_input, multimask_output=False, train_mode=True, embedding_inputs=True)
                     print("GT shape: ",batch_gt_masks.shape)
                     print("Y_pred shape: ", y_pred.shape)
