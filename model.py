@@ -44,7 +44,8 @@ class SAMRI(Sam):
             self,
             batched_input: List[Dict[str, Any]],
             multimask_output: bool,
-            train_mode: bool = False
+            train_mode: bool = False,
+            embedding_inputs = False
         ) -> List[Dict[str, torch.Tensor]]:
         """
         Predicts masks end-to-end from provided images and prompts.
@@ -84,9 +85,11 @@ class SAMRI(Sam):
                 shape BxCxHxW, where H=W=256. Can be passed as mask input
                 to subsequent iterations of prediction.
         """
-        
-        input_images = torch.stack([self.preprocess(x["image"]) for x in batched_input], dim=0)
-        image_embeddings = self.image_encoder(input_images)
+        if embedding_inputs:
+            image_embeddings = torch.stack([x["image"] for x in batched_input], dim=0)
+        else:
+            input_images = torch.stack([self.preprocess(x["image"]) for x in batched_input], dim=0)
+            image_embeddings = self.image_encoder(input_images)
 
         if "point_coords" in batched_input:
             if batched_input["point_coords"] != None:
