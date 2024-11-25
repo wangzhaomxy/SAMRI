@@ -86,7 +86,6 @@ def main():
             # Generate batch in multiple mask mode.
             masks = MaskSplit(mask)
             num_masks = len(masks)
-            print(num_masks)
             if num_masks > batch_size:
                 raise RuntimeError("Too small batch size. It should be larger than label numbers.")
             batch_counter += num_masks
@@ -108,25 +107,27 @@ def main():
                     step += 1                    
                     if prompt == "point":
                         batch_input = [
-                            {'image': prep_img(image, resize_transform),
-                             'point_coords':resize_transform.apply_coords_torch(torch.as_tensor(np.array([gen_points(mask[0,:])]), device=device), original_size=image.shape[:2]),
+                            {'image': image,
+                             'point_coords':resize_transform.apply_coords_torch(torch.as_tensor(np.array([gen_points(mask[0,:])]), device=device), original_size=ori_size),
                              'point_labels':torch.as_tensor([[1]], device=device),
-                             'original_size':image.shape[:2]
+                             'original_size':ori_size
                              } 
                             for image, mask in batch_data
                         ]
                     if prompt == "bbox":
                         batch_input = [
-                            {'image': prep_img(image, resize_transform),
-                             'boxes':resize_transform.apply_boxes_torch(torch.as_tensor(np.array([gen_bboxes(mask[0,:])]), device=device), original_size=image.shape[:2]),
-                             'original_size':image.shape[:2]
+                            {'image': image,
+                             'boxes':resize_transform.apply_boxes_torch(torch.as_tensor(np.array([gen_bboxes(mask[0,:])]), device=device), original_size=ori_size),
+                             'original_size':ori_size
                              } 
                             for image, mask in batch_data
                         ]
                     batch_gt_masks = torch.stack([mask for _, mask in batch_data],dim=0)
-
                     y_pred = samri_model(batch_input, multimask_output=False, train_mode=True, embedding_inputs=True)
                     loss = dice_focal_loass(y_pred, batch_gt_masks)
+                    print("1: ",loss)
+                    print("2: ",dice_focal_loass(y_pred, y_pred))
+                    print("3: ",dice_focal_loass(batch_gt_masks, batch_gt_masks))
                     loss.backward()
                     optimizer.step()
 
