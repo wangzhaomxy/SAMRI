@@ -107,9 +107,7 @@ def main():
                 
                 # Train model
                 for prompt in prompts:
-                    print(batch_data[0][0].shape)
-                    print(batch_data[0][1].shape)
-                    print(batch_data[0][2])
+                    print([shape[2] for shape in batch_data])
                     step += 1                    
                     if prompt == "point":
                         batch_input = [
