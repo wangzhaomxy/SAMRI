@@ -85,10 +85,8 @@ def main():
         train_loader = DataLoader(train_dataset, shuffle=True)
         for step, (embedding, mask, ori_size) in enumerate(tqdm(train_loader)):
             # Generate batch in multiple mask mode.
-            print(embedding.shape)
-            print(mask.shape)
-            print(ori_size)
-            masks = MaskSplit(mask)
+            embedding = embedding.squeeze()
+            masks = MaskSplit(mask.squeeze())
             ori_size = (ori_size[0].numpy()[0], ori_size[1].numpy()[0])
             num_masks = len(masks)
             if num_masks > batch_size:
@@ -113,7 +111,7 @@ def main():
                     if prompt == "point":
                         batch_input = [
                             {'image': image.to(device),
-                             'point_coords':resize_transform.apply_coords_torch(torch.as_tensor(np.array([gen_points(mask.squeeze(0).numpy())]), device=device), original_size=ori_size),
+                             'point_coords':resize_transform.apply_coords_torch(torch.as_tensor(np.array([gen_points(mask.numpy())]), device=device), original_size=ori_size),
                              'point_labels':torch.as_tensor([[1]], device=device),
                              'original_size':ori_size
                              } 
@@ -122,7 +120,7 @@ def main():
                     if prompt == "bbox":
                         batch_input = [
                             {'image': image.to(device),
-                             'boxes':resize_transform.apply_boxes_torch(torch.as_tensor(np.array([gen_bboxes(mask.squeeze(0).numpy())]), device=device), original_size=ori_size),
+                             'boxes':resize_transform.apply_boxes_torch(torch.as_tensor(np.array([gen_bboxes(mask.numpy())]), device=device), original_size=ori_size),
                              'original_size':ori_size
                              } 
                             for image, mask, ori_size in batch_data
