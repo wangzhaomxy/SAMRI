@@ -103,8 +103,6 @@ def main():
                 if batch_counter != 0:
                     remain_data = [(embedding, masks[i], ori_size) for i in range(num_masks - batch_counter, num_masks)]
                 
-                print(len(batch_data))
-                print(batch_data[0][1].shape)
                 # Train model
                 for prompt in prompts:
                     step += 1                    
@@ -120,12 +118,12 @@ def main():
                     if prompt == "bbox":
                         batch_input = [
                             {'image': image,
-                             'boxes':resize_transform.apply_boxes_torch(torch.as_tensor(np.array([gen_bboxes(masks.queeze(0).numpy())]), device=device), original_size=ori_size),
+                             'boxes':resize_transform.apply_boxes_torch(torch.as_tensor(np.array([gen_bboxes(mask.squeeze(0).numpy())]), device=device), original_size=ori_size),
                              'original_size':ori_size
                              } 
                             for image, mask, ori_size in batch_data
                         ]
-                    batch_gt_masks = torch.stack([mask for _, mask in batch_data],dim=0)
+                    batch_gt_masks = torch.stack([mask for _, mask, _ in batch_data],dim=0)
                     y_pred = samri_model(batch_input, multimask_output=False, train_mode=True, embedding_inputs=True)
                     print("GT shape: ",batch_gt_masks.shape)
                     print("Y_pred shape: ", y_pred.shape)
