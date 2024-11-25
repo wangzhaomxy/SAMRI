@@ -86,21 +86,22 @@ def main():
             # Generate batch in multiple mask mode.
             masks = MaskSplit(mask)
             num_masks = len(masks)
+            print(num_masks)
             if num_masks > batch_size:
                 raise RuntimeError("Too small batch size. It should be larger than label numbers.")
             batch_counter += num_masks
             if batch_counter < batch_size:
                 if not remain_data:
-                    batch_data += [(embedding, mask[i]) for i in range(num_masks)]
+                    batch_data += [(embedding, masks[i]) for i in range(num_masks)]
                 else:
                     batch_data += remain_data
-                    batch_data += [(embedding, mask[i]) for i in range(num_masks)]
+                    batch_data += [(embedding, masks[i]) for i in range(num_masks)]
                     remain_data = []
             else:
                 batch_counter -= batch_size
-                batch_data += [(embedding, mask[i]) for i in range(num_masks - batch_counter)]
+                batch_data += [(embedding, masks[i]) for i in range(num_masks - batch_counter)]
                 if batch_counter != 0:
-                    remain_data = [(embedding, mask[i]) for i in range(num_masks - batch_counter, num_masks)]
+                    remain_data = [(embedding, masks[i]) for i in range(num_masks - batch_counter, num_masks)]
                 
                 # Train model
                 for prompt in prompts:
