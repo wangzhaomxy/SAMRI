@@ -63,7 +63,7 @@ def get_dice_from_ds(model, test_dataset, resize=False):
                 mode="constant",
                 anti_aliasing=True,
             )
-            
+            print(image.shape)
             mask = transform.resize(
                 mask,
                 (1024, 1024),
@@ -72,6 +72,7 @@ def get_dice_from_ds(model, test_dataset, resize=False):
                 mode="constant",
                 anti_aliasing=False,
             )
+            print(mask.shape)
         
         predictor.set_image(image)
         masks = MaskSplit(mask)
