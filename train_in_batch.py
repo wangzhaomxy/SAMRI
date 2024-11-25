@@ -8,6 +8,7 @@ import os
 join = os.path.join
 from tqdm import tqdm
 import torch
+import numpy as np
 from segment_anything import sam_model_registry
 from datetime import datetime
 from utils.dataloader import EmbDataset
@@ -123,11 +124,11 @@ def main():
                              } 
                             for image, mask, ori_size in batch_data
                         ]
-                    print([mask.numpy().shape for _,mask,_ in batch_data])
-                    batch_gt_masks = torch.as_tensor([mask.numpy() for _,mask,_ in batch_data], dtype=torch.float, device=device)
+                    
                     y_pred = samri_model(batch_input, multimask_output=False, train_mode=True, embedding_inputs=True)
-                    print("GT shape: ",batch_gt_masks.shape)
                     print("Y_pred shape: ", y_pred.shape)
+                    batch_gt_masks = np.asarray([mask.numpy() for _,mask,_ in batch_data])
+                    print("GT shape: ",batch_gt_masks.shape)
                     loss = dice_focal_loass(y_pred, batch_gt_masks)
                     print("1: ",loss)
                     print("2: ",dice_focal_loass(y_pred, y_pred))
