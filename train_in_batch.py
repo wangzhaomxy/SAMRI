@@ -10,35 +10,24 @@ from tqdm import tqdm
 import torch
 from segment_anything import sam_model_registry
 from datetime import datetime
-from utils.dataloader import NiiDataset
-import wandb
-from monai.losses import DiceLoss
-from torchvision.ops import sigmoid_focal_loss
+from utils.dataloader import EmbDataset
+from torch.utils.data import DataLoader
+from utils.losses import DiceFocalLoss
 from utils.utils import *
 from utils.prompt import *
 from model import SAMRI
 from segment_anything.utils.transforms import ResizeLongestSide
 
 # setup global parameters
-model_type = "vit_b"
+model_type = "samri"
 encoder_type = ENCODER_TYPE[model_type] # choose one from vit_b and vit_h.
-sam_checkpoint = SAM_CHECKPOINT[model_type]
 batch_size = BATCH_SIZE
 data_path = TRAIN_IMAGE_PATH
-model_save_path = MODEL_SAVE_PATH
+model_save_path = MODEL_SAVE_PATH + "ba/"
 device = DEVICE
 num_epochs = NUM_EPOCHS
 train_image_path = TRAIN_IMAGE_PATH
-amp = True
-wandb.login()
-experiment = wandb.init(
-    project="SAMRI",
-    config={
-        "batch_size": batch_size,
-        "data_path": data_path,
-        "model_type": encoder_type,
-    },
-)
+train_image_path.remove('/scratch/project/samri/Embedding/totalseg_mr/')
 
 def prep_img(image, tramsform, device=device):
     image = tramsform.apply_image(image)
@@ -46,6 +35,7 @@ def prep_img(image, tramsform, device=device):
     return image.permute(2, 0, 1).contiguous()
 
 def main():
+    sam_checkpoint, start_epoch = get_checkpoint(model_save_path)
     sam_model = sam_model_registry[encoder_type](sam_checkpoint)
     samri_model = SAMRI(
         image_encoder=sam_model.image_encoder,
@@ -54,20 +44,33 @@ def main():
     ).to(device)
     resize_transform = ResizeLongestSide(samri_model.image_encoder.img_size)
 
+    print(
+            "Number of total parameters: ",
+            sum(p.numel() for p in samri_model.parameters()),
+        )  
+    print(
+        "Number of trainable parameters: ",
+        sum(p.numel() for p in samri_model.parameters() if p.requires_grad),
+    )
+    print("Number of decoder parameters: ", sum(p.numel() for p in samri_model.mask_decoder.parameters()))
+
     optimizer = torch.optim.AdamW(
         samri_model.mask_decoder.parameters(),
-        lr=1e-4, 
-        weight_decay=0.01
+        lr=1e-5, 
+        weight_decay=0.1
     )
-
-    dice_loss = DiceLoss(sigmoid=True, squared_pred=True, reduction="mean", batch=True)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=50)
+    
+    dice_focal_loass = DiceFocalLoss(sigmoid=True, 
+                                     squared_pred=True,
+                                     batch= True, 
+                                     reduction="mean",
+                                     lambda_dice=1,
+                                     lambda_focal=10)
 
     #train
     losses = []
-    best_loss = 1e5
-    scaler = torch.cuda.amp.GradScaler()
-    start_epoch = 0
-    prompts = ["bbox"] # ["point", "bbox"] # 
+    prompts =["point", "bbox"] 
     for epoch in range(start_epoch, num_epochs):
         print(f"The {epoch+1} / {num_epochs} epochs.")
         # training part
@@ -77,25 +80,27 @@ def main():
         remain_data = []
         step = 0
         batch_data = []
-        train_dataset = NiiDataset(train_image_path, shuffle=True, multi_mask=True)
-        for image, mask in tqdm(train_dataset):
+        train_dataset = EmbDataset(train_image_path)
+        train_loader = DataLoader(train_dataset, shuffle=True)
+        for step, (embedding, mask, ori_size) in enumerate(tqdm(train_loader)):
             # Generate batch in multiple mask mode.
-            num_masks = len(mask)
+            masks = MaskSplit(mask)
+            num_masks = len(masks)
             if num_masks > batch_size:
-                raise RuntimeError("Too small batch size. It should be larger than label numbers")
+                raise RuntimeError("Too small batch size. It should be larger than label numbers.")
             batch_counter += num_masks
             if batch_counter < batch_size:
                 if not remain_data:
-                    batch_data += [(image, mask[i]) for i in range(num_masks)]
+                    batch_data += [(embedding, mask[i]) for i in range(num_masks)]
                 else:
                     batch_data += remain_data
-                    batch_data += [(image, mask[i]) for i in range(num_masks)]
+                    batch_data += [(embedding, mask[i]) for i in range(num_masks)]
                     remain_data = []
             else:
                 batch_counter -= batch_size
-                batch_data += [(image, mask[i]) for i in range(num_masks - batch_counter)]
+                batch_data += [(embedding, mask[i]) for i in range(num_masks - batch_counter)]
                 if batch_counter != 0:
-                    remain_data = [(image, mask[i]) for i in range(num_masks - batch_counter, num_masks)]
+                    remain_data = [(embedding, mask[i]) for i in range(num_masks - batch_counter, num_masks)]
                 
                 # Train model
                 for prompt in prompts:
@@ -117,36 +122,20 @@ def main():
                              } 
                             for image, mask in batch_data
                         ]
-                    batch_gt_masks = torch.as_tensor(np.array([mask for _, mask in batch_data]), dtype=torch.float, device=device)
+                    batch_gt_masks = torch.stack([mask for _, mask in batch_data],dim=0)
 
-                    if amp:
-                        with torch.autocast(device_type="cuda", dtype=torch.float16):
-                            y_pred = samri_model(batch_input, multimask_output=False, train_mode=True)
-
-                            focal_loss = sigmoid_focal_loss(y_pred, batch_gt_masks, alpha=0.25, gamma=2,reduction="mean")
-                            loss = dice_loss(y_pred, batch_gt_masks) + focal_loss
-
-                        scaler.scale(loss).backward()
-                        scaler.step(optimizer)
-                        scaler.update()
-
-                    else:
-                        y_pred = samri_model(batch_input, multimask_output=False, train_mode=True)
-                        focal_loss = sigmoid_focal_loss(y_pred, batch_gt_masks, alpha=0.25, gamma=2,reduction="mean")
-                        loss = dice_loss(y_pred, batch_gt_masks) + focal_loss
-                        loss.backward()
-                        optimizer.step()
+                    y_pred = samri_model(batch_input, multimask_output=False, train_mode=True, embedding_inputs=True)
+                    loss = dice_focal_loass(y_pred, batch_gt_masks)
+                    loss.backward()
+                    optimizer.step()
 
                     optimizer.zero_grad()
                     epoch_loss += loss.item()
-
-                    experiment.log({"sub_loss": loss.item()})
                 batch_data = []
-
+        scheduler.step()
         epoch_loss /= step
         losses.append(epoch_loss)
-        experiment.log({"train_epoch_loss": epoch_loss,
-                        "train_losses":losses})
+
         print(
             f'Time: {datetime.now().strftime("%Y%m%d-%H%M")}, Epoch: {epoch}, Loss: {epoch_loss}'
             )

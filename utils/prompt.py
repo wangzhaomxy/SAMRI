@@ -9,7 +9,7 @@ import random
 
 class MaskSplit():
     """
-    Split the labeled ground truth masks into single logits mask. 
+    Split the labeled ground truth masks into single binary mask. 
 
     Args:
         mask (np.darray): the labeled ground truth mask. CHW=(1,255,255)
@@ -19,7 +19,7 @@ class MaskSplit():
     def __init__(self, mask):
         self.mask = mask[0, :, :]
         # mask_number (int): the number of the gt mask labels.
-        self.mask_number = len(np.unique(self.mask))
+        self.mask_number = len(np.unique(self.mask)) - 1
         # masks (list): the list of single mask with different lables, HW=(255,255)
         self.masks = self._split_masks()
         """
