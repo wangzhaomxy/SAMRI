@@ -35,7 +35,7 @@ def show_box(box, ax):
     w, h = box[2] - box[0], box[3] - box[1]
     ax.add_patch(plt.Rectangle((x0, y0), w, h, edgecolor='green', facecolor=(0,0,0,0), lw=2))    
 
-def get_dice_from_ds(model, test_dataset, resize=False):
+def get_dice_from_ds(model, test_dataset, med_sam=False):
     """
     Get point prompt 
 
@@ -54,7 +54,7 @@ def get_dice_from_ds(model, test_dataset, resize=False):
 
     for image, mask in tqdm(test_dataset):
         # Image embedding inference
-        if resize:
+        if med_sam:
             image = transform.resize(
                 image,
                 (1024, 1024),
@@ -88,6 +88,7 @@ def get_dice_from_ds(model, test_dataset, resize=False):
                                 point_coords=point,
                                 point_labels=point_label,
                                 multimask_output=False,
+                                med_sam=med_sam
                             )
             
             pre_mask_b, _, _ = predictor.predict(
@@ -95,6 +96,7 @@ def get_dice_from_ds(model, test_dataset, resize=False):
                                 point_labels=None,
                                 box=bbox[None, :],
                                 multimask_output=False,
+                                med_sam=med_sam
                             )
 
             # save DSC
