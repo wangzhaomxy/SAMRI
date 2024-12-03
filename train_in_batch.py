@@ -127,13 +127,8 @@ def main():
                         ]
                     
                     y_pred = samri_model(batch_input, multimask_output=False, train_mode=True, embedding_inputs=True)
-                    print("Y_pred shape: ", y_pred.shape)
                     batch_gt_masks = torch.stack([preprocess_mask(torch.tensor(x,dtype=torch.float, device=torch.device(device))[None,None,:,:],target_size=256) for _,x,_ in batch_data], dim=0).squeeze(1)
-                    print("GT shape: ",batch_gt_masks.shape)
                     loss = dice_focal_loass(y_pred, batch_gt_masks)
-                    print("1: ",loss)
-                    print("2: ",dice_focal_loass(y_pred, y_pred))
-                    print("3: ",dice_focal_loass(batch_gt_masks, batch_gt_masks))
                     loss.backward()
                     optimizer.step()
 
@@ -144,18 +139,11 @@ def main():
         epoch_loss /= step
         losses.append(epoch_loss)
 
-        print(
-            f'Time: {datetime.now().strftime("%Y%m%d-%H%M")}, Epoch: {epoch}, Loss: {epoch_loss}'
-            )
-        
-        ## save the best model
-        if epoch_loss < best_loss:
-            best_loss = epoch_loss
-            torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_best_box.pth"))
-
         ## save the latest model
-        torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_latest_box.pth"))
-
+        if (epoch + 1) % 1 == 0:
+            print(f"The {epoch+1} / {num_epochs} epochs,  Loss: {epoch_loss}.")
+            torch.save(samri_model.state_dict(), join(model_save_path, f"samri_vitb_ba_{str(epoch+1)}.pth"))
+            print(f"Checkpoint <samri_vitb_{str(epoch+1)}.pth> has been saved.")
 
 if __name__ == "__main__":
     main()
