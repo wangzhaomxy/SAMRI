@@ -45,7 +45,7 @@ class SAMRI(Sam):
             batched_input: List[Dict[str, Any]],
             multimask_output: bool,
             train_mode: bool = False,
-            embedding_inputs = False
+            embedding_inputs = False,
         ) -> List[Dict[str, torch.Tensor]]:
         """
         Predicts masks end-to-end from provided images and prompts.
@@ -71,6 +71,9 @@ class SAMRI(Sam):
                 in the form Bx1xHxW.
           multimask_output (bool): Whether the model should predict multiple
             disambiguating masks, or return a single mask.
+          train_mode(str): "single", "batch" or None. "single" means training 
+            model with single input, and "batch" means training model with batch
+            inputs. None means inference mode. Default None.
 
         Returns:
           (list(dict)): A list over input images, where each element is
@@ -123,22 +126,15 @@ class SAMRI(Sam):
             multimask_output=multimask_output,
         )
         
-        if embedding_inputs:
-            masks = self.postprocess_masks(
-                low_res_masks,
-                input_size=[1024,1024],
-                original_size=batched_input[0]["original_size"],
-            )
+        if train_mode:
+            masks = low_res_masks
+            return masks
         else:
             masks = self.postprocess_masks(
                 low_res_masks,
                 input_size=input_images.shape[-2:],
                 original_size=batched_input[0]["original_size"],
             )
-
-        if train_mode:
-            return masks
-        else:
             masks = masks > self.mask_threshold
             return masks
     
