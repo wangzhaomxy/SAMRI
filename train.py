@@ -62,7 +62,7 @@ def main():
     
     optimizer = torch.optim.AdamW(
         samri_model.mask_decoder.parameters(),
-        lr=1e-5, 
+        lr=1e-4, 
         weight_decay=0.1
     )
 
