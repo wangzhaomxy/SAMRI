@@ -128,7 +128,7 @@ def main():
                     
                     y_pred = samri_model(batch_input, multimask_output=False, train_mode=True, embedding_inputs=True)
                     print("Y_pred shape: ", y_pred.shape)
-                    batch_gt_masks = torch.stack([preprocess_mask(x.type(torch.uint8)[None,None,:,:]) for _,x,_ in batch_data], dim=0).squeeze(1)
+                    batch_gt_masks = torch.stack([preprocess_mask(x.type(torch.float)[None,None,:,:],target_size=256) for _,x,_ in batch_data], dim=0).squeeze(1)
                     print("GT shape: ",[mask.shape for mask in batch_gt_masks])
                     loss = dice_focal_loass(y_pred, batch_gt_masks)
                     print("1: ",loss)
