@@ -65,14 +65,12 @@ def preprocess_mask(mask, target_size=256):
         (np.array): the mask with the target shape.
         
     """
-    h, w = mask.shape[-2:]
-    print(h," and ",w)
-    resize_long = get_preprocess_shape(h, w, target_size)
+    resize_long = get_preprocess_shape(mask.shape[-2], mask.shape[-1], target_size)
     resized_mask = F.interpolate(mask, 
                            resize_long, 
                            mode="nearest")
     # Pad
-    print(resized_mask.shape)
+    h, w = resized_mask.shape[-2:]
     padh = target_size - h
     padw = target_size - w
     x = F.pad(resized_mask, (0, padw, 0, padh))
