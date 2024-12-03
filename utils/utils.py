@@ -54,11 +54,18 @@ def get_preprocess_shape(oldh: int, oldw: int, long_side_length: int) :
         return (newh, neww)
 
 def preprocess_mask(mask, target_size=256):
+    """
+    Preprocess masks from original size to target size.
+
+    Args:
+        mask (np.array): the masks
+        target_size (int, optional): _description_. Defaults to 256.
+    """
     h, w = mask.shape
     resize_long = get_preprocess_shape(h, w, target_size)
     resized_mask = F.interpolate(mask, 
                            resize_long, 
-                           mode="bilinear", 
+                           mode="nearest", 
                            align_corners=False, 
                            antialias=True)
     # Pad
