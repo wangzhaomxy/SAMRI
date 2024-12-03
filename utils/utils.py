@@ -66,6 +66,7 @@ def preprocess_mask(mask, target_size=256):
         
     """
     h, w = mask.shape[-2:]
+    print(h," and ",w)
     resize_long = get_preprocess_shape(h, w, target_size)
     resized_mask = F.interpolate(mask, 
                            resize_long, 
