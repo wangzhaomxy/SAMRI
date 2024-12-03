@@ -72,6 +72,7 @@ def preprocess_mask(mask, target_size=256):
                            resize_long, 
                            mode="nearest")
     # Pad
+    print(resized_mask.shape)
     padh = target_size - h
     padw = target_size - w
     x = F.pad(resized_mask, (0, padw, 0, padh))
