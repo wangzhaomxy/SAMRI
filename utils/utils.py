@@ -69,9 +69,7 @@ def preprocess_mask(mask, target_size=256):
     resize_long = get_preprocess_shape(h, w, target_size)
     resized_mask = F.interpolate(mask, 
                            resize_long, 
-                           mode="nearest", 
-                           align_corners=False, 
-                           antialias=True)
+                           mode="nearest")
     # Pad
     padh = target_size - h
     padw = target_size - w
