@@ -5,8 +5,10 @@ Permanent variables, universal functions, ect
 """
 from glob import glob
 import os
+from torch.nn import functional as F
 
 root_path = "/scratch/project/samri/"
+ch_root = "/scratch/user/s4670484/Model_dir/"
 EMBEDDING_PATH = root_path + "Embedding/" # The main folder of datasets
 TEST_PATH = root_path + "Datasets/SAMRI_train_test/"
 MODEL_SAVE_PATH = root_path + "Model_save/"
@@ -16,7 +18,6 @@ NUM_EPOCHS = 1000
 JITTER = 10
 
 TRAIN_IMAGE_PATH = [ds + "/" for ds in sorted(glob(EMBEDDING_PATH + "*"))]
-
 TEST_IMAGE_PATH = [ds + "/testing/" for ds in sorted(glob(TEST_PATH + "*"))]
 
 IMAGE_KEYS = "*_img_*"  # The image file names containing letters between *
@@ -28,7 +29,6 @@ ENCODER_TYPE = {"vit_b":"vit_b",
                   "samri":"vit_b"
                   }
 
-ch_root = "/scratch/user/s4670484/Model_dir/"
 SAM_CHECKPOINT = {"vit_b": ch_root + "sam_vit_b_01ec64.pth",
                   "vit_h": ch_root + "sam_vit_h_4b8939.pth",
                   "med_sam": ch_root + "medsam_vit_b.pth",
@@ -42,3 +42,26 @@ def get_checkpoint(path):
     start_epoch = max([int(cp.split('_')[-1]) for cp in cp_names if cp != ""])
     cp_name = glob(path + f"*_{str(start_epoch)}.pth*")[0]
     return cp_name, start_epoch
+
+def get_preprocess_shape(oldh: int, oldw: int, long_side_length: int) :
+        """
+        Compute the output size given input size and target long side length.
+        """
+        scale = long_side_length * 1.0 / max(oldh, oldw)
+        newh, neww = oldh * scale, oldw * scale
+        neww = int(neww + 0.5)
+        newh = int(newh + 0.5)
+        return (newh, neww)
+
+def preprocess_mask(mask, target_size=256):
+    h, w = mask.shape
+    resize_long = get_preprocess_shape(h, w, target_size)
+    resized_mask = F.interpolate(mask, 
+                           resize_long, 
+                           mode="bilinear", 
+                           align_corners=False, 
+                           antialias=True)
+    # Pad
+    padh = target_size - h
+    padw = target_size - w
+    x = F.pad(resized_mask, (0, padw, 0, padh))
