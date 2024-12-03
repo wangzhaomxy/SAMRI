@@ -58,14 +58,14 @@ def preprocess_mask(mask, target_size=256):
     Preprocess masks from original size to target size.
 
     Args:
-        mask (np.array): the mask with shape of H x W
-        target_size (int, optional): The target size T x T. Defaults to 256x256.
+        mask (np.array): the mask with shape of BxCxHxW
+        target_size (int, optional): The target size. Defaults to 256.
         
     Returns:
-        (np.array): the mask with shape of T x T.
+        (np.array): the mask with the target shape.
         
     """
-    h, w = mask.shape
+    h, w = mask.shape[-2:]
     resize_long = get_preprocess_shape(h, w, target_size)
     resized_mask = F.interpolate(mask, 
                            resize_long, 
