@@ -58,8 +58,12 @@ def preprocess_mask(mask, target_size=256):
     Preprocess masks from original size to target size.
 
     Args:
-        mask (np.array): the masks
-        target_size (int, optional): _description_. Defaults to 256.
+        mask (np.array): the mask with shape of H x W
+        target_size (int, optional): The target size T x T. Defaults to 256x256.
+        
+    Returns:
+        (np.array): the mask with shape of T x T.
+        
     """
     h, w = mask.shape
     resize_long = get_preprocess_shape(h, w, target_size)
@@ -72,3 +76,4 @@ def preprocess_mask(mask, target_size=256):
     padh = target_size - h
     padw = target_size - w
     x = F.pad(resized_mask, (0, padw, 0, padh))
+    return x
