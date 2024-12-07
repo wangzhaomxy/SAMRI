@@ -10,7 +10,6 @@ from tqdm import tqdm
 import torch
 import numpy as np
 from segment_anything import sam_model_registry
-from datetime import datetime
 from utils.dataloader import EmbDataset
 from torch.utils.data import DataLoader
 from utils.losses import DiceFocalLoss
@@ -29,11 +28,6 @@ device = DEVICE
 num_epochs = NUM_EPOCHS
 train_image_path = TRAIN_IMAGE_PATH
 train_image_path.remove('/scratch/project/samri/Embedding/totalseg_mr/')
-
-def prep_img(image, tramsform, device=device):
-    image = tramsform.apply_image(image)
-    image = torch.as_tensor(image, device=device)
-    return image.permute(2, 0, 1).contiguous()
 
 def main():
     sam_checkpoint, start_epoch = get_checkpoint(model_save_path)
