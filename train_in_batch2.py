@@ -8,75 +8,67 @@ import os
 join = os.path.join
 from tqdm import tqdm
 import torch
+import numpy as np
 from segment_anything import sam_model_registry
-from datetime import datetime
-from utils.dataloader import NiiDataset
+from utils.dataloader import EmbDataset
 from torch.utils.data import DataLoader
-import wandb
-from monai.losses import DiceLoss
-from torchvision.ops import sigmoid_focal_loss
+from utils.losses import DiceFocalLoss
 from utils.utils import *
 from utils.prompt import *
 from model import SAMRI
 from segment_anything.utils.transforms import ResizeLongestSide
 
 # setup global parameters
-model_type = "vit_b"
+model_type = "samri"
 encoder_type = ENCODER_TYPE[model_type] # choose one from vit_b and vit_h.
-sam_checkpoint = SAM_CHECKPOINT[model_type]
 batch_size = BATCH_SIZE
 data_path = TRAIN_IMAGE_PATH
-model_save_path = MODEL_SAVE_PATH
+model_save_path = MODEL_SAVE_PATH + "ba_rand/"
 device = DEVICE
 num_epochs = NUM_EPOCHS
 train_image_path = TRAIN_IMAGE_PATH
-amp = False
-wandb.login()
-experiment = wandb.init(
-    project="SAMRI",
-    config={
-        "batch_size": batch_size,
-        "data_path": data_path,
-        "model_type": encoder_type,
-    },
-)
+train_image_path.remove('/scratch/project/samri/Embedding/totalseg_mr/')
 
-def prep_img(image, tramsform, device=device):
-    image = tramsform.apply_image(image)
-    image = torch.as_tensor(image, device=device)
-    return image.permute(2, 0, 1).contiguous()
 
 def main():
+    sam_checkpoint, start_epoch = get_checkpoint(model_save_path)
     sam_model = sam_model_registry[encoder_type](sam_checkpoint)
     samri_model = SAMRI(
         image_encoder=sam_model.image_encoder,
         mask_decoder=sam_model.mask_decoder,
         prompt_encoder=sam_model.prompt_encoder,
     ).to(device)
-
-    train_dataset = NiiDataset(train_image_path)
-    batch_data = DataLoader(
-        train_dataset,
-        batch_size=batch_size,
-        shuffle=True,
-        pin_memory=True,
-        )
-    
     resize_transform = ResizeLongestSide(samri_model.image_encoder.img_size)
+
+    print(
+            "Number of total parameters: ",
+            sum(p.numel() for p in samri_model.parameters()),
+        )  
+    print(
+        "Number of trainable parameters: ",
+        sum(p.numel() for p in samri_model.parameters() if p.requires_grad),
+    )
+    print("Number of decoder parameters: ", sum(p.numel() for p in samri_model.mask_decoder.parameters()))
 
     optimizer = torch.optim.AdamW(
         samri_model.mask_decoder.parameters(),
-        lr=1e-4, 
-        weight_decay=0.01
+        lr=1e-5, 
+        weight_decay=0.1
     )
-
-    dice_loss = DiceLoss(sigmoid=True, squared_pred=True, reduction="mean", batch=True)
-
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=50)
+    
+    dice_focal_loass = DiceFocalLoss(sigmoid=True, 
+                                     squared_pred=True,
+                                     batch= True, 
+                                     reduction="mean",
+                                     lambda_dice=1,
+                                     lambda_focal=10)
+    
+    train_dataset = EmbDataset(train_image_path)
+    train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+    
     #train
     losses = []
-    best_loss = 1e5
-    scaler = torch.cuda.amp.GradScaler()
-    start_epoch = 0
     prompts = ["point", "bbox"] # ["bbox"] #  
     for epoch in range(start_epoch, num_epochs):
         print(f"The {epoch+1} / {num_epochs} epochs.")
@@ -85,7 +77,7 @@ def main():
         epoch_loss = 0
         step = 0
 
-        for batch_image, batch_mask in tqdm(batch_data):
+        for step, (embedding, mask, ori_size) in enumerate(tqdm(train_loader)):
             # Train model
             batch_image = batch_image.detach().numpy()
             for prompt in prompts:
@@ -109,44 +101,25 @@ def main():
                     ]
                 batch_gt_masks = batch_mask.float().to(device)
 
-                if amp:
-                    with torch.autocast(device_type="cuda", dtype=torch.float16):
-                        y_pred = samri_model(batch_input, multimask_output=False, train_mode=True)
-
-                        focal_loss = sigmoid_focal_loss(y_pred, batch_gt_masks, alpha=0.25, gamma=2,reduction="mean")
-                        loss = dice_loss(y_pred, batch_gt_masks) + focal_loss
-
-                    scaler.scale(loss).backward()
-                    scaler.step(optimizer)
-                    scaler.update()
-
-                else:
-                    y_pred = samri_model(batch_input, multimask_output=False, train_mode=True)
-                    focal_loss = sigmoid_focal_loss(y_pred, batch_gt_masks, alpha=0.25, gamma=2,reduction="mean")
-                    loss = dice_loss(y_pred, batch_gt_masks) + focal_loss
-                    loss.backward()
-                    optimizer.step()
+                y_pred = samri_model(batch_input, multimask_output=False, train_mode=True)
+                loss = dice_focal_loass(y_pred, batch_gt_masks)
+                loss.backward()
+                optimizer.step()
 
                 optimizer.zero_grad()
                 epoch_loss += loss.item()
 
-                experiment.log({"sub_loss": loss.item()})
 
+        scheduler.step()
         epoch_loss /= step
         losses.append(epoch_loss)
-        experiment.log({"train_epoch_loss": epoch_loss,
-                        "train_losses":losses})
-        print(
-            f'Time: {datetime.now().strftime("%Y%m%d-%H%M")}, Epoch: {epoch}, Loss: {epoch_loss}'
-            )
-        
-        ## save the best model
-        if epoch_loss < best_loss:
-            best_loss = epoch_loss
-            torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_best_na.pth"))
 
         ## save the latest model
-        torch.save(samri_model.state_dict(), join(model_save_path, "samri_vitb_latest_na.pth"))
+        if (epoch + 1) % 1 == 0:
+            print(f"The {epoch+1} / {num_epochs} epochs,  Loss: {epoch_loss}.")
+            torch.save(samri_model.state_dict(), join(model_save_path, f"samri_vitb_ba_{str(epoch+1)}.pth"))
+            print(f"Checkpoint <samri_vitb_{str(epoch+1)}.pth> has been saved.")
+        
 
 
 if __name__ == "__main__":
