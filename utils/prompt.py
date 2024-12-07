@@ -45,7 +45,10 @@ class MaskSplit():
                 masks.append(self.mask == label)
         return masks
     
+def random_mask_batch(masks):
+    pass
     
+        
 def gen_points(mask, num_points=1):
     """
     Generate a point list [H, W] or points [[H, W], ...] in a mask.
