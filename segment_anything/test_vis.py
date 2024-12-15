@@ -7,7 +7,11 @@ from tqdm import tqdm
 
 
 file_paths = TEST_IMAGE_PATH
-ckpt_list = ["/scratch/project/samri/Model_save/mult/samri_vitb_mult_45.pth"]
+ckpt_list = ["/scratch/project/samri/Model_save/ba/samri_vitb_ba_45.pth",
+             "/scratch/project/samri/Model_save/ba/samri_vitb_ba_30.pth",
+             "/scratch/project/samri/Model_save/ba/samri_vitb_ba_15.pth",
+             "/scratch/project/samri/Model_save/mult/samri_vitb_mult_55.pth"
+             ]
 
 def save_test_record(file_paths, sam_model, save_path):
     p_record = []
