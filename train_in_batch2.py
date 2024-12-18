@@ -98,10 +98,10 @@ def main():
                         for image, mask, ori_size in zip(embedding, masks, ori_size)
                     ]
 
-                    y_pred = samri_model(batch_input, multimask_output=False, train_mode=True, embedding_inputs=True)
-                    loss = dice_focal_loass(y_pred, masks)
-                    loss.backward()
-                    optimizer.step()
+                y_pred = samri_model(batch_input, multimask_output=False, train_mode=True, embedding_inputs=True)
+                loss = dice_focal_loass(y_pred, masks)
+                loss.backward()
+                optimizer.step()
 
                 optimizer.zero_grad()
                 epoch_loss += loss.item()
