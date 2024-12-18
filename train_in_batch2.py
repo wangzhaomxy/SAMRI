@@ -75,41 +75,36 @@ def main():
         epoch_loss = 0
         step = 0
 
-        for step, (embedding, mask, ori_size) in enumerate(tqdm(train_loader)):
+        for step, (embedding, masks, ori_size) in enumerate(tqdm(train_loader)):
             # Train model
-            embedding = embedding.squeeze()
-            rand_mask = MaskSplit(mask.squeeze(0))
-            ori_size = (ori_size[0].numpy()[0], ori_size[1].numpy()[0])
+            ori_size = [(ori_size[0].numpy()[i], ori_size[1].numpy()[i]) for i in range(len(ori_size[0]))]
             for prompt in prompts:
                 step += 1
                 if prompt == "point":
                     batch_input = [
-                        {'image': prep_img(image, resize_transform),
-                        'point_coords':resize_transform.apply_coords_torch(gen_points_torch(mask.squeeze(0)), original_size=batch_image.shape[:2]),
-                        'point_labels':torch.as_tensor([[1]], device=device),
-                        'original_size':image.shape[:2]
-                        } 
-                        for image, mask in zip(batch_image, batch_mask)
+                        {'image': image.to(device),
+                            'point_coords':resize_transform.apply_coords_torch(torch.as_tensor(np.array([gen_points(mask.squeeze(0).numpy())]), device=device), original_size=ori_size),
+                            'point_labels':torch.as_tensor([[1]], device=device),
+                            'original_size':ori_size
+                            } 
+                        for image, mask, ori_size in zip(embedding, masks, ori_size)
                     ]
                 if prompt == "bbox":
                     batch_input = [
-                        {'image': prep_img(image, resize_transform),
-                        'boxes':resize_transform.apply_boxes_torch(gen_bboxes_torch(mask.squeeze(0)), original_size=batch_image.shape[:2]),
-                        'original_size':image.shape[:2]
-                        } 
-                        for image, mask in zip(batch_image, batch_mask)
+                        {'image': image.to(device),
+                            'boxes':resize_transform.apply_boxes_torch(torch.as_tensor(np.array([gen_bboxes(mask.squeeze(0).numpy())]), device=device), original_size=ori_size),
+                            'original_size':ori_size
+                            } 
+                        for image, mask, ori_size in zip(embedding, masks, ori_size)
                     ]
-                batch_gt_masks = batch_mask.float().to(device)
 
-                y_pred = samri_model(batch_input, multimask_output=False, train_mode=True)
-                loss = dice_focal_loass(y_pred, batch_gt_masks)
-                loss.backward()
-                optimizer.step()
+                    y_pred = samri_model(batch_input, multimask_output=False, train_mode=True, embedding_inputs=True)
+                    loss = dice_focal_loass(y_pred, masks)
+                    loss.backward()
+                    optimizer.step()
 
                 optimizer.zero_grad()
                 epoch_loss += loss.item()
-
-
         scheduler.step()
         epoch_loss /= step
         losses.append(epoch_loss)

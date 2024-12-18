@@ -22,7 +22,6 @@ from segment_anything.utils.transforms import ResizeLongestSide
 model_type = "samri"
 encoder_type = ENCODER_TYPE[model_type] # choose one from vit_b and vit_h.
 batch_size = BATCH_SIZE
-data_path = TRAIN_IMAGE_PATH
 model_save_path = MODEL_SAVE_PATH + "ba/"
 device = DEVICE
 num_epochs = NUM_EPOCHS
