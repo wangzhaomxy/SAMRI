@@ -22,13 +22,11 @@ from segment_anything.utils.transforms import ResizeLongestSide
 model_type = "samri"
 encoder_type = ENCODER_TYPE[model_type] # choose one from vit_b and vit_h.
 batch_size = BATCH_SIZE
-data_path = TRAIN_IMAGE_PATH
 model_save_path = MODEL_SAVE_PATH + "ba_rand/"
 device = DEVICE
 num_epochs = NUM_EPOCHS
 train_image_path = TRAIN_IMAGE_PATH
 train_image_path.remove('/scratch/project/samri/Embedding/totalseg_mr/')
-
 
 def main():
     sam_checkpoint, start_epoch = get_checkpoint(model_save_path)
@@ -65,7 +63,7 @@ def main():
                                      lambda_focal=10)
     
     train_dataset = EmbDataset(train_image_path)
-    train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     
     #train
     losses = []
@@ -79,7 +77,9 @@ def main():
 
         for step, (embedding, mask, ori_size) in enumerate(tqdm(train_loader)):
             # Train model
-            batch_image = batch_image.detach().numpy()
+            embedding = embedding.squeeze()
+            rand_mask = MaskSplit(mask.squeeze(0))
+            ori_size = (ori_size[0].numpy()[0], ori_size[1].numpy()[0])
             for prompt in prompts:
                 step += 1
                 if prompt == "point":
