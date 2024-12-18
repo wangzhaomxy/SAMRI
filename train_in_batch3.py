@@ -45,6 +45,7 @@ def ddp_setup(rank: int, world_size: int):
     init_process_group(backend="nccl", rank=rank, world_size=world_size)
     
 def main(gpu, world_size, num_epochs, save_every):
+    ddp_setup(rank=gpu, world_size=world_size)
     sam_checkpoint, start_epoch = get_checkpoint(model_save_path)
     sam_model = sam_model_registry[encoder_type](sam_checkpoint)
     samri_model = SAMRI(
