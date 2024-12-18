@@ -86,7 +86,7 @@ def main(gpu, world_size, num_epochs, save_every):
     
     train_dataset = EmbDataset(train_image_path, random_mask=True, resize_mask=True)
     sampler = DistributedSampler(train_dataset)
-    train_loader = DataLoader(train_dataset, shuffle=False, sampler=sampler)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=False, sampler=sampler)
     
     #train
     losses = []
