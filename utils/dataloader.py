@@ -80,7 +80,7 @@ class NiiDataset(Dataset):
         if self.multi_mask:
             return (nii_img, nii_seg)
         else:
-            return (nii_img, nii_seg==random.choice([[i for i in np.unique(nii_seg) if i!=0]]))
+            return (nii_img, nii_seg==random.choice([i for i in np.unique(nii_seg) if i!=0]))
         
     def _shuffle(self, data1, data2):
         """
@@ -274,7 +274,7 @@ class EmbDataset(Dataset):
         mask = npz_data["mask"]
         
         if self.random_mask:
-            mask = mask==random.choice([[i for i in np.unique(mask) if i!=0]])
+            mask = mask==random.choice([i for i in np.unique(mask) if i!=0])
 
         if self.resize_mask:
             mask = torch.tensor(mask, dtype=torch.float)[None, :, :, :]
