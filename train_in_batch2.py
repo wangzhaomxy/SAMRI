@@ -62,7 +62,7 @@ def main():
                                      lambda_dice=1,
                                      lambda_focal=10)
     
-    train_dataset = EmbDataset(train_image_path)
+    train_dataset = EmbDataset(train_image_path, random_mask=True, resize_mask=True)
     train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
     
     #train
