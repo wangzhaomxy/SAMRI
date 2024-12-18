@@ -52,7 +52,7 @@ def main(gpu, world_size, num_epochs, save_every):
         image_encoder=sam_model.image_encoder,
         mask_decoder=sam_model.mask_decoder,
         prompt_encoder=sam_model.prompt_encoder,
-    ).to(device)
+    ).cuda()
     resize_transform = ResizeLongestSide(samri_model.image_encoder.img_size)
 
     print(
