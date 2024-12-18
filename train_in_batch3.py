@@ -63,7 +63,6 @@ def main(gpu, world_size, num_epochs, save_every):
         "Number of trainable parameters: ",
         sum(p.numel() for p in samri_model.parameters() if p.requires_grad),
     )
-    print("Number of decoder parameters: ", sum(p.numel() for p in samri_model.mask_decoder.parameters()))
 
     samri_model = DDP(
                     samri_model,
