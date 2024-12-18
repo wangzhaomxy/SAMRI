@@ -277,7 +277,7 @@ class EmbDataset(Dataset):
             mask = mask == random.choice(np.unique(mask))
 
         if self.resize_mask:
-            mask = torch.tensor(mask)[None, :, :, :]
+            mask = torch.tensor(mask, dtype=torch.float)[None, :, :, :]
             mask = preprocess_mask(mask, target_size=self.mask_size)
             mask = mask.squeeze(0).numpy()
             
