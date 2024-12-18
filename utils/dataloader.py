@@ -5,14 +5,14 @@ Data loading and image preprocessing
 
 """
 
-import numpy as np
 import os
 join = os.path.join
+import numpy as np
+import torch
 from torch.utils.data import Dataset
 import glob, random
 import nibabel as nib
-from utils.utils import IMAGE_KEYS, MASK_KEYS
-from skimage import exposure
+from utils.utils import IMAGE_KEYS, MASK_KEYS, preprocess_mask
 import cv2
 
 class NiiDataset(Dataset):
@@ -219,12 +219,18 @@ class NiiDataset(Dataset):
 class EmbDataset(Dataset):
     def __init__(self, 
                  data_root, 
-                 shuffle=False):
+                 shuffle=False,
+                 random_mask=False,
+                 resize_mask=False,
+                 mask_size=256):
         """
         Args:
             data_root (list[str]): The path list of the datasets. The path
                         eliments should be in format of xxx/xxx/xxx/.
             shuffle (bool): If shuffle the data. Default is False.
+            random_mask(bool): If True, return a random mask from the multi masks.
+            resize_mask(bool): If True, resize the mask into the mask size.
+            mask_size(int): The target size of the mask, HW=(256, 256). Default is 256.
 
         """
         super().__init__()
@@ -236,6 +242,9 @@ class EmbDataset(Dataset):
         if shuffle:
             random.shuffle(self.npz_files)
         self.cur_name = ""
+        self.random_mask = random_mask
+        self.resize_mask = resize_mask
+        self.mask_size = mask_size
 
         """
         Vars:
@@ -262,8 +271,17 @@ class EmbDataset(Dataset):
         """
         npz_data = np.load(self.npz_files[index])
         self.cur_name = self.npz_files[index]
+        mask = npz_data["mask"]
         
-        return (npz_data["img"], npz_data["mask"], tuple(npz_data["ori_size"]))
+        if self.random_mask:
+            mask = mask == random.choice(np.unique(mask))
+
+        if self.resize_mask:
+            mask = torch.tensor(mask)[None, :, :, :]
+            mask = preprocess_mask(mask, target_size=self.mask_size)
+            mask = mask.squeeze(0).numpy()
+            
+        return (npz_data["img"], mask, tuple(npz_data["ori_size"]))
 
     def get_name(self):
         """
