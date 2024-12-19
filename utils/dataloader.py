@@ -277,7 +277,7 @@ class EmbDataset(Dataset):
             mask = mask==random.choice([i for i in np.unique(mask) if i!=0])
             if not mask.any():
                 print(mask.shape)
-                raise ValueError(f"The following file contains the empty mask: {self.get_name()}")
+                raise ValueError(f"After random choice, The following file contains the empty mask: {self.get_name()}")
 
         if self.resize_mask:
             mask = torch.tensor(mask, dtype=torch.float)[None, :, :, :]
@@ -285,7 +285,7 @@ class EmbDataset(Dataset):
             mask = mask.squeeze(0).numpy()
             if not mask.any():
                 print(mask.shape)
-                raise ValueError(f"The following file contains the empty mask: {self.get_name()}")
+                raise ValueError(f"After resize, The following file contains the empty mask: {self.get_name()}")
             
         return (npz_data["img"], mask, tuple(npz_data["ori_size"]))
 
