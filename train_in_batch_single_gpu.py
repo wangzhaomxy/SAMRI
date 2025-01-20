@@ -22,7 +22,7 @@ from segment_anything.utils.transforms import ResizeLongestSide
 model_type = "samri"
 encoder_type = ENCODER_TYPE[model_type] # choose one from vit_b and vit_h.
 batch_size = BATCH_SIZE
-model_save_path = MODEL_SAVE_PATH + "ba/"
+model_save_path = MODEL_SAVE_PATH + "b128e20lr4/"
 device = DEVICE
 num_epochs = NUM_EPOCHS
 train_image_path = TRAIN_IMAGE_PATH
@@ -135,8 +135,8 @@ def main():
         ## save the latest model
         if (epoch + 1) % 1 == 0:
             print(f"The {epoch+1} / {num_epochs} epochs,  Loss: {epoch_loss}.")
-            torch.save(samri_model.state_dict(), join(model_save_path, f"samri_vitb_ba_{str(epoch+1)}.pth"))
-            print(f"Checkpoint <samri_vitb_{str(epoch+1)}.pth> has been saved.")
+            torch.save(samri_model.state_dict(), join(model_save_path, f"samri_vitb_b128e20lr4_{str(epoch+1)}.pth"))
+            print(f"Checkpoint <samri_vitb_b128e20lr4_{str(epoch+1)}.pth> has been saved.")
 
 if __name__ == "__main__":
     main()
