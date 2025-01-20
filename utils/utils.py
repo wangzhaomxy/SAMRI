@@ -14,7 +14,7 @@ TEST_PATH = root_path + "Datasets/SAMRI_train_test/"
 MODEL_SAVE_PATH = root_path + "Model_save/"
 DEVICE = "cuda"
 BATCH_SIZE = 128
-NUM_EPOCHS = 1000
+NUM_EPOCHS = 20
 JITTER = 10
 
 TRAIN_IMAGE_PATH = [ds + "/" for ds in sorted(glob(EMBEDDING_PATH + "*"))]
