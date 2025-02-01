@@ -60,10 +60,7 @@ def main():
                                      batch= True, 
                                      reduction="mean",
                                      lambda_dice=1,
-                                     lambda_focal=10)
-    
-    train_dataset = EmbDataset(train_image_path, random_mask=True, resize_mask=True)
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+                                     lambda_focal=10)    
     
     #train
     losses = []
@@ -74,7 +71,8 @@ def main():
         samri_model.train()
         epoch_loss = 0
         step = 0
-
+        train_dataset = EmbDataset(train_image_path, random_mask=True, resize_mask=True)
+        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
         for step, (embedding, masks, ori_size) in enumerate(tqdm(train_loader)):
             # Train model
             ori_size = [(ori_size[0].numpy()[i], ori_size[1].numpy()[i]) for i in range(len(ori_size[0]))]
@@ -115,7 +113,6 @@ def main():
             torch.save(samri_model.state_dict(), join(model_save_path, f"samri_vitb_ba_rand_{str(epoch+1)}.pth"))
             print(f"Checkpoint <samri_vitb_ba_rand_{str(epoch+1)}.pth> has been saved.")
         
-
 
 if __name__ == "__main__":
     main()
