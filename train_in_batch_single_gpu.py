@@ -77,6 +77,7 @@ def main():
         train_dataset = EmbDataset(train_image_path)
         train_loader = DataLoader(train_dataset, shuffle=True)
         for prompt in prompts:
+            print(f"Training {prompt} prompt...")
             for step, (embedding, mask, ori_size) in enumerate(tqdm(train_loader)):
                 # Generate batch in multiple mask mode.
                 embedding = embedding.squeeze()
