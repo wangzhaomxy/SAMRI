@@ -22,7 +22,7 @@ from segment_anything.utils.transforms import ResizeLongestSide
 model_type = "samri"
 encoder_type = ENCODER_TYPE[model_type] # choose one from vit_b and vit_h.
 batch_size = BATCH_SIZE
-model_save_path = MODEL_SAVE_PATH + "point/"
+model_save_path = MODEL_SAVE_PATH + "bp11/"
 device = DEVICE
 num_epochs = NUM_EPOCHS
 train_image_path = TRAIN_IMAGE_PATH
@@ -64,7 +64,7 @@ def main():
 
     #train
     losses = []
-    prompts =["point"]#["bbox"] 
+    prompts =["point","bbox"]
     for epoch in range(start_epoch, num_epochs):
         print(f"The {epoch+1} / {num_epochs} epochs.")
         # training part
@@ -76,46 +76,46 @@ def main():
         batch_data = []
         train_dataset = EmbDataset(train_image_path)
         train_loader = DataLoader(train_dataset, shuffle=True)
-        for step, (embedding, mask, ori_size) in enumerate(tqdm(train_loader)):
-            # Generate batch in multiple mask mode.
-            embedding = embedding.squeeze()
-            masks = MaskSplit(mask.squeeze(0))
-            ori_size = (ori_size[0].numpy()[0], ori_size[1].numpy()[0])
-            num_masks = len(masks)
-            if num_masks > batch_size:
-                raise RuntimeError("Too small batch size. It should be larger than label numbers.")
-            batch_counter += num_masks
-            if batch_counter < batch_size:
-                if not remain_data:
-                    batch_data += [(embedding, masks[i], ori_size) for i in range(num_masks)]
+        for prompt in prompts:
+            for step, (embedding, mask, ori_size) in enumerate(tqdm(train_loader)):
+                # Generate batch in multiple mask mode.
+                embedding = embedding.squeeze()
+                masks = MaskSplit(mask.squeeze(0))
+                ori_size = (ori_size[0].numpy()[0], ori_size[1].numpy()[0])
+                num_masks = len(masks)
+                if num_masks > batch_size:
+                    raise RuntimeError("Too small batch size. It should be larger than label numbers.")
+                batch_counter += num_masks
+                if batch_counter < batch_size:
+                    if not remain_data:
+                        batch_data += [(embedding, masks[i], ori_size) for i in range(num_masks)]
+                    else:
+                        batch_data += remain_data
+                        batch_data += [(embedding, masks[i], ori_size) for i in range(num_masks)]
+                        remain_data = []
                 else:
-                    batch_data += remain_data
-                    batch_data += [(embedding, masks[i], ori_size) for i in range(num_masks)]
-                    remain_data = []
-            else:
-                batch_counter -= batch_size
-                batch_data += [(embedding, masks[i], ori_size) for i in range(num_masks - batch_counter)]
-                if batch_counter != 0:
-                    remain_data = [(embedding, masks[i], ori_size) for i in range(num_masks - batch_counter, num_masks)]
-                
-                # Train model
-                for prompt in prompts:
+                    batch_counter -= batch_size
+                    batch_data += [(embedding, masks[i], ori_size) for i in range(num_masks - batch_counter)]
+                    if batch_counter != 0:
+                        remain_data = [(embedding, masks[i], ori_size) for i in range(num_masks - batch_counter, num_masks)]
+                    
+                    # Train model
                     step += 1                    
                     if prompt == "point":
                         batch_input = [
                             {'image': image.to(device),
-                             'point_coords':resize_transform.apply_coords_torch(torch.as_tensor(np.array([gen_points(mask.numpy())]), device=device), original_size=ori_size),
-                             'point_labels':torch.as_tensor([[1]], device=device),
-                             'original_size':ori_size
-                             } 
+                            'point_coords':resize_transform.apply_coords_torch(torch.as_tensor(np.array([gen_points(mask.numpy())]), device=device), original_size=ori_size),
+                            'point_labels':torch.as_tensor([[1]], device=device),
+                            'original_size':ori_size
+                            } 
                             for image, mask, ori_size in batch_data
                         ]
                     if prompt == "bbox":
                         batch_input = [
                             {'image': image.to(device),
-                             'boxes':resize_transform.apply_boxes_torch(torch.as_tensor(np.array([gen_bboxes(mask.numpy())]), device=device), original_size=ori_size),
-                             'original_size':ori_size
-                             } 
+                            'boxes':resize_transform.apply_boxes_torch(torch.as_tensor(np.array([gen_bboxes(mask.numpy())]), device=device), original_size=ori_size),
+                            'original_size':ori_size
+                            } 
                             for image, mask, ori_size in batch_data
                         ]
                     
@@ -127,7 +127,7 @@ def main():
 
                     optimizer.zero_grad()
                     epoch_loss += loss.item()
-                batch_data = []
+                    batch_data = []
         scheduler.step()
         epoch_loss /= step
         losses.append(epoch_loss)
@@ -135,8 +135,8 @@ def main():
         ## save the latest model
         if (epoch + 1) % 1 == 0:
             print(f"The {epoch+1} / {num_epochs} epochs,  Loss: {epoch_loss}.")
-            torch.save(samri_model.state_dict(), join(model_save_path, f"samri_vitb_point_{str(epoch+1)}.pth"))
-            print(f"Checkpoint <samri_vitb_point_{str(epoch+1)}.pth> has been saved.")
+            torch.save(samri_model.state_dict(), join(model_save_path, f"samri_vitb_bp11_{str(epoch+1)}.pth"))
+            print(f"Checkpoint <samri_vitb_bp11_{str(epoch+1)}.pth> has been saved.")
 
 if __name__ == "__main__":
     main()
