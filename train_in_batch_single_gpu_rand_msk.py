@@ -53,7 +53,7 @@ def main():
         lr=1e-5, 
         weight_decay=0.1
     )
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=50)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=10)
     
     dice_focal_loass = DiceFocalLoss(sigmoid=True, 
                                      squared_pred=True,
@@ -73,10 +73,11 @@ def main():
         step = 0
         train_dataset = EmbDataset(train_image_path, random_mask=True, resize_mask=True)
         train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-        for step, (embedding, masks, ori_size) in enumerate(tqdm(train_loader)):
-            # Train model
-            ori_size = [(ori_size[0].numpy()[i], ori_size[1].numpy()[i]) for i in range(len(ori_size[0]))]
-            for prompt in prompts:
+        for prompt in prompts:
+            for step, (embedding, masks, ori_size) in enumerate(tqdm(train_loader)):
+                # Train model
+                ori_size = [(ori_size[0].numpy()[i], ori_size[1].numpy()[i]) for i in range(len(ori_size[0]))]
+                
                 step += 1
                 if prompt == "point":
                     batch_input = [
