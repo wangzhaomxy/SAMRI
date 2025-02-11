@@ -11,8 +11,8 @@ setup(
     name="SAMRI",
     version="0.0.1",
     author="Zhao Wang",
-    python_requires=">=3.9",
-    install_requires=["monai", "matplotlib", "scikit-image", "SimpleITK>=2.2.1", "nibabel", "tqdm", "scipy", "ipympl", "opencv-python", "jupyterlab", "ipywidgets"],
+    python_requires=">=3.10",
+    install_requires=["matplotlib", "scikit-image", "SimpleITK>=2.2.1", "nibabel", "tqdm", "scipy", "ipympl", "opencv-python", "jupyterlab", "ipywidgets", "pytorch", "glob"],
     packages=find_packages(exclude="notebooks"),
     extras_require={
         "all": ["pycocotools", "opencv-python", "onnx", "onnxruntime"],
