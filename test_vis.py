@@ -8,15 +8,18 @@ from tqdm import tqdm
 
 file_paths = TEST_IMAGE_PATH
 ckpt_root_path = "/scratch/project/samri/Model_save/"
-model_folder = "bp11/"
-ckpt_list = [ckpt_root_path + model_folder + "samri_vitb_bp11_0.pth",
-             ckpt_root_path + model_folder + "samri_vitb_bp11_1.pth",
-             ckpt_root_path + model_folder + "samri_vitb_bp11_2.pth",
-             ckpt_root_path + model_folder + "samri_vitb_bp11_3.pth",
-             ckpt_root_path + model_folder + "samri_vitb_bp11_4.pth",
-             ckpt_root_path + model_folder + "samri_vitb_bp11_5.pth",
-             ckpt_root_path + model_folder + "samri_vitb_bp11_6.pth",
-             ckpt_root_path + model_folder + "samri_vitb_bp11_7.pth",
+model_folder = "box/"
+ckpt_list = [ckpt_root_path + model_folder + "samri_vitb_box_0.pth",
+             ckpt_root_path + model_folder + "samri_vitb_box_1.pth",
+             ckpt_root_path + model_folder + "samri_vitb_box_2.pth",
+             ckpt_root_path + model_folder + "samri_vitb_box_3.pth",
+             ckpt_root_path + model_folder + "samri_vitb_box_4.pth",
+             ckpt_root_path + model_folder + "samri_vitb_box_5.pth",
+             ckpt_root_path + model_folder + "samri_vitb_box_6.pth",
+             ckpt_root_path + model_folder + "samri_vitb_box_7.pth",
+             ckpt_root_path + model_folder + "samri_vitb_box_8.pth",
+             ckpt_root_path + model_folder + "samri_vitb_box_9.pth",
+             ckpt_root_path + model_folder + "samri_vitb_box_10.pth",
              ]
 
 def save_test_record(file_paths, sam_model, save_path):
