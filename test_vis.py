@@ -7,17 +7,14 @@ from tqdm import tqdm
 
 
 file_paths = TEST_IMAGE_PATH
-ckpt_list = ["/scratch/project/samri/Model_save/ba/samri_vitb_ba_0.pth",
-             "/scratch/project/samri/Model_save/ba/samri_vitb_ba_1.pth",
-             "/scratch/project/samri/Model_save/ba/samri_vitb_ba_2.pth",
-             "/scratch/project/samri/Model_save/ba/samri_vitb_ba_3.pth",
-             "/scratch/project/samri/Model_save/ba/samri_vitb_ba_4.pth",
-             "/scratch/project/samri/Model_save/ba/samri_vitb_ba_5.pth",
-             "/scratch/project/samri/Model_save/ba/samri_vitb_ba_6.pth",
-             "/scratch/project/samri/Model_save/ba/samri_vitb_ba_7.pth",
-             "/scratch/project/samri/Model_save/ba/samri_vitb_ba_8.pth",
-             "/scratch/project/samri/Model_save/ba/samri_vitb_ba_9.pth",
-             "/scratch/project/samri/Model_save/ba/samri_vitb_ba_10.pth",
+ckpt_list = ["/scratch/project/samri/Model_save/bp11_0/samri_vitb_bp11_0.pth",
+             "/scratch/project/samri/Model_save/bp11_0/samri_vitb_bp11_1.pth",
+             "/scratch/project/samri/Model_save/bp11_0/samri_vitb_bp11_2.pth",
+             "/scratch/project/samri/Model_save/bp11_0/samri_vitb_bp11_3.pth",
+             "/scratch/project/samri/Model_save/bp11_0/samri_vitb_bp11_4.pth",
+             "/scratch/project/samri/Model_save/bp11_0/samri_vitb_bp11_5.pth",
+             "/scratch/project/samri/Model_save/bp11_0/samri_vitb_bp11_6.pth",
+             "/scratch/project/samri/Model_save/bp11_0/samri_vitb_bp11_7.pth",
              ]
 
 def save_test_record(file_paths, sam_model, save_path):
