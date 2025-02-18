@@ -8,13 +8,13 @@ from tqdm import tqdm
 
 file_paths = TEST_IMAGE_PATH
 ckpt_root_path = "/scratch/project/samri/Model_save/"
-model_folder = "bp12"
-ckpt_list = [ckpt_root_path + model_folder + "/samri_vitb_bp12_0.pth",
-             ckpt_root_path + model_folder + "/samri_vitb_bp12_1.pth",
-             ckpt_root_path + model_folder + "/samri_vitb_bp12_2.pth",
-             ckpt_root_path + model_folder + "/samri_vitb_bp12_3.pth",
-             ckpt_root_path + model_folder + "/samri_vitb_bp12_4.pth",
-             ckpt_root_path + model_folder + "/samri_vitb_bp12_5.pth",
+model_folder = "bp12/"
+ckpt_list = [ckpt_root_path + model_folder + "samri_vitb_bp12_0.pth",
+             ckpt_root_path + model_folder + "samri_vitb_bp12_1.pth",
+             ckpt_root_path + model_folder + "samri_vitb_bp12_2.pth",
+             ckpt_root_path + model_folder + "samri_vitb_bp12_3.pth",
+             ckpt_root_path + model_folder + "samri_vitb_bp12_4.pth",
+             ckpt_root_path + model_folder + "samri_vitb_bp12_5.pth",
              ]
 
 def save_test_record(file_paths, sam_model, save_path):
@@ -41,6 +41,6 @@ for ckpt in ckpt_list:
     # regist the MRI-SAM model and predictor.
     sam_model = sam_model_registry[encoder_tpye](checkpoint)
     sam_model = sam_model.to(device)
-    save_path = "/scratch/project/samri/Eval_results/bp12/" + file_name[:-4]
+    save_path = "/scratch/project/samri/Eval_results/" + model_folder + file_name[:-4]
 
     save_test_record(file_paths, sam_model, save_path)
