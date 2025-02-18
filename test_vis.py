@@ -41,6 +41,6 @@ for ckpt in ckpt_list:
     # regist the MRI-SAM model and predictor.
     sam_model = sam_model_registry[encoder_tpye](checkpoint)
     sam_model = sam_model.to(device)
-    save_path = "/scratch/project/samri/Eval_results/" + file_name[:-4]
+    save_path = "/scratch/project/samri/Eval_results/bp11/" + file_name[:-4]
 
     save_test_record(file_paths, sam_model, save_path)
