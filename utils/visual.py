@@ -81,7 +81,7 @@ def get_dice_from_ds(model, test_dataset, med_sam=False):
             # generate prompts
             point = gen_points(each_mask)
             point_label = np.array([1])
-            bbox = gen_bboxes(each_mask, jitter=JITTER)
+            bbox = gen_bboxes(each_mask, jitter=0)
 
             # generate mask
             pre_mask_p, _, _ = predictor.predict(
