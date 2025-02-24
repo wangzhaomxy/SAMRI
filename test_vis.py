@@ -8,18 +8,18 @@ from tqdm import tqdm
 
 file_paths = TEST_IMAGE_PATH
 ckpt_root_path = "/scratch/project/samri/Model_save/"
-model_folder = "point/"
-ckpt_list = [ckpt_root_path + model_folder + "samri_vitb_point_0.pth",
-             ckpt_root_path + model_folder + "samri_vitb_point_1.pth",
-             ckpt_root_path + model_folder + "samri_vitb_point_2.pth",
-             ckpt_root_path + model_folder + "samri_vitb_point_3.pth",
-             ckpt_root_path + model_folder + "samri_vitb_point_4.pth",
-             ckpt_root_path + model_folder + "samri_vitb_point_5.pth",
-             ckpt_root_path + model_folder + "samri_vitb_point_6.pth",
-             ckpt_root_path + model_folder + "samri_vitb_point_7.pth",
-             ckpt_root_path + model_folder + "samri_vitb_point_8.pth",
-             ckpt_root_path + model_folder + "samri_vitb_point_9.pth",
-             ckpt_root_path + model_folder + "samri_vitb_point_10.pth",
+model_folder = "box/"
+ckpt_list = [ckpt_root_path + model_folder + "samri_vitb_box_0.pth",
+             ckpt_root_path + model_folder + "samri_vitb_box_1.pth",
+             ckpt_root_path + model_folder + "samri_vitb_box_2.pth",
+             ckpt_root_path + model_folder + "samri_vitb_box_3.pth",
+             ckpt_root_path + model_folder + "samri_vitb_box_4.pth",
+             ckpt_root_path + model_folder + "samri_vitb_box_5.pth",
+             ckpt_root_path + model_folder + "samri_vitb_box_6.pth",
+             ckpt_root_path + model_folder + "samri_vitb_box_7.pth",
+             ckpt_root_path + model_folder + "samri_vitb_box_8.pth",
+             ckpt_root_path + model_folder + "samri_vitb_box_9.pth",
+             ckpt_root_path + model_folder + "samri_vitb_box_10.pth",
              ]
 
 def save_test_record(file_paths, sam_model, save_path):
@@ -38,13 +38,13 @@ def save_test_record(file_paths, sam_model, save_path):
 for ckpt in ckpt_list:
     model_type = 'vit_b'# Choose one from vit_b, vit_h, samri, and med_sam
     encoder_tpye = ENCODER_TYPE[model_type] 
-    checkpoint = ckpt
+    checkbox = ckpt
     device = DEVICE
     file_name = ckpt.split("/")[-1]
-    print("Testing Check-point " + file_name)
+    print("Testing Check-box " + file_name)
 
     # regist the MRI-SAM model and predictor.
-    sam_model = sam_model_registry[encoder_tpye](checkpoint)
+    sam_model = sam_model_registry[encoder_tpye](checkbox)
     sam_model = sam_model.to(device)
     save_path = "/scratch/project/samri/Eval_results/" + model_folder + file_name[:-4]
 

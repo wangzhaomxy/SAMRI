@@ -53,7 +53,7 @@ def main():
         lr=1e-5, 
         weight_decay=0.1
     )
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=10)
+    #scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=10)
     
     dice_focal_loass = DiceFocalLoss(sigmoid=True, 
                                      squared_pred=True,
@@ -104,7 +104,7 @@ def main():
 
                 optimizer.zero_grad()
                 epoch_loss += loss.item()
-        scheduler.step()
+        #scheduler.step()
         epoch_loss /= step
         losses.append(epoch_loss)
 
