@@ -40,8 +40,8 @@ class MaskSplit():
     
     def _split_masks(self):
         masks = []
-        for label in np.unique(self.mask).nonzero():
-            masks.append(self.mask == label)
+        for label in np.unique(self.mask).nonzero()[0]:
+            masks.append(self.mask == np.unique(self.mask)[label])
         return masks
     
 def random_mask_batch(masks):
