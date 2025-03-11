@@ -23,21 +23,22 @@ model_type = "samri"
 encoder_type = ENCODER_TYPE[model_type] # choose one from vit_b and vit_h.
 batch_size = BATCH_SIZE
 model_save_path = MODEL_SAVE_PATH + "box1/"
-device = DEVICE
 num_epochs = NUM_EPOCHS
 train_image_path = TRAIN_IMAGE_PATH
 train_image_path.remove('/scratch/project/samri/Embedding/totalseg_mr/')
+device_list = [i for i in range(torch.cuda.device_count())]
+device = device_list[0]
 
 def main():
     sam_checkpoint, start_epoch = get_checkpoint(model_save_path)
     sam_model = sam_model_registry[encoder_type](sam_checkpoint)
-    device_list = [i for i in range(torch.cuda.device_count())]
+    
     samri_model = SAMRI(
         image_encoder=sam_model.image_encoder,
         mask_decoder=sam_model.mask_decoder,
         prompt_encoder=sam_model.prompt_encoder,
     )
-    samri_model = torch.nn.DataParallel(samri_model, device_ids=device_list).to(device_list[0])
+    samri_model = torch.nn.DataParallel(samri_model, device_ids=device_list).to(device)
 
     resize_transform = ResizeLongestSide(samri_model.image_encoder.img_size)
 
