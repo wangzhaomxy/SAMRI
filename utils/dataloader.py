@@ -80,7 +80,7 @@ class NiiDataset(Dataset):
         if self.multi_mask:
             return (nii_img, nii_seg)
         else:
-            return (nii_img, nii_seg==random.choice([i for i in np.unique(nii_seg) if i!=0]))
+            return (nii_img, nii_seg==random.choice(np.unique(nii_seg).nonzero()[0]))
         
     def _shuffle(self, data1, data2):
         """
