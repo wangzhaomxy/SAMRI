@@ -31,16 +31,17 @@ device = device_list[0]
 
 def main():
     sam_checkpoint, start_epoch = get_checkpoint(model_save_path)
-    sam_model = sam_model_registry[encoder_type](sam_checkpoint)
-    
+    sam_model = sam_model_registry[encoder_type](sam_checkpoint)    
     samri_model = SAMRI(
         image_encoder=sam_model.image_encoder,
         mask_decoder=sam_model.mask_decoder,
         prompt_encoder=sam_model.prompt_encoder,
     )
+        
+    samri_model = torch.nn.DataParallel(samri_model, device_ids=device_list)
+    sam_model.to(device)
+
     resize_transform = ResizeLongestSide(samri_model.image_encoder.img_size)
-    
-    samri_model = torch.nn.DataParallel(samri_model, device_ids=device_list).to(device)
 
     print(
             "Number of total parameters: ",
@@ -51,7 +52,7 @@ def main():
         sum(p.numel() for p in samri_model.parameters() if p.requires_grad),
     )
     print("Number of decoder parameters: ", sum(p.numel() for p in samri_model.mask_decoder.parameters()))
-
+    
     optimizer = torch.optim.AdamW(
         samri_model.mask_decoder.parameters(),
         lr=1e-5, 
