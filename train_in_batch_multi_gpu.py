@@ -38,9 +38,9 @@ def main():
         mask_decoder=sam_model.mask_decoder,
         prompt_encoder=sam_model.prompt_encoder,
     )
-    samri_model = torch.nn.DataParallel(samri_model, device_ids=device_list).to(device)
-
     resize_transform = ResizeLongestSide(samri_model.image_encoder.img_size)
+    
+    samri_model = torch.nn.DataParallel(samri_model, device_ids=device_list).to(device)
 
     print(
             "Number of total parameters: ",
