@@ -27,7 +27,7 @@ num_epochs = NUM_EPOCHS
 train_image_path = TRAIN_IMAGE_PATH
 train_image_path.remove('/scratch/project/samri/Embedding/totalseg_mr/')
 device_list = [i for i in range(torch.cuda.device_count())]
-device = device_list[0]
+device = DEVICE
 
 def main():
     sam_checkpoint, start_epoch = get_checkpoint(model_save_path)
@@ -36,7 +36,7 @@ def main():
         image_encoder=sam_model.image_encoder,
         mask_decoder=sam_model.mask_decoder,
         prompt_encoder=sam_model.prompt_encoder,
-    )
+    ).to(device)
 
     resize_transform = ResizeLongestSide(samri_model.image_encoder.img_size)
 
@@ -65,7 +65,7 @@ def main():
                                      lambda_focal=10)
 
     samri_model = torch.nn.DataParallel(samri_model, device_ids=device_list)
-    samri_model.to(device)
+    optimizer = torch.nn.DataParallel(optimizer, device_ids=device_list)
     
     #train
     losses = []
@@ -141,7 +141,7 @@ def main():
         ## save the latest model
         if (epoch + 1) % 1 == 0:
             print(f"The {epoch+1} / {num_epochs} epochs,  Loss: {epoch_loss}.")
-            torch.save(samri_model.state_dict(), join(model_save_path, f"samri_vitb_box1_{str(epoch+1)}.pth"))
+            torch.save(samri_model.module.state_dict(), join(model_save_path, f"samri_vitb_box1_{str(epoch+1)}.pth"))
             print(f"Checkpoint <samri_vitb_box1_{str(epoch+1)}.pth> has been saved.")
 
 if __name__ == "__main__":
