@@ -36,9 +36,7 @@ def main():
         image_encoder=sam_model.image_encoder,
         mask_decoder=sam_model.mask_decoder,
         prompt_encoder=sam_model.prompt_encoder,
-    ).to(device)
-        
-    samri_model = torch.nn.DataParallel(samri_model, device_ids=device_list)
+    )
 
     resize_transform = ResizeLongestSide(samri_model.image_encoder.img_size)
 
@@ -66,6 +64,9 @@ def main():
                                      lambda_dice=1,
                                      lambda_focal=10)
 
+    samri_model = torch.nn.DataParallel(samri_model, device_ids=device_list)
+    samri_model.to(device)
+    
     #train
     losses = []
     prompts =["bbox"]#["point","point","bbox"]
