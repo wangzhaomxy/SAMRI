@@ -272,9 +272,9 @@ class EmbDataset(Dataset):
         npz_data = np.load(self.npz_files[index])
         self.cur_name = self.npz_files[index]
         mask = npz_data["mask"]
-        
+
         if self.random_mask:
-            mask = mask==random.choice([i for i in np.unique(mask) if i!=0])
+            mask = mask==np.unique(mask)[random.choice(np.unique(mask).nonzero()[0])]
             if not mask.any():
                 raise ValueError(f"After random choice, The following file contains the empty mask: {self.get_name()}")
 

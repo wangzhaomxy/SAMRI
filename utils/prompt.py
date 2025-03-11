@@ -14,6 +14,8 @@ class MaskSplit():
     Args:
         mask (np.darray): the labeled ground truth mask. CHW=(1,255,255)
         
+    Returns:
+        masks
     
     """
     def __init__(self, mask):
