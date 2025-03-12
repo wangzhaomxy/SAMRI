@@ -22,7 +22,7 @@ from segment_anything.utils.transforms import ResizeLongestSide
 model_type = "samri"
 encoder_type = ENCODER_TYPE[model_type] # choose one from vit_b and vit_h.
 batch_size = BATCH_SIZE
-model_save_path = MODEL_SAVE_PATH + "box1/"
+model_save_path = MODEL_SAVE_PATH + "box/"
 device = DEVICE
 num_epochs = NUM_EPOCHS
 train_image_path = TRAIN_IMAGE_PATH
@@ -53,7 +53,7 @@ def main():
         lr=1e-5, 
         weight_decay=0.1
     )
-    #scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=10)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=10)
     
     dice_focal_loass = DiceFocalLoss(sigmoid=True, 
                                      squared_pred=True,
@@ -129,7 +129,7 @@ def main():
                     optimizer.zero_grad()
                     epoch_loss += loss.item()
                     batch_data = []
-        #scheduler.step()
+        scheduler.step()
         epoch_loss /= step
         losses.append(epoch_loss)
 
