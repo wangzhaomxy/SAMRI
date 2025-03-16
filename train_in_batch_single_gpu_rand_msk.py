@@ -64,7 +64,7 @@ def main():
     
     #train
     losses = []
-    prompts = ["point", "bbox"] # ["bbox"] #  
+    prompts = ["bbox"] #  ["point", "bbox"]
     for epoch in range(start_epoch, num_epochs):
         print(f"The {epoch+1} / {num_epochs} epochs.")
         # training part
