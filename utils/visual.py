@@ -88,7 +88,7 @@ def get_dice_from_ds(model, test_dataset, med_sam=False):
                                 point_coords=point,
                                 point_labels=point_label,
                                 multimask_output=False,
-                                med_sam=med_sam
+                                #med_sam=med_sam
                             )
             
             pre_mask_b, _, _ = predictor.predict(
@@ -96,7 +96,7 @@ def get_dice_from_ds(model, test_dataset, med_sam=False):
                                 point_labels=None,
                                 box=bbox[None, :],
                                 multimask_output=False,
-                                med_sam=med_sam
+                                #med_sam=med_sam
                             )
 
             # save DSC

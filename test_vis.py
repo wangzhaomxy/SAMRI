@@ -9,20 +9,21 @@ from tqdm import tqdm
 file_paths = TEST_IMAGE_PATH
 ckpt_root_path = "/scratch/project/samri/Model_save/"
 model_folder = "box/"
-save_path = "/scratch/project/samri/Eval_results/" + model_folder
-ckpt_list = [ckpt_root_path + model_folder + "samri_vitb_box_0.pth",
-             ckpt_root_path + model_folder + "samri_vitb_box_1.pth",
-             ckpt_root_path + model_folder + "samri_vitb_box_2.pth",
-             ckpt_root_path + model_folder + "samri_vitb_box_3.pth",
-             ckpt_root_path + model_folder + "samri_vitb_box_4.pth",
-             ckpt_root_path + model_folder + "samri_vitb_box_5.pth",
-             ckpt_root_path + model_folder + "samri_vitb_box_6.pth",
-             ckpt_root_path + model_folder + "samri_vitb_box_7.pth",
-             ckpt_root_path + model_folder + "samri_vitb_box_8.pth",
-             ckpt_root_path + model_folder + "samri_vitb_box_9.pth",
-             ckpt_root_path + model_folder + "samri_vitb_box_10.pth",
-             ]
-# ckpt_list = ["/scratch/user/s4670484/Model_dir/sam_vit_b_01ec64.pth"]
+save_path = "/scratch/project/samri/Eval_results/" #+ model_folder
+# ckpt_list = [ckpt_root_path + model_folder + "samri_vitb_box_0.pth",
+#              ckpt_root_path + model_folder + "samri_vitb_box_1.pth",
+#              ckpt_root_path + model_folder + "samri_vitb_box_2.pth",
+#              ckpt_root_path + model_folder + "samri_vitb_box_3.pth",
+#              ckpt_root_path + model_folder + "samri_vitb_box_4.pth",
+#              ckpt_root_path + model_folder + "samri_vitb_box_5.pth",
+#              ckpt_root_path + model_folder + "samri_vitb_box_6.pth",
+#              ckpt_root_path + model_folder + "samri_vitb_box_7.pth",
+#              ckpt_root_path + model_folder + "samri_vitb_box_8.pth",
+#              ckpt_root_path + model_folder + "samri_vitb_box_9.pth",
+#              ckpt_root_path + model_folder + "samri_vitb_box_10.pth",
+#              ]
+ckpt_list = ["/scratch/user/s4670484/Model_dir/sam_vit_b_01ec64.pth"]
+# ckpt_list = ["/scratch/user/s4670484/Model_dir/medsam_vit_b.pth"]
 
 def save_test_record(file_paths, sam_model, save_path):
     p_record = []
@@ -30,7 +31,7 @@ def save_test_record(file_paths, sam_model, save_path):
     for file_path in file_paths:
         print("Processing the dataset: ",file_path)
         test_dataset = NiiDataset([file_path], multi_mask= True)    
-        p_record_vitb, b_record_vitb = get_dice_from_ds(model=sam_model, test_dataset=test_dataset)
+        p_record_vitb, b_record_vitb = get_dice_from_ds(model=sam_model, test_dataset=test_dataset, med_sam=True)
         p_record.append(p_record_vitb)
         b_record.append(b_record_vitb)
         final_record = {"p":p_record,"b":b_record}
