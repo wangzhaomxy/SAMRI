@@ -41,7 +41,7 @@ def get_dice_from_ds(model, test_dataset, med_sam=False):
 
     Args:
         model (SAM model): The SAM model loaded from Checkpoint.
-        test_dataset (Dataset): The pytorch dataset from torch.Dataset.ß
+        test_dataset (Dataset): The pytorch dataset from torch.Dataset.
 
     Returns:
         ([p_record], [b_record]): 
@@ -54,7 +54,21 @@ def get_dice_from_ds(model, test_dataset, med_sam=False):
 
     for image, mask in tqdm(test_dataset):
         # Image embedding inference
-        if med_sam:
+        if med_sam: # for MedSAM evaluation.
+            # copied from MedSAM pre_CT_MR.py file MR data preprocessing
+            lower_bound, upper_bound = np.percentile(
+                image[image > 0], 0.5
+            ), np.percentile(image[image > 0], 99.5)
+            image_data_pre = np.clip(image, lower_bound, upper_bound)
+            image_data_pre = (
+                (image_data_pre - np.min(image_data_pre))
+                / (np.max(image_data_pre) - np.min(image_data_pre))
+                * 255.0
+            )
+            image_data_pre[image == 0] = 0
+
+            image = np.uint8(image_data_pre)
+            
             image = transform.resize(
                 image,
                 (1024, 1024),
@@ -88,7 +102,7 @@ def get_dice_from_ds(model, test_dataset, med_sam=False):
                                 point_coords=point,
                                 point_labels=point_label,
                                 multimask_output=False,
-                                #med_sam=med_sam
+                                med_sam=med_sam
                             )
             
             pre_mask_b, _, _ = predictor.predict(
@@ -96,7 +110,7 @@ def get_dice_from_ds(model, test_dataset, med_sam=False):
                                 point_labels=None,
                                 box=bbox[None, :],
                                 multimask_output=False,
-                                #med_sam=med_sam
+                                med_sam=med_sam
                             )
 
             # save DSC
