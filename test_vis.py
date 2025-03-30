@@ -9,7 +9,7 @@ from tqdm import tqdm
 file_paths = TEST_IMAGE_PATH
 ckpt_root_path = "/scratch/project/samri/Model_save/"
 model_folder = "box/"
-save_path = "/scratch/project/samri/Eval_results/" #+ model_folder
+save_path = "/scratch/project/samri/Eval_results/" + "new_"#+ model_folder
 # ckpt_list = [ckpt_root_path + model_folder + "samri_vitb_box_0.pth",
 #              ckpt_root_path + model_folder + "samri_vitb_box_1.pth",
 #              ckpt_root_path + model_folder + "samri_vitb_box_2.pth",
