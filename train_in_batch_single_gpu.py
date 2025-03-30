@@ -136,8 +136,8 @@ def main():
         ## save the latest model
         if (epoch + 1) % 1 == 0:
             print(f"The {epoch+1} / {num_epochs} epochs,  Loss: {epoch_loss}.")
-            torch.save(samri_model.state_dict(), join(model_save_path, f"samri_vitb_box1_{str(epoch+1)}.pth"))
-            print(f"Checkpoint <samri_vitb_box1_{str(epoch+1)}.pth> has been saved.")
+            torch.save(samri_model.state_dict(), join(model_save_path, f"samri_vitb_box_{str(epoch+1)}.pth"))
+            print(f"Checkpoint <samri_vitb_box_{str(epoch+1)}.pth> has been saved.")
 
 if __name__ == "__main__":
     main()
