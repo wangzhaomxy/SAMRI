@@ -86,7 +86,7 @@ def main():
                             'point_labels':torch.as_tensor([[1]], device=device),
                             'original_size':ori_size
                             } 
-                        for image, mask, ori_size in zip(embedding, masks, ori_size)
+                        for image, _, ori_size in zip(embedding, masks, ori_size)
                     ]
                 if prompt == "bbox":
                     batch_input = [
@@ -94,11 +94,11 @@ def main():
                             'boxes':resize_transform.apply_boxes_torch(torch.as_tensor(np.array([gen_bboxes(mask.squeeze(0).numpy())]), device=device), original_size=ori_size),
                             'original_size':ori_size
                             } 
-                        for image, mask, ori_size in zip(embedding, masks, ori_size)
+                        for image, _, ori_size in zip(embedding, masks, ori_size)
                     ]
 
                 y_pred = samri_model(batch_input, multimask_output=False, train_mode=True, embedding_inputs=True)
-                loss = dice_focal_loass(y_pred, masks.to(device))
+                loss = dice_focal_loass(y_pred, masks[0].to(device))
                 loss.backward()
                 optimizer.step()
 
