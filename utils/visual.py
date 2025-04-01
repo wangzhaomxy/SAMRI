@@ -37,11 +37,13 @@ def show_box(box, ax):
 
 def get_dice_from_ds(model, test_dataset, med_sam=False):
     """
-    Get point prompt 
+    Calculate the dice score for the test dataset using the SAM model.
 
     Args:
         model (SAM model): The SAM model loaded from Checkpoint.
         test_dataset (Dataset): The pytorch dataset from torch.Dataset.
+        med_sam (bool): using the data preprocessing method from medSAM. Defalt
+                        is False.
 
     Returns:
         ([p_record], [b_record]): 
@@ -62,7 +64,7 @@ def get_dice_from_ds(model, test_dataset, med_sam=False):
             image_data_pre = np.clip(image, lower_bound, upper_bound)
             image_data_pre = (
                 (image_data_pre - np.min(image_data_pre))
-                / (np.max(image_data_pre) - np.min(image_data_pre))
+                / (np.max(image_data_pre) - np.min(image_data_pre) + 1e-8)
                 * 255.0
             )
             image_data_pre[image == 0] = 0
@@ -118,3 +120,30 @@ def get_dice_from_ds(model, test_dataset, med_sam=False):
             b_record.append(dice_similarity(each_mask, pre_mask_b[0, :, :]))
     return p_record, b_record
 
+def get_pix_num_from_ds(test_dataset):
+    """
+    Calculate the dice score for the test dataset using the SAM model.
+
+    Args:
+        model (SAM model): The SAM model loaded from Checkpoint.
+        test_dataset (Dataset): The pytorch dataset from torch.Dataset.
+        med_sam (bool): using the data preprocessing method from medSAM. Defalt
+                        is False.
+
+    Returns:
+        ([p_record], [b_record]): 
+            p_record:A list of DSC of point prompt for the test dataset.
+            b_record:A list of DSC of bbox prompt for the test dataset.
+    """
+    
+    pixel_count = []
+    area_percentage = []
+    for _, mask in tqdm(test_dataset):
+        H, W = mask.shape[-2:]
+        total_pixels = H * W
+        masks = MaskSplit(mask)
+        for each_mask in masks:
+            pixel_count.append(np.sum(each_mask))
+            area_percentage.append(np.sum(each_mask) / total_pixels)
+    return pixel_count, area_percentage
+        
