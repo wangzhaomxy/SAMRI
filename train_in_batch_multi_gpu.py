@@ -17,133 +17,125 @@ from utils.utils import *
 from utils.prompt import *
 from model import SAMRI
 from segment_anything.utils.transforms import ResizeLongestSide
+import torch.multiprocessing as mp
+from torch.utils.data.distributed import DistributedSampler
+from torch.nn.parallel import DistributedDataParallel as DDP
+from torch.distributed import init_process_group, destroy_process_group
 
 # setup global parameters
 model_type = "samri"
 encoder_type = ENCODER_TYPE[model_type] # choose one from vit_b and vit_h.
 batch_size = BATCH_SIZE
-model_save_path = MODEL_SAVE_PATH + "box1/"
+model_save_path = MODEL_SAVE_PATH + "ba_rand/"
 num_epochs = NUM_EPOCHS
 train_image_path = TRAIN_IMAGE_PATH
 train_image_path.remove('/scratch/project/samri/Embedding/totalseg_mr/')
-device_list = [i for i in range(torch.cuda.device_count())]
-device = DEVICE
+save_every = 1
 
-def main():
+def ddp_setup(rank: int, world_size: int):
+    """
+    Args:
+    rank: Unique identifier of each process
+    world_size: Total number of processes
+    """
+    os.environ["MASTER_ADDR"] = "localhost"
+    os.environ["MASTER_PORT"] = "12355"
+    torch.cuda.set_device(rank)
+    init_process_group(backend="nccl", rank=rank, world_size=world_size)
+
+def main(gpu, world_size, num_epochs, save_every):
+    ddp_setup(rank=gpu, world_size=world_size)
     sam_checkpoint, start_epoch = get_checkpoint(model_save_path)
-    sam_model = sam_model_registry[encoder_type](sam_checkpoint)    
+    sam_model = sam_model_registry[encoder_type](sam_checkpoint)
     samri_model = SAMRI(
         image_encoder=sam_model.image_encoder,
         mask_decoder=sam_model.mask_decoder,
         prompt_encoder=sam_model.prompt_encoder,
-    ).to(device)
-
+    ).cuda()
     resize_transform = ResizeLongestSide(samri_model.image_encoder.img_size)
 
     print(
-            "Number of total parameters: ",
-            sum(p.numel() for p in samri_model.parameters()),
-        )  
+        "Number of total parameters: ",
+        sum(p.numel() for p in samri_model.parameters()),
+    )  
     print(
         "Number of trainable parameters: ",
         sum(p.numel() for p in samri_model.parameters() if p.requires_grad),
     )
-    print("Number of decoder parameters: ", sum(p.numel() for p in samri_model.mask_decoder.parameters()))
-    
+
+    samri_model = DDP(
+                    samri_model,
+                    device_ids=[gpu],
+                    gradient_as_bucket_view=True,
+                    find_unused_parameters=True
+                    )
+
     optimizer = torch.optim.AdamW(
-        samri_model.mask_decoder.parameters(),
-        lr=1e-5, 
+        samri_model.module.mask_decoder.parameters(),
+        lr=1e-4/world_size, 
         weight_decay=0.1
     )
-    #scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=10)
-    
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=10)    
     dice_focal_loass = DiceFocalLoss(sigmoid=True, 
                                      squared_pred=True,
                                      batch= True, 
                                      reduction="mean",
                                      lambda_dice=1,
-                                     lambda_focal=10)
-
-    samri_model = torch.nn.DataParallel(samri_model, device_ids=device_list)
-    optimizer = torch.nn.DataParallel(optimizer, device_ids=device_list)
+                                     lambda_focal=10)    
     
     #train
     losses = []
-    prompts =["bbox"]#["point","point","bbox"]
+    train_dataset = EmbDataset(train_image_path)
+    train_loader = DataLoader(train_dataset, shuffle=False, sampler=DistributedSampler(train_dataset))
+    
+    prompts = ["bbox"] #  ["point", "bbox"]
     for epoch in range(start_epoch, num_epochs):
         print(f"The {epoch+1} / {num_epochs} epochs.")
         # training part
         samri_model.train()
         epoch_loss = 0
-        batch_counter = 0
-        remain_data = []
-        step = 0
-        batch_data = []
-        train_dataset = EmbDataset(train_image_path)
-        train_loader = DataLoader(train_dataset, shuffle=True)
         for prompt in prompts:
-            print(f"Training {prompt} prompt...")
-            for step, (embedding, mask, ori_size) in enumerate(tqdm(train_loader)):
-                # Generate batch in multiple mask mode.
-                embedding = embedding.squeeze()
-                masks = MaskSplit(mask.squeeze(0))
-                ori_size = (ori_size[0].numpy()[0], ori_size[1].numpy()[0])
-                num_masks = len(masks)
-                if num_masks > batch_size:
-                    raise RuntimeError("Too small batch size. It should be larger than label numbers.")
-                batch_counter += num_masks
-                if batch_counter < batch_size:
-                    if not remain_data:
-                        batch_data += [(embedding, masks[i], ori_size) for i in range(num_masks)]
-                    else:
-                        batch_data += remain_data
-                        batch_data += [(embedding, masks[i], ori_size) for i in range(num_masks)]
-                        remain_data = []
-                else:
-                    batch_counter -= batch_size
-                    batch_data += [(embedding, masks[i], ori_size) for i in range(num_masks - batch_counter)]
-                    if batch_counter != 0:
-                        remain_data = [(embedding, masks[i], ori_size) for i in range(num_masks - batch_counter, num_masks)]
-                    
-                    # Train model
-                    step += 1                    
-                    if prompt == "point":
-                        batch_input = [
-                            {'image': image.to(device),
-                            'point_coords':resize_transform.apply_coords_torch(torch.as_tensor(np.array([gen_points(mask.numpy())]), device=device), original_size=ori_size),
-                            'point_labels':torch.as_tensor([[1]], device=device),
+            for step, (embedding, masks, ori_size) in enumerate(tqdm(train_loader)):
+                # Train model
+                ori_size = [(ori_size[0].numpy()[i], ori_size[1].numpy()[i]) for i in range(len(ori_size[0]))]
+                
+                step += 1
+                if prompt == "point":
+                    batch_input = [
+                        {'image': image.squeeze(),
+                            'point_coords':resize_transform.apply_coords_torch(torch.as_tensor(np.array([gen_points(mask.squeeze(0).numpy())]), device=device), original_size=ori_size),
+                            'point_labels':torch.as_tensor([[1]]),
                             'original_size':ori_size
                             } 
-                            for image, mask, ori_size in batch_data
-                        ]
-                    if prompt == "bbox":
-                        batch_input = [
-                            {'image': image.to(device),
-                            'boxes':resize_transform.apply_boxes_torch(torch.as_tensor(np.array([gen_bboxes(mask.numpy())]), device=device), original_size=ori_size),
+                        for image, mask, ori_size in zip(embedding, masks, ori_size)
+                    ]
+                if prompt == "bbox":
+                    batch_input = [
+                        {'image': image.squeeze(),
+                            'boxes':resize_transform.apply_boxes_torch(torch.as_tensor(np.array([gen_bboxes(mask.squeeze(0).numpy())]), device=device), original_size=ori_size),
                             'original_size':ori_size
                             } 
-                            for image, mask, ori_size in batch_data
-                        ]
-                    
-                    y_pred = samri_model(batch_input, multimask_output=False, train_mode=True, embedding_inputs=True)
-                    batch_gt_masks = torch.stack([preprocess_mask(torch.tensor(x,dtype=torch.float, device=torch.device(device))[None,None,:,:],target_size=256) for _,x,_ in batch_data], dim=0).squeeze(1)
-                    loss = dice_focal_loass(y_pred, batch_gt_masks)
-                    loss.backward()
-                    optimizer.step()
+                        for image, mask, ori_size in zip(embedding, masks, ori_size)
+                    ]
 
-                    optimizer.zero_grad()
-                    epoch_loss += loss.item()
-                    batch_data = []
-        #scheduler.step()
+                y_pred = samri_model(batch_input, multimask_output=False, train_mode=True, embedding_inputs=True)
+                loss = dice_focal_loass(y_pred, masks.to(device))
+                loss.backward()
+                optimizer.step()
+
+                optimizer.zero_grad()
+                epoch_loss += loss.item()
+        scheduler.step()
         epoch_loss /= step
         losses.append(epoch_loss)
 
         ## save the latest model
         if (epoch + 1) % 1 == 0:
             print(f"The {epoch+1} / {num_epochs} epochs,  Loss: {epoch_loss}.")
-            torch.save(samri_model.module.state_dict(), join(model_save_path, f"samri_vitb_box1_{str(epoch+1)}.pth"))
-            print(f"Checkpoint <samri_vitb_box1_{str(epoch+1)}.pth> has been saved.")
+            torch.save(samri_model.state_dict(), join(model_save_path, f"samri_vitb_ba_rand_{str(epoch+1)}.pth"))
+            print(f"Checkpoint <samri_vitb_ba_rand_{str(epoch+1)}.pth> has been saved.")
+        
 
 if __name__ == "__main__":
     main()
-           
+        
