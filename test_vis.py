@@ -10,20 +10,20 @@ file_paths = TEST_IMAGE_PATH
 ckpt_root_path = "/scratch/project/samri/Model_save/"
 model_folder = "base/"
 save_path = "/scratch/project/samri/Eval_results/" + model_folder
-# ckpt_list = [ckpt_root_path + model_folder + "samri_vitb_box_0.pth",
-#              ckpt_root_path + model_folder + "samri_vitb_box_1.pth",
-#              ckpt_root_path + model_folder + "samri_vitb_box_2.pth",
-#              ckpt_root_path + model_folder + "samri_vitb_box_3.pth",
-#              ckpt_root_path + model_folder + "samri_vitb_box_4.pth",
-#              ckpt_root_path + model_folder + "samri_vitb_box_5.pth",
-#              ckpt_root_path + model_folder + "samri_vitb_box_6.pth",
-#              ckpt_root_path + model_folder + "samri_vitb_box_7.pth",
-#              ckpt_root_path + model_folder + "samri_vitb_box_8.pth",
-#              ckpt_root_path + model_folder + "samri_vitb_box_9.pth",
-#              ckpt_root_path + model_folder + "samri_vitb_box_10.pth",
-#              ]
+ckpt_list = [ckpt_root_path + model_folder + "samri_vitb_box_0.pth",
+            #  ckpt_root_path + model_folder + "samri_vitb_box_1.pth",
+            #  ckpt_root_path + model_folder + "samri_vitb_box_2.pth",
+            #  ckpt_root_path + model_folder + "samri_vitb_box_3.pth",
+            #  ckpt_root_path + model_folder + "samri_vitb_box_4.pth",
+            #  ckpt_root_path + model_folder + "samri_vitb_box_5.pth",
+            #  ckpt_root_path + model_folder + "samri_vitb_box_6.pth",
+            #  ckpt_root_path + model_folder + "samri_vitb_box_7.pth",
+            #  ckpt_root_path + model_folder + "samri_vitb_box_8.pth",
+            #  ckpt_root_path + model_folder + "samri_vitb_box_9.pth",
+            #  ckpt_root_path + model_folder + "samri_vitb_box_10.pth",
+             ]
 # ckpt_list = ["/scratch/user/s4670484/Model_dir/sam_vit_b_01ec64.pth"]
-ckpt_list = ["/scratch/user/s4670484/Model_dir/sam_vit_h_4b8939.pth"]
+# ckpt_list = ["/scratch/user/s4670484/Model_dir/sam_vit_h_4b8939.pth"]
 # ckpt_list = ["/scratch/user/s4670484/Model_dir/medsam_vit_b.pth"]
 
 def save_test_record(file_paths, sam_model, save_path):
@@ -51,7 +51,7 @@ def save_test_record(file_paths, sam_model, save_path):
         pickle.dump(final_record, f)
 
 for ckpt in ckpt_list:
-    model_type = 'vit_h'# Choose one from vit_b, vit_h, samri, and med_sam
+    model_type = 'vit_b'# Choose one from vit_b, vit_h, samri, and med_sam
     encoder_tpye = ENCODER_TYPE[model_type] 
     checkbox = ckpt
     device = DEVICE
