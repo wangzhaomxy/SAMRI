@@ -71,7 +71,7 @@ def main():
         samri_model.train()
         epoch_loss = 0
         step = 0
-        train_dataset = EmbDataset(train_image_path, random_mask=True, resize_mask=True)
+        train_dataset = EmbDataset(train_image_path, random_mask=True, resize_mask=True, mask_size=256)
         train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
         for prompt in prompts:
             for step, (embedding, masks, ori_size) in enumerate(tqdm(train_loader)):

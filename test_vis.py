@@ -25,48 +25,48 @@ save_path = "/scratch/project/samri/Eval_results/" + "pixel_count" #+ model_fold
 # ckpt_list = ["/scratch/user/s4670484/Model_dir/sam_vit_b_01ec64.pth"]
 ckpt_list = ["/scratch/user/s4670484/Model_dir/medsam_vit_b.pth"]
 
-def save_pxl_record(file_paths, save_path):
-    pixel_count, area_percentage = [], []
-    for file_path in file_paths:
-        print("Processing the dataset: ",file_path)
-        test_dataset = NiiDataset([file_path], multi_mask= True)
-        pixel_count_vit, area_percentage_vit = get_pix_num_from_ds(test_dataset=test_dataset)
-        pixel_count.append(pixel_count_vit)
-        area_percentage.append(area_percentage_vit)
-        final_record = {"pixel_count":pixel_count,"area_percentage":area_percentage}
-    with open(save_path, "wb") as f:
-        pickle.dump(final_record, f)
-
-save_pxl_record(file_paths, save_path)
-print("Done!")
-
-# def save_test_record(file_paths, sam_model, save_path):
-#     p_record, b_record = [], []
+# def save_pxl_record(file_paths, save_path):
 #     pixel_count, area_percentage = [], []
 #     for file_path in file_paths:
 #         print("Processing the dataset: ",file_path)
-#         test_dataset = NiiDataset([file_path], multi_mask= True)    
-#         p_record_vitb, b_record_vitb = get_dice_from_ds(model=sam_model, test_dataset=test_dataset, med_sam=True)
+#         test_dataset = NiiDataset([file_path], multi_mask= True)
 #         pixel_count_vit, area_percentage_vit = get_pix_num_from_ds(test_dataset=test_dataset)
-#         p_record.append(p_record_vitb)
-#         b_record.append(b_record_vitb)
 #         pixel_count.append(pixel_count_vit)
 #         area_percentage.append(area_percentage_vit)
-#         final_record = {"p":p_record,"b":b_record, "pixel_count":pixel_count,"area_percentage":area_percentage}
+#         final_record = {"pixel_count":pixel_count,"area_percentage":area_percentage}
 #     with open(save_path, "wb") as f:
 #         pickle.dump(final_record, f)
 
-# for ckpt in ckpt_list:
-#     model_type = 'vit_b'# Choose one from vit_b, vit_h, samri, and med_sam
-#     encoder_tpye = ENCODER_TYPE[model_type] 
-#     checkbox = ckpt
-#     device = DEVICE
-#     file_name = ckpt.split("/")[-1]
-#     print("Testing Check-point " + file_name)
+# save_pxl_record(file_paths, save_path)
+# print("Done!")
 
-#     # regist the MRI-SAM model and predictor.
-#     sam_model = sam_model_registry[encoder_tpye](checkbox)
-#     sam_model = sam_model.to(device)
-#     save_path_all = save_path + file_name[:-4]
+def save_test_record(file_paths, sam_model, save_path):
+    p_record, b_record = [], []
+    pixel_count, area_percentage = [], []
+    for file_path in file_paths:
+        print("Processing the dataset: ",file_path)
+        test_dataset = NiiDataset([file_path], multi_mask= True)    
+        p_record_vitb, b_record_vitb = get_dice_from_ds(model=sam_model, test_dataset=test_dataset, med_sam=True)
+        pixel_count_vit, area_percentage_vit = get_pix_num_from_ds(test_dataset=test_dataset)
+        p_record.append(p_record_vitb)
+        b_record.append(b_record_vitb)
+        pixel_count.append(pixel_count_vit)
+        area_percentage.append(area_percentage_vit)
+        final_record = {"p":p_record,"b":b_record, "pixel_count":pixel_count,"area_percentage":area_percentage}
+    with open(save_path, "wb") as f:
+        pickle.dump(final_record, f)
 
-#     save_test_record(file_paths, sam_model, save_path_all)
+for ckpt in ckpt_list:
+    model_type = 'vit_b'# Choose one from vit_b, vit_h, samri, and med_sam
+    encoder_tpye = ENCODER_TYPE[model_type] 
+    checkbox = ckpt
+    device = DEVICE
+    file_name = ckpt.split("/")[-1]
+    print("Testing Check-point " + file_name)
+
+    # regist the MRI-SAM model and predictor.
+    sam_model = sam_model_registry[encoder_tpye](checkbox)
+    sam_model = sam_model.to(device)
+    save_path_all = save_path + file_name[:-4]
+
+    save_test_record(file_paths, sam_model, save_path_all)
