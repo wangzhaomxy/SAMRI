@@ -51,7 +51,7 @@ def save_test_record(file_paths, sam_model, save_path):
         pickle.dump(final_record, f)
 
 for ckpt in ckpt_list:
-    model_type = 'vit_b'# Choose one from vit_b, vit_h, samri, and med_sam
+    model_type = 'vit_h'# Choose one from vit_b, vit_h, samri, and med_sam
     encoder_tpye = ENCODER_TYPE[model_type] 
     checkbox = ckpt
     device = DEVICE
