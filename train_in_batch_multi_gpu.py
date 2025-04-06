@@ -97,7 +97,8 @@ def main(gpu, world_size, num_epochs, save_every):
     
     prompts = ["bbox"] #  ["point", "bbox"]
     for epoch in range(start_epoch, num_epochs):
-        print(f"The {epoch+1} / {num_epochs} epochs.")
+        if gpu == 0:
+            print(f"The {epoch+1} / {num_epochs} epochs.")
         # training part
         samri_model.train()
         epoch_loss = 0
