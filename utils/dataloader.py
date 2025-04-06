@@ -36,7 +36,8 @@ class NiiDataset(Dataset):
             self.gt_file += sorted(glob.glob(path + MASK_KEYS))
         if shuffle:
             self.img_file, self.gt_file = self._shuffle(self.img_file, self.gt_file)
-        self.cur_name = ""
+        self.cur_img_name = ""
+        self.cur_msk_name = ""
         self.multi_mask = multi_mask
         self.matching_img = cv2.imread("/home/s4670484/Documents/SAMRI/matching_img/groceries.jpg")
         self.matching_img = cv2.cvtColor(self.matching_img, cv2.COLOR_BGR2RGB)
@@ -47,7 +48,7 @@ class NiiDataset(Dataset):
             data_root (str): The path of the dataset
             img_file (list): The absolute path of the image files list
             gr_file (list): The absolute pathe of the ground truth masks list.
-            cur_name: The current image name that the dataset is loading.
+            cur_img_name: The current image name that the dataset is loading.
         """
 
     def __len__(self):
@@ -71,7 +72,8 @@ class NiiDataset(Dataset):
         # load input image and corresponding mask
         nii_img = self._load_nii(self.img_file[index])
         nii_seg = self._load_nii(self.gt_file[index])
-        self.cur_name = self.img_file[index]
+        self.cur_img_name = self.img_file[index]
+        self.cur_msk_name = self.gt_file[index]
         
         # preprocess the image to np.ndarray type in unit8 format,(256 ,256 ,3)
         nii_img = self._preprocess(nii_img)
@@ -158,7 +160,7 @@ class NiiDataset(Dataset):
         Returns:
             (str): the image name.
         """
-        return os.path.basename(self.cur_name)
+        return os.path.basename(self.cur_img_name)
     
     def _clip_img(self, image, lower_b=0.5, upper_b=99.5):
         """
