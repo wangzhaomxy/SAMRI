@@ -13,7 +13,7 @@ EMBEDDING_PATH = root_path + "Embedding/" # The main folder of datasets
 TEST_PATH = root_path + "Datasets/SAMRI_train_test/"
 MODEL_SAVE_PATH = root_path + "Model_save/"
 DEVICE = "cuda"
-BATCH_SIZE = 384
+BATCH_SIZE = 512
 NUM_EPOCHS = 10
 JITTER = 3
 
