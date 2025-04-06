@@ -53,7 +53,6 @@ def ddp_setup(rank: int, world_size: int):
     torch.cuda.set_device(rank)
     init_process_group(backend="nccl", rank=rank, world_size=world_size)
 
-
 def main(gpu, world_size, num_epochs, save_every):
     ddp_setup(rank=gpu, world_size=world_size)
     sam_checkpoint, start_epoch = get_checkpoint(model_save_path)

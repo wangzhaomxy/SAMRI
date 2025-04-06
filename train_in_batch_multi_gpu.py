@@ -53,15 +53,16 @@ def main(gpu, world_size, num_epochs, save_every):
         prompt_encoder=sam_model.prompt_encoder,
     ).cuda()
     resize_transform = ResizeLongestSide(samri_model.image_encoder.img_size)
-
-    print(
-        "Number of total parameters: ",
-        sum(p.numel() for p in samri_model.parameters()),
-    )  
-    print(
-        "Number of trainable parameters: ",
-        sum(p.numel() for p in samri_model.parameters() if p.requires_grad),
-    )
+    
+    if gpu == 0:
+        print(
+            "Number of total parameters: ",
+            sum(p.numel() for p in samri_model.parameters()),
+        )  
+        print(
+            "Number of trainable parameters: ",
+            sum(p.numel() for p in samri_model.parameters() if p.requires_grad),
+        )
 
     samri_model = DDP(
                     samri_model,
@@ -85,8 +86,14 @@ def main(gpu, world_size, num_epochs, save_every):
     
     #train
     losses = []
-    train_dataset = EmbDataset(train_image_path, random_mask=True, resize_mask=True, mask_size=256)
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+    train_dataset = EmbDataset(train_image_path, 
+                               random_mask=True, 
+                               resize_mask=True, 
+                               mask_size=256)
+    train_loader = DataLoader(train_dataset, 
+                              batch_size=batch_size, 
+                              shuffle=False, 
+                              sampler=DistributedSampler(train_dataset))
     
     prompts = ["bbox"] #  ["point", "bbox"]
     for epoch in range(start_epoch, num_epochs):
