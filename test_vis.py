@@ -23,6 +23,7 @@ save_path = "/scratch/project/samri/Eval_results/" + model_folder
 #              ckpt_root_path + model_folder + "samri_vitb_box_10.pth",
 #              ]
 # ckpt_list = ["/scratch/user/s4670484/Model_dir/sam_vit_b_01ec64.pth"]
+# ckpt_list = ["/scratch/user/s4670484/Model_dir/sam_vit_h_4b8939.pth"]
 ckpt_list = ["/scratch/user/s4670484/Model_dir/medsam_vit_b.pth"]
 
 def save_test_record(file_paths, sam_model, save_path):
