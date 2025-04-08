@@ -140,7 +140,7 @@ class NiiDataset(Dataset):
         # np_3c = exposure.match_histograms(np_3c,self.matching_img)
 
         # normalize pixel number into [0,1]
-        np_3c = (np_3c - np_3c.min()) / (np_3c.max() - np_3c.min())
+        np_3c = (np_3c - np_3c.min()) / (np_3c.max() - np_3c.min() + 1e-8)
 
         # clip image intensity value between the 0.5th to 99.5th percentale.
         # np_3c = exposure.rescale_intensity(np_3c, in_range=(0.005, 0.995))
