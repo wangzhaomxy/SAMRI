@@ -26,7 +26,7 @@ from torch.distributed import init_process_group, destroy_process_group
 model_type = "samri"
 encoder_type = ENCODER_TYPE[model_type] # choose one from vit_b and vit_h.
 batch_size = BATCH_SIZE
-model_save_path = MODEL_SAVE_PATH + "ba_mult/"
+model_save_path = MODEL_SAVE_PATH + "box/"
 num_epochs = NUM_EPOCHS
 train_image_path = TRAIN_IMAGE_PATH
 train_image_path.remove('/scratch/project/samri/Embedding/totalseg_mr/')
@@ -76,7 +76,7 @@ def main(gpu, world_size, num_epochs, save_every):
         lr=1e-4/world_size, 
         weight_decay=0.1
     )
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=10)    
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=10)
     dice_focal_loass = DiceFocalLoss(sigmoid=True, 
                                      squared_pred=True,
                                      batch= True, 
@@ -140,8 +140,8 @@ def main(gpu, world_size, num_epochs, save_every):
         ## save the latest model
         if (epoch + 1) % save_every == 0 and gpu == 0:
             print(f"The {epoch+1} / {num_epochs} epochs,  Loss: {epoch_loss}.")
-            torch.save(samri_model.module.state_dict(), join(model_save_path, f"samri_vitb_ba_mult_{str(epoch+1)}.pth"))
-            print(f"Checkpoint <samri_vitb_ba_mult_{str(epoch+1)}.pth> has been saved.")
+            torch.save(samri_model.module.state_dict(), join(model_save_path, f"samri_vitb_box_{str(epoch+1)}.pth"))
+            print(f"Checkpoint <samri_vitb_box_{str(epoch+1)}.pth> has been saved.")
     destroy_process_group()
 
 if __name__ == "__main__":
