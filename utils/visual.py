@@ -35,7 +35,7 @@ def show_box(box, ax):
     w, h = box[2] - box[0], box[3] - box[1]
     ax.add_patch(plt.Rectangle((x0, y0), w, h, edgecolor='green', facecolor=(0,0,0,0), lw=2))    
 
-def get_dice_from_ds(model, test_dataset, med_sam=False):
+def get_dice_from_ds(model, test_dataset, med_sam=False, with_pix=True):
     """
     Calculate the dice score for the test dataset using the SAM model.
 
@@ -53,8 +53,12 @@ def get_dice_from_ds(model, test_dataset, med_sam=False):
     predictor = SamPredictor(model)
     p_record = []
     b_record = []
+    pixel_count = []
+    area_percentage = []
 
     for image, mask in tqdm(test_dataset):
+        H, W = mask.shape[-2:]
+        total_pixels = H * W
         # Image embedding inference
         if med_sam: # for MedSAM evaluation.
             # copied from MedSAM pre_CT_MR.py file MR data preprocessing
@@ -118,7 +122,12 @@ def get_dice_from_ds(model, test_dataset, med_sam=False):
             # save DSC
             p_record.append(dice_similarity(each_mask, pre_mask_p[0, :, :]))
             b_record.append(dice_similarity(each_mask, pre_mask_b[0, :, :]))
-    return p_record, b_record
+            pixel_count.append(np.sum(each_mask))
+            area_percentage.append(np.sum(each_mask) / total_pixels) 
+    if with_pix:
+        return p_record, b_record, pixel_count, area_percentage
+    else:  
+        return p_record, b_record
 
 def get_pix_num_from_ds(test_dataset):
     """
