@@ -24,18 +24,19 @@ dataset_lib = {
 # list all the dataset folders under the DATASETS_PATH folder.
 ds_root = [ds for ds in glob.glob(DATASETS_PATH + "/*") if ds not in 
                                             glob.glob(DATASETS_PATH+"/*.*")]
+
+
 ds_root_process = [ds for ds in ds_root if include(ds, dataset_lib.keys())]
 
-if __name__ == "__main__":
-    print("\n The following datasets will be processed:")
-    for ds in ds_root_process:
-        print(ds)
-    print("\n")
+print("\n The following datasets will be processed:")
+for ds in ds_root_process:
+    print(ds)
+print("\n")
 
-    for ds_root_path in ds_root_process:
-        ds_name = os.path.basename(ds_root_path)
-        print("Processing " + ds_name +" Dataset...")
-        dataset_lib[ds_name](ds_root_path, PRPCESSED_ALL_PATH)
+for ds_root_path in ds_root_process:
+    ds_name = os.path.basename(ds_root_path)
+    print("Processing " + ds_name +" Dataset...")
+    dataset_lib[ds_name](ds_root_path, PRPCESSED_ALL_PATH)
 
 
 

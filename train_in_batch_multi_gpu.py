@@ -26,7 +26,7 @@ from torch.distributed import init_process_group, destroy_process_group
 model_type = "samri"
 encoder_type = ENCODER_TYPE[model_type] # choose one from vit_b and vit_h.
 batch_size = BATCH_SIZE
-model_save_path = MODEL_SAVE_PATH + "ba_mult/"
+model_save_path = MODEL_SAVE_PATH + "ba_rand/"
 num_epochs = NUM_EPOCHS
 train_image_path = TRAIN_IMAGE_PATH
 train_image_path.remove('/scratch/project/samri/Embedding/totalseg_mr/')
@@ -53,16 +53,15 @@ def main(gpu, world_size, num_epochs, save_every):
         prompt_encoder=sam_model.prompt_encoder,
     ).cuda()
     resize_transform = ResizeLongestSide(samri_model.image_encoder.img_size)
-    
-    if gpu == 0:
-        print(
-            "Number of total parameters: ",
-            sum(p.numel() for p in samri_model.parameters()),
-        )  
-        print(
-            "Number of trainable parameters: ",
-            sum(p.numel() for p in samri_model.parameters() if p.requires_grad),
-        )
+
+    print(
+        "Number of total parameters: ",
+        sum(p.numel() for p in samri_model.parameters()),
+    )  
+    print(
+        "Number of trainable parameters: ",
+        sum(p.numel() for p in samri_model.parameters() if p.requires_grad),
+    )
 
     samri_model = DDP(
                     samri_model,
@@ -86,19 +85,12 @@ def main(gpu, world_size, num_epochs, save_every):
     
     #train
     losses = []
-    train_dataset = EmbDataset(train_image_path, 
-                               random_mask=True, 
-                               resize_mask=True, 
-                               mask_size=256)
-    train_loader = DataLoader(train_dataset, 
-                              batch_size=batch_size, 
-                              shuffle=False, 
-                              sampler=DistributedSampler(train_dataset))
+    train_dataset = EmbDataset(train_image_path)
+    train_loader = DataLoader(train_dataset, shuffle=False, sampler=DistributedSampler(train_dataset))
     
     prompts = ["bbox"] #  ["point", "bbox"]
     for epoch in range(start_epoch, num_epochs):
-        if gpu == 0:
-            print(f"The {epoch+1} / {num_epochs} epochs.")
+        print(f"The {epoch+1} / {num_epochs} epochs.")
         # training part
         samri_model.train()
         epoch_loss = 0
@@ -111,7 +103,7 @@ def main(gpu, world_size, num_epochs, save_every):
                 if prompt == "point":
                     batch_input = [
                         {'image': image.squeeze(),
-                            'point_coords':resize_transform.apply_coords_torch(torch.as_tensor(np.array([gen_points(mask.squeeze(0).numpy())]), device=gpu), original_size=ori_size),
+                            'point_coords':resize_transform.apply_coords_torch(torch.as_tensor(np.array([gen_points(mask.squeeze(0).numpy())]), device=device), original_size=ori_size),
                             'point_labels':torch.as_tensor([[1]]),
                             'original_size':ori_size
                             } 
@@ -120,14 +112,14 @@ def main(gpu, world_size, num_epochs, save_every):
                 if prompt == "bbox":
                     batch_input = [
                         {'image': image.squeeze(),
-                            'boxes':resize_transform.apply_boxes_torch(torch.as_tensor(np.array([gen_bboxes(mask.squeeze(0).numpy())]), device=gpu), original_size=ori_size),
+                            'boxes':resize_transform.apply_boxes_torch(torch.as_tensor(np.array([gen_bboxes(mask.squeeze(0).numpy())]), device=device), original_size=ori_size),
                             'original_size':ori_size
                             } 
                         for image, mask, ori_size in zip(embedding, masks, ori_size)
                     ]
 
                 y_pred = samri_model(batch_input, multimask_output=False, train_mode=True, embedding_inputs=True)
-                loss = dice_focal_loass(y_pred, masks.to(gpu))
+                loss = dice_focal_loass(y_pred, masks.to(device))
                 loss.backward()
                 optimizer.step()
 
@@ -138,14 +130,12 @@ def main(gpu, world_size, num_epochs, save_every):
         losses.append(epoch_loss)
 
         ## save the latest model
-        if (epoch + 1) % save_every == 0 and gpu == 0:
+        if (epoch + 1) % 1 == 0:
             print(f"The {epoch+1} / {num_epochs} epochs,  Loss: {epoch_loss}.")
-            torch.save(samri_model.module.state_dict(), join(model_save_path, f"samri_vitb_ba_mult_{str(epoch+1)}.pth"))
-            print(f"Checkpoint <samri_vitb_ba_mult_{str(epoch+1)}.pth> has been saved.")
-    destroy_process_group()
+            torch.save(samri_model.state_dict(), join(model_save_path, f"samri_vitb_ba_rand_{str(epoch+1)}.pth"))
+            print(f"Checkpoint <samri_vitb_ba_rand_{str(epoch+1)}.pth> has been saved.")
+        
 
 if __name__ == "__main__":
-    world_size = torch.cuda.device_count()
-    mp.spawn(main, args=(world_size, num_epochs, save_every), nprocs=world_size)
     main()
         
