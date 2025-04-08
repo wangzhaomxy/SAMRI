@@ -37,7 +37,7 @@ def save_test_record(file_paths, sam_model, save_path):
          pixel_count_vit, 
          area_percentage_vit) = get_dice_from_ds(model=sam_model, 
                                                  test_dataset=test_dataset, 
-                                                 med_sam=False,
+                                                 med_sam=True,
                                                  with_pix=True)
         p_record.append(p_record_vitb)
         b_record.append(b_record_vitb)
