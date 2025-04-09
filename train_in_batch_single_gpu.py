@@ -66,7 +66,6 @@ def main():
     losses = []
     prompts =["bbox"]#["point","point","bbox"]
     for epoch in range(start_epoch, num_epochs):
-        print(f"The {epoch+1} / {num_epochs} epochs.")
         # training part
         samri_model.train()
         epoch_loss = 0

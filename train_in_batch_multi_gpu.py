@@ -97,8 +97,6 @@ def main(gpu, world_size, num_epochs, save_every):
     
     prompts = ["bbox"] #  ["point", "bbox"]
     for epoch in range(start_epoch, num_epochs):
-        if gpu == 0:
-            print(f"The {epoch+1} / {num_epochs} epochs.")
         # training part
         samri_model.train()
         epoch_loss = 0
@@ -147,5 +145,4 @@ def main(gpu, world_size, num_epochs, save_every):
 if __name__ == "__main__":
     world_size = torch.cuda.device_count()
     mp.spawn(main, args=(world_size, num_epochs, save_every), nprocs=world_size)
-    main()
         

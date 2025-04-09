@@ -669,98 +669,127 @@ def sigmoid_focal_loss(
 
     return loss
 
-
-
-
-def dice_similarity(y_true, y_pred, smooth=1e-10):
+def dice_similarity(y_true, y_pred, square = False, smooth=1e-10):
     """
     Calculate the dice similarity of the two images, dice similarity = (2 * 
-    intersection + smooth) / (sum of squares of prediction + sum of squares 
-    of ground truth + smooth)
+    intersection + smooth) / (sum of  prediction + sum of ground truth + smooth).
+    if square = True, dice similarity = (2 * intersection + smooth) / (sum of 
+    prediction^2 + sum of ground truth^2 + smooth).
 
     Parameters:
-        y_true (np.array): the gound truth of the output
-        y_pred (np.array): the predicted output
+        y_true (np.array): the gound truth of the output. Shape should be H x W.
+        y_pred (np.array): the predicted output. Shape should be H x W.
+        square (bool): if calculate square of the dice similarity, default is False.
         smooth (float): a small number to avoid zero denominator.
     """
     intersection = np.sum(y_true * y_pred)
-    sum_of_squares_pred = np.sum(np.square(y_pred))
-    sum_of_squares_true = np.sum(np.square(y_true))
-    dice = (2 * intersection + smooth) / (sum_of_squares_pred + 
-                                          sum_of_squares_true + smooth)
+    if square:
+        sum_of_pred = np.sum(np.square(y_pred))
+        sum_of_true = np.sum(np.square(y_true))
+    else:
+        sum_of_pred = np.sum(y_pred ** 2)
+        sum_of_true = np.sum(y_true ** 2)
+    dice = (2.0 * intersection + smooth) / (sum_of_pred + 
+                                          sum_of_true + smooth)
     return dice
 
 
-def iou(y_true, y_pred, smooth=1e-10):
-    intersection = np.sum(np.bitwise_and(y_true, y_pred))
-    union = np.sum(np.bitwise_or(y_true, y_pred))
-    return (intersection) /  (union + smooth)
+def surface_distance(input1, input2, sampling=1, connectivity=1):
+    from scipy import ndimage
+    #The two inputs are checked for their size and made binary. Any value greater than zero is made 1 (true).
+    input_1 = np.atleast_1d(input1.astype(int))
+    input_2 = np.atleast_1d(input2.astype(int))
+    # morphology.generate_binary_structure function, along with the number of dimensions of the segmentation, to create the kernel that will be used to detect the edges of the segmentations. This could be done just by hard-coding the kernel itself: [[0 0 0],[0 1 0],[0 0 0]; [0 1 0], [1 1 1], [0 1 0]; [0 0 0], [0 1 0], [0 0 0]].
+    conn = ndimage.morphology.generate_binary_structure(input_1.ndim, connectivity)
+    #This kernel ‘conn’ is supplied to the morphology.binary_erosion function which strips the outermost pixel from the edge of the segmentation. Subtracting this result from the segmentation itself leaves only the single-pixel-wide surface.
+    S = input_1  - ndimage.morphology.binary_erosion(input_1, conn)
+    Sprime = input_2 - ndimage.morphology.binary_erosion(input_2, conn)
+    #This time we give the distance_transform_edt function our pixel-size (samping) and also the inverted surface-image. The inversion is used such that the surface itself is given the value of zero i.e. any pixel at this location, will have zero surface-distance. The transform increases the value/error/penalty of the remaining pixels with increasing distance away from the surface.
+    dta = ndimage.morphology.distance_transform_edt((1-S),sampling)
+    dtb = ndimage.morphology.distance_transform_edt((1-Sprime),sampling)
+    #Each pixel of the opposite segmentation-surface is then laid upon this ‘map’ of penalties and both results are concatenated into a vector which is as long as the number of pixels in the surface of each segmentation. This vector of surface distances is returned. Note that this is technically the symmetric surface distance as we are not assuming that just doing this for one of the surfaces is enough. It may be that the distance between a pixel in A and in B is not the same as between the pixel in B and in A. i.e. d(S,S′)≠d(S′,S)
+    sds = np.concatenate([np.ravel(dta[Sprime!=0]), np.ravel(dtb[S!=0])])
+    return sds
+def sd_hausdorff_distance(input1, input2, sampling=1, connectivity=1):
+    sd = surface_distance(input1, input2, sampling=1, connectivity=1)
+    return sd.max()
+def sd_mean_surface_distancedef(input1, input2, sampling=1, connectivity=1):
+    sd = surface_distance(input1, input2, sampling=1, connectivity=1)
+    return sd.mean()
+def sd_residual_mean_square_distance(input1, input2, sampling=1, connectivity=1):
+    sd = surface_distance(input1, input2, sampling=1, connectivity=1)
+    return np.sqrt((sd**2).mean())
+
+# def iou(y_true, y_pred, smooth=1e-10):
+#     intersection = np.sum(np.bitwise_and(y_true, y_pred))
+#     union = np.sum(np.bitwise_or(y_true, y_pred))
+#     return (intersection) /  (union + smooth)
 
 
-def bce_dice_loss(y_true, y_pred):
-    y_true = y_true.float()
-    y_pred = y_pred.float()
+# def bce_dice_loss(y_true, y_pred):
+#     y_true = y_true.float()
+#     y_pred = y_pred.float()
     
-    dicescore = 1 - dice_similarity(y_true, y_pred)
-    bcescore = nn.BCELoss()
-    bceloss = bcescore(y_true, y_pred)
+#     dicescore = 1 - dice_similarity(y_true, y_pred)
+#     bcescore = nn.BCELoss()
+#     bceloss = bcescore(y_true, y_pred)
 
-    return bceloss + dicescore
+#     return bceloss + dicescore
 
-class MultiClassDiceLoss(nn.Module):
-    def __init__(self, num_classes=3) -> None:
-        super().__init__()
-        self.num_classes = num_classes
+# class MultiClassDiceLoss(nn.Module):
+#     def __init__(self, num_classes=3) -> None:
+#         super().__init__()
+#         self.num_classes = num_classes
 
-    def forward(self, y_pred, target):
-        y_pred = F.softmax(y_pred, dim=1).float()
-        smooth = smooth=1e-5
-        intersection = (target * y_pred).sum(axis=(-4,-2,-1))
-        union_a = intersection
-        union_b = target.sum(axis=(-4,-2,-1))
-        dice_coef = (2 * intersection) / (union_a + 
-                                            union_b + smooth)
-        return (1- dice_coef).mean()
+#     def forward(self, y_pred, target):
+#         y_pred = F.softmax(y_pred, dim=1).float()
+#         smooth = smooth=1e-5
+#         intersection = (target * y_pred).sum(axis=(-4,-2,-1))
+#         union_a = intersection
+#         union_b = target.sum(axis=(-4,-2,-1))
+#         dice_coef = (2 * intersection) / (union_a + 
+#                                             union_b + smooth)
+#         return (1- dice_coef).mean()
     
-class CeDiceLoss(nn.Module):
-    def __init__(self, num_classes) -> None:
-        super().__init__()
-        self.num_classes = num_classes
+# class CeDiceLoss(nn.Module):
+#     def __init__(self, num_classes) -> None:
+#         super().__init__()
+#         self.num_classes = num_classes
 
-    def forward(self,y_pred, target):
-        y_pred = y_pred.float()
-        target = target.float()
+#     def forward(self,y_pred, target):
+#         y_pred = y_pred.float()
+#         target = target.float()
 
-        dicescore = MultiClassDiceLoss(self.num_classes)
-        diceloss = dicescore(y_pred, target)
-        cescore = nn.CrossEntropyLoss()
-        celoss = cescore(y_pred, target)
+#         dicescore = MultiClassDiceLoss(self.num_classes)
+#         diceloss = dicescore(y_pred, target)
+#         cescore = nn.CrossEntropyLoss()
+#         celoss = cescore(y_pred, target)
 
-        return celoss + diceloss
+#         return celoss + diceloss
 
-class BiDiceLoss(nn.Module):
-    def __init__(self) -> None:
-        super().__init__()
+# class BiDiceLoss(nn.Module):
+#     def __init__(self) -> None:
+#         super().__init__()
 
-    def forward(self,y_pred, target, smooth=1e-10):
-        y_pred = F.sigmoid(y_pred).float()
-        intersection = (y_pred * target).sum()
-        sum_of_pred = y_pred.sum()
-        sum_of_target = target.sum()
-        dice_coef = (2 * intersection + smooth) / (sum_of_pred + 
-                                            sum_of_target + smooth)
-        return 1 - dice_coef
+#     def forward(self,y_pred, target, smooth=1e-10):
+#         y_pred = F.sigmoid(y_pred).float()
+#         intersection = (y_pred * target).sum()
+#         sum_of_pred = y_pred.sum()
+#         sum_of_target = target.sum()
+#         dice_coef = (2 * intersection + smooth) / (sum_of_pred + 
+#                                             sum_of_target + smooth)
+#         return 1 - dice_coef
     
-class BatchDiceLoss(nn.Module):
-    def __init__(self) -> None:
-        super().__init__()
+# class BatchDiceLoss(nn.Module):
+#     def __init__(self) -> None:
+#         super().__init__()
 
-    def forward(self,y_pred, target, smooth=1e-10):
-        y_pred = F.sigmoid(y_pred).float()
-        intersection = (y_pred * target).sum(axis=(-3,-2,-1))
-        sum_of_pred = y_pred.pow(2).sum(axis=(-3,-2,-1))
-        sum_of_target = target.pow(2).sum(axis=(-3,-2,-1))
-        dice_coef = (2 * intersection + smooth) / (sum_of_pred + 
-                                            sum_of_target + smooth)
-        return 1 - dice_coef.mean()
+#     def forward(self,y_pred, target, smooth=1e-10):
+#         y_pred = F.sigmoid(y_pred).float()
+#         intersection = (y_pred * target).sum(axis=(-3,-2,-1))
+#         sum_of_pred = y_pred.pow(2).sum(axis=(-3,-2,-1))
+#         sum_of_target = target.pow(2).sum(axis=(-3,-2,-1))
+#         dice_coef = (2 * intersection + smooth) / (sum_of_pred + 
+#                                             sum_of_target + smooth)
+#         return 1 - dice_coef.mean()
 

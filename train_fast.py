@@ -147,4 +147,3 @@ def main(gpu, world_size, num_epochs, save_every):
 if __name__ == "__main__":
     world_size = torch.cuda.device_count()
     mp.spawn(main, args=(world_size, num_epochs, save_every), nprocs=world_size)
-    main()
