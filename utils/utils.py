@@ -59,11 +59,11 @@ def preprocess_mask(mask, target_size=256):
     Preprocess masks from original size to target size.
 
     Args:
-        mask (np.array): the mask with shape of BxCxHxW
+        mask (tensor): the mask with shape of BxCxHxW
         target_size (int, optional): The target size. Defaults to 256.
         
     Returns:
-        (np.array): the mask with the target shape.
+        (tensor): the mask with the target shape.
         
     """
     resize_long = get_preprocess_shape(mask.shape[-2], mask.shape[-1], target_size)

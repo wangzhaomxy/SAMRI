@@ -98,6 +98,7 @@ def main():
                     ]
 
                 y_pred = samri_model(batch_input, multimask_output=False, train_mode=True, embedding_inputs=True)
+                masks = preprocess_mask(masks,target_size=256)
                 loss = dice_focal_loass(y_pred, masks.to(device))
                 loss.backward()
                 optimizer.step()

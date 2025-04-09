@@ -118,13 +118,14 @@ def main(gpu, world_size, num_epochs, save_every):
                 if prompt == "bbox":
                     batch_input = [
                         {'image': image.squeeze(),
-                            'boxes':resize_transform.apply_boxes_torch(torch.as_tensor(np.array([gen_bboxes(mask.squeeze(0).numpy())]), device=gpu), original_size=ori_size),
+                            'boxes':resize_transform.apply_boxes_torch(torch.as_tensor(np.array([gen_bboxes(mask.squeeze(0).numpy(),jitter=JITTER)]), device=gpu), original_size=ori_size),
                             'original_size':ori_size
                             } 
                         for image, mask, ori_size in zip(embedding, masks, ori_size)
                     ]
 
                 y_pred = samri_model(batch_input, multimask_output=False, train_mode=True, embedding_inputs=True)
+                masks = preprocess_mask(masks,target_size=256)
                 loss = dice_focal_loass(y_pred, masks.to(gpu))
                 loss.backward()
                 optimizer.step()
