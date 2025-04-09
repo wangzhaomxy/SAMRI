@@ -12,6 +12,7 @@ import torch.nn.functional as F
 from enum import Enum
 from torch.nn.modules.loss import _Loss
 from collections.abc import Callable, Sequence
+from scipy import ndimage
 
 
 
@@ -695,7 +696,6 @@ def dice_similarity(y_true, y_pred, square = False, smooth=1e-10):
 
 
 def surface_distance(input1, input2, sampling=1, connectivity=1):
-    from scipy import ndimage
     #The two inputs are checked for their size and made binary. Any value greater than zero is made 1 (true).
     input_1 = np.atleast_1d(input1.astype(int))
     input_2 = np.atleast_1d(input2.astype(int))
