@@ -3,8 +3,6 @@ from utils.visual import get_dice_from_ds, get_pix_num_from_ds
 from utils.utils import *
 from utils.dataloader import NiiDataset
 import pickle
-from tqdm import tqdm
-
 
 file_paths = TEST_IMAGE_PATH
 ckpt_root_path = "/scratch/project/samri/Model_save/"

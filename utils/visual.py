@@ -11,7 +11,7 @@ from tqdm import tqdm
 from segment_anything import SamPredictor
 from utils.utils import *
 from utils.prompt import *
-from utils.losses import dice_similarity
+from utils.losses import dice_similarity, sd_hausdorff_distance, sd_mean_surface_distance
 from skimage import transform
 
 
@@ -51,8 +51,9 @@ def get_dice_from_ds(model, test_dataset, med_sam=False, with_pix=True):
             b_record:A list of DSC of bbox prompt for the test dataset.
     """
     predictor = SamPredictor(model)
-    p_record = []
-    b_record = []
+    p_dice, p_hd, p_msd = [], [], []
+    b_dice, b_hd, b_mhd = [], [], []
+    b_dice = []
     pixel_count = []
     area_percentage = []
 
@@ -120,14 +121,23 @@ def get_dice_from_ds(model, test_dataset, med_sam=False, with_pix=True):
                             )
 
             # save DSC
-            p_record.append(dice_similarity(each_mask, pre_mask_p[0, :, :]))
-            b_record.append(dice_similarity(each_mask, pre_mask_b[0, :, :]))
+            p_dice.append(dice_similarity(each_mask, pre_mask_p[0, :, :]))
+            b_dice.append(dice_similarity(each_mask, pre_mask_b[0, :, :]))
+            p_hd.append(sd_hausdorff_distance(each_mask, pre_mask_p[0, :, :]))
+            b_hd.append(sd_hausdorff_distance(each_mask, pre_mask_b[0, :, :]))
+            p_msd.append(sd_mean_surface_distance(each_mask, pre_mask_p[0, :, :]))
+            b_mhd.append(sd_mean_surface_distance(each_mask, pre_mask_b[0, :, :]))
             pixel_count.append(np.sum(each_mask))
             area_percentage.append(np.sum(each_mask) / total_pixels) 
     if with_pix:
-        return p_record, b_record, pixel_count, area_percentage
+        return (p_dice, b_dice, 
+                p_hd, b_hd, 
+                p_msd, b_mhd,
+                pixel_count, area_percentage)
     else:  
-        return p_record, b_record
+        return (p_dice, b_dice, 
+                p_hd, b_hd, 
+                p_msd, b_mhd)
 
 def get_pix_num_from_ds(test_dataset):
     """

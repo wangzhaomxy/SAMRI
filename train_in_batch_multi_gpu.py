@@ -77,7 +77,7 @@ def main(gpu, world_size, num_epochs, save_every):
         weight_decay=0.1
     )
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=10)
-    dice_focal_loass = DiceFocalLoss(sigmoid=True, 
+    dice_focal_loss = DiceFocalLoss(sigmoid=True, 
                                      squared_pred=True,
                                      batch= True, 
                                      reduction="mean",
@@ -125,8 +125,7 @@ def main(gpu, world_size, num_epochs, save_every):
                     ]
 
                 y_pred = samri_model(batch_input, multimask_output=False, train_mode=True, embedding_inputs=True)
-                masks = preprocess_mask(masks,target_size=256)
-                loss = dice_focal_loass(y_pred, masks.to(gpu))
+                loss = dice_focal_loss(y_pred, masks.to(gpu))
                 loss.backward()
                 optimizer.step()
 
