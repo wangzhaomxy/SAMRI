@@ -96,7 +96,7 @@ def get_dice_from_ds(model, test_dataset, med_sam=False, with_pix=True):
             mask = mask.transpose(2,0,1)
         
         predictor.set_image(image)
-        masks = MaskSplit(mask)
+        masks, labels = MaskSplit(mask)
 
         for each_mask in masks:
             # generate prompts

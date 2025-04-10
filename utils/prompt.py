@@ -15,7 +15,8 @@ class MaskSplit():
         mask (np.darray): the labeled ground truth mask. CHW=(1,255,255)
         
     Returns:
-        masks
+        masks (list): A list of splited masks. HW=(255,255)
+        labels (list): The list of splited masks labels.
     
     """
     def __init__(self, mask):
@@ -23,7 +24,7 @@ class MaskSplit():
         # mask_number (int): the number of the gt mask labels.
         self.mask_number = len(np.unique(self.mask)) - 1
         # masks (list): the list of single mask with different lables, HW=(255,255)
-        self.masks = self._split_masks()
+        self.masks, self.labels = self._split_masks()
         """
         Args:
             mask (np.darray): the labeled ground truth mask. CHW=(1,255,255)
@@ -38,13 +39,15 @@ class MaskSplit():
         return self.mask_number
     
     def __getitem__(self, index):
-        return self.masks[index]
+        return self.masks[index], self.labels[index]
     
     def _split_masks(self):
         masks = []
+        labels = []
         for label in np.unique(self.mask).nonzero()[0]:
             masks.append(self.mask == np.unique(self.mask)[label])
-        return masks
+            labels.append(np.unique(self.mask)[label])
+        return masks, labels
     
 def random_mask_batch(masks):
     pass
