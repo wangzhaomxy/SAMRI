@@ -62,10 +62,10 @@ def get_dice_from_ds(model, test_dataset, med_sam=False, with_pix=True):
         # Image embedding inference
         if med_sam: # for MedSAM evaluation.
             # copied from MedSAM pre_CT_MR.py file MR data preprocessing
-            lower_bound, upper_bound = np.percentile(
-                image[image > 0], 0.5
-            ), np.percentile(image[image > 0], 99.5)
-            image_data_pre = np.clip(image, lower_bound, upper_bound)
+            # lower_bound, upper_bound = np.percentile(
+            #     image[image > 0], 0.5
+            # ), np.percentile(image[image > 0], 99.5)
+            # image_data_pre = np.clip(image, lower_bound, upper_bound)
             image_data_pre = (
                 (image_data_pre - np.min(image_data_pre))
                 / (np.max(image_data_pre) - np.min(image_data_pre) + 1e-8)

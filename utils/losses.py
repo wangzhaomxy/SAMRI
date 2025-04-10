@@ -713,7 +713,7 @@ def surface_distance(input1, input2, sampling=1, connectivity=1):
 def sd_hausdorff_distance(input1, input2, sampling=1, connectivity=1):
     sd = surface_distance(input1, input2, sampling=1, connectivity=1)
     return sd.max()
-def sd_mean_surface_distancedef(input1, input2, sampling=1, connectivity=1):
+def sd_mean_surface_distance(input1, input2, sampling=1, connectivity=1):
     sd = surface_distance(input1, input2, sampling=1, connectivity=1)
     return sd.mean()
 def sd_residual_mean_square_distance(input1, input2, sampling=1, connectivity=1):

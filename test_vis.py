@@ -6,10 +6,10 @@ import pickle
 from tqdm import tqdm
 
 
-file_paths = TEST_IMAGE_PATH[:3]
+file_paths = TEST_IMAGE_PATH
 ckpt_root_path = "/scratch/project/samri/Model_save/"
 model_folder = "base/"
-save_path = "/scratch/project/samri/Eval_results/" + model_folder +"fast_"
+save_path = "/scratch/project/samri/Eval_results/" + model_folder
 # ckpt_list = [ckpt_root_path + model_folder + "samri_vitb_ba_mult_0.pth",
 #              ckpt_root_path + model_folder + "samri_vitb_ba_mult_1.pth",
 #              ckpt_root_path + model_folder + "samri_vitb_ba_mult_2.pth",
