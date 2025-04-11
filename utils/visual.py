@@ -13,6 +13,8 @@ from utils.utils import *
 from utils.prompt import *
 from utils.losses import dice_similarity, sd_hausdorff_distance, sd_mean_surface_distance
 from skimage import transform
+from utils.dataloader import NiiDataset
+import pickle
 
 
 def show_mask(mask, ax, random_color=False):
@@ -98,7 +100,7 @@ def get_dice_from_ds(model, test_dataset, med_sam=False, with_pix=True):
         predictor.set_image(image)
         masks, labels = MaskSplit(mask)
 
-        for each_mask in masks:
+        for each_mask, each_label in zip(masks, labels):
             # generate prompts
             point = gen_points(each_mask)
             point_label = np.array([1])
@@ -166,3 +168,43 @@ def get_pix_num_from_ds(test_dataset):
             area_percentage.append(np.sum(each_mask) / total_pixels)
     return pixel_count, area_percentage
         
+def save_test_record(file_paths, sam_model, save_path, by_ds=False):
+    p_record, b_record = [], []
+    pixel_count, area_percentage = [], []
+    for file_path in file_paths:
+        print("Processing the dataset: ",file_path)
+        test_dataset = NiiDataset([file_path], multi_mask= True)    
+        (p_record_vitb, 
+         b_record_vitb, 
+         pixel_count_vit, 
+         area_percentage_vit) = get_dice_from_ds(model=sam_model, 
+                                                 test_dataset=test_dataset, 
+                                                 med_sam=True,
+                                                 with_pix=True)
+        p_record.append(p_record_vitb)
+        b_record.append(b_record_vitb)
+        pixel_count.append(pixel_count_vit)
+        area_percentage.append(area_percentage_vit)
+        final_record = {"p":p_record, 
+                        "b":b_record, 
+                        "pixel_count":pixel_count,
+                        "area_percentage":area_percentage}
+        if by_ds:
+            with open(save_path + "_" + file_path.split("/")[-2], "wb") as f:
+                pickle.dump(final_record, f)
+    if not by_ds:
+        with open(save_path, "wb") as f:
+            pickle.dump(final_record, f)
+            
+            
+def save_pxl_record(file_paths, save_path):
+    pixel_count, area_percentage = [], []
+    for file_path in file_paths:
+        print("Processing the dataset: ",file_path)
+        test_dataset = NiiDataset([file_path], multi_mask= True)
+        pixel_count_vit, area_percentage_vit = get_pix_num_from_ds(test_dataset=test_dataset)
+        pixel_count.append(pixel_count_vit)
+        area_percentage.append(area_percentage_vit)
+        final_record = {"pixel_count":pixel_count,"area_percentage":area_percentage}
+    with open(save_path, "wb") as f:
+        pickle.dump(final_record, f)

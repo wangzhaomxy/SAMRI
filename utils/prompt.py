@@ -16,6 +16,7 @@ class MaskSplit():
         
     Returns:
         masks (list): A list of splited masks. HW=(255,255)
+        
         labels (list): The list of splited masks labels.
     
     """
@@ -48,9 +49,6 @@ class MaskSplit():
             masks.append(self.mask == np.unique(self.mask)[label])
             labels.append(np.unique(self.mask)[label])
         return masks, labels
-    
-def random_mask_batch(masks):
-    pass
     
         
 def gen_points(mask, num_points=1):
