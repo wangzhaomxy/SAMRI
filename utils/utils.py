@@ -19,7 +19,7 @@ JITTER = 3
 
 TRAIN_IMAGE_PATH = [ds + "/" for ds in sorted(glob(EMBEDDING_PATH + "*"))]
 TEST_IMAGE_PATH = [ds + "/testing/" for ds in sorted(glob(TEST_PATH + "*"))]
-TEST_IMAGE_PATH_DA = [ds + "/testing/" for ds in sorted(glob(TEST_PATH + "*"))]
+TEST_IMAGE_PATH_DA = [ds + "/training/" for ds in sorted(glob(TEST_PATH + "*"))]
 
 IMAGE_KEYS = "*_img_*"  # The image file names containing letters between *
 MASK_KEYS = "*_seg_*"   # The mask file names containing letters between *

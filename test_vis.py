@@ -3,7 +3,7 @@ from utils.visual import save_test_record
 from utils.utils import *
 
 
-file_paths = TEST_IMAGE_PATH
+file_paths = TEST_IMAGE_PATH_DA
 ckpt_root_path = "/scratch/project/samri/Model_save/"
 model_folder = "base/"
 save_path = "/scratch/project/samri/Eval_results/" + model_folder
@@ -19,13 +19,12 @@ save_path = "/scratch/project/samri/Eval_results/" + model_folder
             #  ckpt_root_path + model_folder + "samri_vitb_box_9.pth",
             #  ckpt_root_path + model_folder + "samri_vitb_box_10.pth",
             #  ]
-# ckpt_list = ["/scratch/user/s4670484/Model_dir/sam_vit_b_01ec64.pth"]
-ckpt_list = ["/scratch/user/s4670484/Model_dir/sam_vit_h_4b8939.pth"]
+ckpt_list = ["/scratch/user/s4670484/Model_dir/sam_vit_b_01ec64.pth"]
+# ckpt_list = ["/scratch/user/s4670484/Model_dir/sam_vit_h_4b8939.pth"]
 # ckpt_list = ["/scratch/user/s4670484/Model_dir/medsam_vit_b.pth"]
 
-
 for ckpt in ckpt_list:
-    model_type = 'vit_h'# Choose one from vit_b, vit_h, samri, and med_sam
+    model_type = 'vit_b'# Choose one from vit_b, vit_h, samri, and med_sam
     encoder_tpye = ENCODER_TYPE[model_type] 
     checkpoint = ckpt
     device = DEVICE
@@ -35,7 +34,7 @@ for ckpt in ckpt_list:
     # regist the MRI-SAM model and predictor.
     sam_model = sam_model_registry[encoder_tpye](checkpoint)
     sam_model = sam_model.to(device)
-    save_path_all = save_path + model_name[:-4]
+    save_path_all = save_path + model_name[:-4] + "_train_ds"
 
     save_test_record(file_paths=file_paths,
                      sam_model=sam_model, 
