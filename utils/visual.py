@@ -37,29 +37,49 @@ def show_box(box, ax):
     w, h = box[2] - box[0], box[3] - box[1]
     ax.add_patch(plt.Rectangle((x0, y0), w, h, edgecolor='green', facecolor=(0,0,0,0), lw=2))    
 
-def get_dice_from_ds(model, test_dataset, med_sam=False, with_pix=True):
+def get_test_record_from_ds(model, test_dataset, med_sam=False):
     """
     Calculate the dice score for the test dataset using the SAM model.
 
     Args:
         model (SAM model): The SAM model loaded from Checkpoint.
         test_dataset (Dataset): The pytorch dataset from torch.Dataset.
-        med_sam (bool): using the data preprocessing method from medSAM. Defalt
+        med_sam (bool): Use the image preprocessing method from medSAM. Defalt
                         is False.
 
     Returns:
-        ([p_record], [b_record]): 
-            p_record:A list of DSC of point prompt for the test dataset.
-            b_record:A list of DSC of bbox prompt for the test dataset.
+        (list):A list of record for every data, and each data consists of a 
+            dictionary. For example:
+            
+            [{
+            "img_name":img_fullpath,     # image full path. (str)
+            "mask_name":mask_fullpath,   # mask full path. (str)
+            "labels":labels,             # list of labels. (list)
+            "p_dice":p_dice,         # list of DSC of point prompt. (list)
+            "b_dice":b_dice,         # list of DSC of bbox prompt. (list)
+            "p_hd":p_hd,             # list of HD of point prompt. (list)
+            "b_hd":b_hd,             # list of HD of bbox prompt. (list)
+            "p_msd":p_msd,           # list of MSD of point prompt. (list)
+            "b_msd":b_msd,           # list of MSD of bbox prompt. (list)
+            "pixel_count":pixel_count,  # list of pixel count. (list)
+            "area_percentage":area_percentage # list of area percentage. (list)
+            },
+            {
+                ......
+            }
+            ......                
+            ]
     """
     predictor = SamPredictor(model)
-    p_dice, p_hd, p_msd = [], [], []
-    b_dice, b_hd, b_mhd = [], [], []
-    b_dice = []
-    pixel_count = []
-    area_percentage = []
-
+    final_record = []
+    
     for image, mask in tqdm(test_dataset):
+        img_fullpath = test_dataset.cur_name
+        mask_fullpath = test_dataset.cur_gt_name
+        p_dice, p_hd, p_msd = [], [], []
+        b_dice, b_hd, b_msd = [], [], []
+        pixel_count, area_percentage = [], []
+        labels = []
         H, W = mask.shape[-2:]
         total_pixels = H * W
         # Image embedding inference
@@ -98,9 +118,9 @@ def get_dice_from_ds(model, test_dataset, med_sam=False, with_pix=True):
             mask = mask.transpose(2,0,1)
         
         predictor.set_image(image)
-        masks, labels = MaskSplit(mask)
+        masks = MaskSplit(mask)
 
-        for each_mask, each_label in zip(masks, labels):
+        for each_mask, label in masks:
             # generate prompts
             point = gen_points(each_mask)
             point_label = np.array([1])
@@ -123,23 +143,29 @@ def get_dice_from_ds(model, test_dataset, med_sam=False, with_pix=True):
                             )
 
             # save DSC
-            p_dice.append(dice_similarity(each_mask, pre_mask_p[0, :, :]))
-            b_dice.append(dice_similarity(each_mask, pre_mask_b[0, :, :]))
-            p_hd.append(sd_hausdorff_distance(each_mask, pre_mask_p[0, :, :]))
-            b_hd.append(sd_hausdorff_distance(each_mask, pre_mask_b[0, :, :]))
-            p_msd.append(sd_mean_surface_distance(each_mask, pre_mask_p[0, :, :]))
-            b_mhd.append(sd_mean_surface_distance(each_mask, pre_mask_b[0, :, :]))
+            labels.append(label)
+            p_dice.append(dice_similarity(pre_mask_p[0, :, :], each_mask))
+            b_dice.append(dice_similarity(pre_mask_b[0, :, :]), each_mask)
+            p_hd.append(sd_hausdorff_distance(pre_mask_p[0, :, :], each_mask))
+            b_hd.append(sd_hausdorff_distance(pre_mask_b[0, :, :], each_mask))
+            p_msd.append(sd_mean_surface_distance(pre_mask_p[0, :, :], each_mask))
+            b_msd.append(sd_mean_surface_distance(pre_mask_b[0, :, :], each_mask))
             pixel_count.append(np.sum(each_mask))
             area_percentage.append(np.sum(each_mask) / total_pixels) 
-    if with_pix:
-        return (p_dice, b_dice, 
-                p_hd, b_hd, 
-                p_msd, b_mhd,
-                pixel_count, area_percentage)
-    else:  
-        return (p_dice, b_dice, 
-                p_hd, b_hd, 
-                p_msd, b_mhd)
+        
+        single_data_result = {"img_name":img_fullpath,
+                              "mask_name":mask_fullpath,
+                              "labels":labels,
+                              "p_dice":p_dice,
+                              "b_dice":b_dice,
+                              "p_hd":p_hd,
+                              "b_hd":b_hd,
+                              "p_msd":p_msd,
+                              "b_msd":b_msd,
+                              "pixel_count":pixel_count,
+                              "area_percentage":area_percentage}
+        final_record.append(single_data_result)
+    return final_record
 
 def get_pix_num_from_ds(test_dataset):
     """
@@ -168,30 +194,19 @@ def get_pix_num_from_ds(test_dataset):
             area_percentage.append(np.sum(each_mask) / total_pixels)
     return pixel_count, area_percentage
         
-def save_test_record(file_paths, sam_model, save_path, by_ds=False):
-    p_record, b_record = [], []
-    pixel_count, area_percentage = [], []
+def save_test_record(file_paths, sam_model, save_path, med_sam=False, by_ds=False):
+    final_record = {}
     for file_path in file_paths:
         print("Processing the dataset: ",file_path)
+        ds_name = file_path.split("/")[-3]
         test_dataset = NiiDataset([file_path], multi_mask= True)    
-        (p_record_vitb, 
-         b_record_vitb, 
-         pixel_count_vit, 
-         area_percentage_vit) = get_dice_from_ds(model=sam_model, 
+        ds_record = get_test_record_from_ds(model=sam_model, 
                                                  test_dataset=test_dataset, 
-                                                 med_sam=True,
-                                                 with_pix=True)
-        p_record.append(p_record_vitb)
-        b_record.append(b_record_vitb)
-        pixel_count.append(pixel_count_vit)
-        area_percentage.append(area_percentage_vit)
-        final_record = {"p":p_record, 
-                        "b":b_record, 
-                        "pixel_count":pixel_count,
-                        "area_percentage":area_percentage}
+                                                 med_sam=med_sam)
+        final_record[ds_name] = ds_record
         if by_ds:
-            with open(save_path + "_" + file_path.split("/")[-2], "wb") as f:
-                pickle.dump(final_record, f)
+            with open(save_path + "/" + ds_name, "wb") as f:
+                pickle.dump(ds_record, f)
     if not by_ds:
         with open(save_path, "wb") as f:
             pickle.dump(final_record, f)

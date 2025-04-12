@@ -27,15 +27,15 @@ ckpt_list = ["/scratch/user/s4670484/Model_dir/medsam_vit_b.pth"]
 for ckpt in ckpt_list:
     model_type = 'vit_b'# Choose one from vit_b, vit_h, samri, and med_sam
     encoder_tpye = ENCODER_TYPE[model_type] 
-    checkbox = ckpt
+    checkpoint = ckpt
     device = DEVICE
-    file_name = ckpt.split("/")[-1]
-    print("Testing Check-point " + file_name)
+    model_name = ckpt.split("/")[-1]
+    print("Testing Check-point " + model_name)
 
     # regist the MRI-SAM model and predictor.
-    sam_model = sam_model_registry[encoder_tpye](checkbox)
+    sam_model = sam_model_registry[encoder_tpye](checkpoint)
     sam_model = sam_model.to(device)
-    save_path_all = save_path + file_name[:-4]
+    save_path_all = save_path + model_name[:-4]
 
     save_test_record(file_paths, sam_model, save_path_all, by_ds=True)
 
