@@ -88,15 +88,15 @@ def get_test_record_from_ds(model, test_dataset, med_sam=False):
             # lower_bound, upper_bound = np.percentile(
             #     image[image > 0], 0.5
             # ), np.percentile(image[image > 0], 99.5)
-            # image_data_pre = np.clip(image, lower_bound, upper_bound)
-            image_data_pre = (
-                (image_data_pre - np.min(image_data_pre))
-                / (np.max(image_data_pre) - np.min(image_data_pre) + 1e-8)
+            # image = np.clip(image, lower_bound, upper_bound)
+            image = (
+                (image - np.min(image))
+                / (np.max(image) - np.min(image) + 1e-8)
                 * 255.0
             )
-            image_data_pre[image == 0] = 0
+            image[image == 0] = 0
 
-            image = np.uint8(image_data_pre)
+            image = np.uint8(image)
             
             image = transform.resize(
                 image,
