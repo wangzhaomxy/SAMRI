@@ -19,9 +19,9 @@ save_path = "/scratch/project/samri/Eval_results/" + model_folder
             #  ckpt_root_path + model_folder + "samri_vitb_box_9.pth",
             #  ckpt_root_path + model_folder + "samri_vitb_box_10.pth",
             #  ]
-# ckpt_list = ["/scratch/user/s4670484/Model_dir/sam_vit_b_01ec64.pth"]
+ckpt_list = ["/scratch/user/s4670484/Model_dir/sam_vit_b_01ec64.pth"]
 # ckpt_list = ["/scratch/user/s4670484/Model_dir/sam_vit_h_4b8939.pth"]
-ckpt_list = ["/scratch/user/s4670484/Model_dir/medsam_vit_b.pth"]
+# ckpt_list = ["/scratch/user/s4670484/Model_dir/medsam_vit_b.pth"]
 
 
 for ckpt in ckpt_list:
@@ -40,8 +40,8 @@ for ckpt in ckpt_list:
     save_test_record(file_paths=file_paths,
                      sam_model=sam_model, 
                      save_path=save_path_all, 
-                     med_sam=True, 
-                     by_ds=True)
+                     med_sam=False, 
+                     by_ds=False)
 
 
 # save_pxl_record(file_paths, save_path)
