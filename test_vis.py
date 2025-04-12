@@ -37,7 +37,11 @@ for ckpt in ckpt_list:
     sam_model = sam_model.to(device)
     save_path_all = save_path + model_name[:-4]
 
-    save_test_record(file_paths, sam_model, save_path_all, by_ds=True)
+    save_test_record(file_paths, 
+                     sam_model, 
+                     save_path_all, 
+                     med_sam=True, 
+                     by_ds=True)
 
 
 # save_pxl_record(file_paths, save_path)

@@ -145,7 +145,7 @@ def get_test_record_from_ds(model, test_dataset, med_sam=False):
             # save DSC
             labels.append(label)
             p_dice.append(dice_similarity(pre_mask_p[0, :, :], each_mask))
-            b_dice.append(dice_similarity(pre_mask_b[0, :, :]), each_mask)
+            b_dice.append(dice_similarity(pre_mask_b[0, :, :], each_mask))
             p_hd.append(sd_hausdorff_distance(pre_mask_p[0, :, :], each_mask))
             b_hd.append(sd_hausdorff_distance(pre_mask_b[0, :, :], each_mask))
             p_msd.append(sd_mean_surface_distance(pre_mask_p[0, :, :], each_mask))
