@@ -205,6 +205,7 @@ def save_test_record(file_paths, sam_model, save_path, med_sam=False, by_ds=Fals
                                                  med_sam=med_sam)
         final_record[ds_name] = ds_record
         if by_ds:
+            make_dir(save_path + "/")
             with open(save_path + "/" + ds_name, "wb") as f:
                 pickle.dump(ds_record, f)
     if not by_ds:
@@ -223,3 +224,7 @@ def save_pxl_record(file_paths, save_path):
         final_record = {"pixel_count":pixel_count,"area_percentage":area_percentage}
     with open(save_path, "wb") as f:
         pickle.dump(final_record, f)
+        
+def make_dir(path):
+    if not os.path.exists(path):
+        os.makedirs(path)
