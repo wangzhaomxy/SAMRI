@@ -51,9 +51,9 @@ def main():
     optimizer = torch.optim.AdamW(
         samri_model.mask_decoder.parameters(),
         lr=1e-4, 
-        weight_decay=0.1
+        weight_decay=0.05
     )
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=10)
+    # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=10)
     
     dice_focal_loss = DiceFocalLoss(sigmoid=True, 
                                      squared_pred=True,
@@ -104,7 +104,7 @@ def main():
 
                 optimizer.zero_grad()
                 epoch_loss += loss.item()
-        scheduler.step()
+        # scheduler.step()
         epoch_loss /= step
         losses.append(epoch_loss)
 

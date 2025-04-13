@@ -215,8 +215,8 @@ def save_test_record(file_paths, sam_model, save_path, med_sam=False, by_ds=Fals
             
 def save_pxl_record(file_paths, save_path):
     pixel_count, area_percentage = [], []
-    for file_path in file_paths:
-        print("Processing the dataset: ",file_path)
+    for idx, file_path in enumerate(file_paths):
+        print(f"{idx+1}/{len(file_paths)} :Processing the dataset: ",file_path)
         test_dataset = NiiDataset([file_path], multi_mask= True)
         pixel_count_vit, area_percentage_vit = get_pix_num_from_ds(test_dataset=test_dataset)
         pixel_count.append(pixel_count_vit)
