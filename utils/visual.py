@@ -199,11 +199,13 @@ def save_test_record(file_paths, sam_model, save_path, med_sam=False, by_ds=Fals
     
 
     Args:
-        file_paths (list): The testing path list 
-        sam_model (_type_): _description_
-        save_path (_type_): _description_
-        med_sam (bool, optional): _description_. Defaults to False.
-        by_ds (bool, optional): _description_. Defaults to False.
+        file_paths (list): The testing dataset path list. Ex.["DS1", "DS2", ...]
+        sam_model (SAM model): The SAM model loaded from Checkpoint.
+        save_path (str): The path to save the record.
+        med_sam (bool, optional): If true, using the data preprocessing method
+                                  from medSAM. Defaults to False.
+        by_ds (bool, optional): if true, saving the result by dataset. 
+                                Defaults to False. 
     """
     final_record = {}
     for file_path in file_paths:
