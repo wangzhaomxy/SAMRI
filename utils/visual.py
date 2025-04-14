@@ -195,6 +195,16 @@ def get_pix_num_from_ds(test_dataset):
     return pixel_count, area_percentage
         
 def save_test_record(file_paths, sam_model, save_path, med_sam=False, by_ds=False):
+    """Save the test record for the test model and dataset.
+    
+
+    Args:
+        file_paths (list): The testing path list 
+        sam_model (_type_): _description_
+        save_path (_type_): _description_
+        med_sam (bool, optional): _description_. Defaults to False.
+        by_ds (bool, optional): _description_. Defaults to False.
+    """
     final_record = {}
     for file_path in file_paths:
         print("Processing the dataset: ",file_path)
