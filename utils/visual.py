@@ -224,8 +224,13 @@ def save_test_record(file_paths, sam_model, save_path, med_sam=False, by_ds=Fals
         with open(save_path, "wb") as f:
             pickle.dump(final_record, f)
             
-            
 def save_pxl_record(file_paths, save_path):
+    """Save the mask pixel count result for the test dataset.
+    
+    Args:
+        file_paths (list): The testing dataset path list. Ex.["DS1", "DS2", ...]
+        save_path (list): The path to save the record.
+    """
     pixel_count, area_percentage = [], []
     for idx, file_path in enumerate(file_paths):
         print(f"{idx+1}/{len(file_paths)} :Processing the dataset: ",file_path)
