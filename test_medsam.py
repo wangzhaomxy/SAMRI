@@ -205,68 +205,73 @@ for file_path in file_paths:
     ds_name = file_path.split("/")[-3]
     test_dataset = NiiDataset([file_path], multi_mask= True)
     for img_np, masks in tqdm(test_dataset):
-        img_name = test_dataset.get_name()
-        
-        # Preprocessing image, from MedSAM Inference file
-        ###################
-        # img_np = io.imread(args.data_path)
-        if len(img_np.shape) == 2:
-            img_3c = np.repeat(img_np[:, :, None], 3, axis=-1)
-        else:
-            img_3c = img_np
-        H, W, _ = img_3c.shape
-        img_1024 = transform.resize(
-            img_3c, (1024, 1024), order=3, preserve_range=True, anti_aliasing=True
-        ).astype(np.uint8)
-        img_1024 = (img_1024 - img_1024.min()) / np.clip(
-            img_1024.max() - img_1024.min(), a_min=1e-8, a_max=None
-        )  # normalize to [0, 1], (H, W, 3)
-        # convert the shape to (3, H, W)
-        img_1024_tensor = (
-            torch.tensor(img_1024).float().permute(2, 0, 1).unsqueeze(0).to(device)
-        )
-        #####################
-        # Code above are from MedSAM Inference file
-        
-        # Generate bounding box for every mask
-        for mask, label in MaskSplit(masks):
-            # box_np = np.array([args.box])
-            bbox = gen_bboxes(mask, num_bboxes=1, jitter=0)
-            box_np = np.array([bbox])
-            gt_seg = mask
+        try:
+            img_name = test_dataset.get_name()
             
-            # From MedSAM Inference file
+            # Preprocessing image, from MedSAM Inference file
             ###################
-            # transfer box_np t0 1024x1024 scale
-            box_1024 = box_np / np.array([W, H, W, H]) * 1024               
-            
-            with torch.no_grad():
-                image_embedding = medsam_model.image_encoder(img_1024_tensor)  # (1, 256, 64, 64)
-
-            medsam_seg = medsam_inference(medsam_model, image_embedding, box_1024, H, W)
-            #####################
-            # Code above are from MedSAM Inference file
-
-            comb_seg = img_as_ubyte(np.concatenate([gt_seg, medsam_seg], axis=1))
-
-            # Create new folders to save results
-            ds_dir = save_path + ds_name + "/"
-            make_dir(ds_dir)
-            result_dir = ds_dir + "results/"
-            make_dir(result_dir)
-            comb_dir = ds_dir + "comb/"
-            make_dir(comb_dir)
-            
-            # From MedSAM Inference file
-            ###################
-            io.imsave(
-                join(comb_dir, "comb_" + img_name[:-7] + ".png"),
-                comb_seg,
-                check_contrast=False,
+            # img_np = io.imread(args.data_path)
+            if len(img_np.shape) == 2:
+                img_3c = np.repeat(img_np[:, :, None], 3, axis=-1)
+            else:
+                img_3c = img_np
+            H, W, _ = img_3c.shape
+            img_1024 = transform.resize(
+                img_3c, (1024, 1024), order=3, preserve_range=True, anti_aliasing=True
+            ).astype(np.uint8)
+            img_1024 = (img_1024 - img_1024.min()) / np.clip(
+                img_1024.max() - img_1024.min(), a_min=1e-8, a_max=None
+            )  # normalize to [0, 1], (H, W, 3)
+            # convert the shape to (3, H, W)
+            img_1024_tensor = (
+                torch.tensor(img_1024).float().permute(2, 0, 1).unsqueeze(0).to(device)
             )
             #####################
             # Code above are from MedSAM Inference file
             
-            np.savez_compressed(result_dir + img_name[:-7] + ".npz", 
-                                gt=gt_seg, 
-                                medsam=medsam_seg)
+            # Generate bounding box for every mask
+            for mask, label in MaskSplit(masks):
+                # box_np = np.array([args.box])
+                bbox = gen_bboxes(mask, num_bboxes=1, jitter=0)
+                box_np = np.array([bbox])
+                gt_seg = mask
+                
+                # From MedSAM Inference file
+                ###################
+                # transfer box_np t0 1024x1024 scale
+                box_1024 = box_np / np.array([W, H, W, H]) * 1024               
+                
+                with torch.no_grad():
+                    image_embedding = medsam_model.image_encoder(img_1024_tensor)  # (1, 256, 64, 64)
+
+                medsam_seg = medsam_inference(medsam_model, image_embedding, box_1024, H, W)
+                #####################
+                # Code above are from MedSAM Inference file
+
+                comb_seg = img_as_ubyte(np.concatenate([gt_seg, medsam_seg], axis=1))
+
+                # Create new folders to save results
+                ds_dir = save_path + ds_name + "/"
+                make_dir(ds_dir)
+                result_dir = ds_dir + "results/"
+                make_dir(result_dir)
+                comb_dir = ds_dir + "comb/"
+                make_dir(comb_dir)
+                
+                # From MedSAM Inference file
+                ###################
+                io.imsave(
+                    join(comb_dir, "comb_" + img_name[:-7] + ".png"),
+                    comb_seg,
+                    check_contrast=False,
+                )
+                #####################
+                # Code above are from MedSAM Inference file
+                
+                np.savez_compressed(result_dir + img_name[:-7] + ".npz", 
+                                    gt=gt_seg, 
+                                    medsam=medsam_seg)
+        except Exception as e:
+            print(e)
+            print("Error in file: " + test_dataset.cur_name)
+            continue
