@@ -43,7 +43,7 @@ def medsam_inference(medsam_model, img_embed, box_1024, H, W):
         align_corners=False,
     )  # (1, 1, gt.shape)
     low_res_pred = low_res_pred.squeeze().detach().cpu().numpy()  # (256, 256)
-    medsam_seg = (low_res_pred > 0.5) #.astype(np.uint8) delete this part in function to test the difference.
+    medsam_seg = (low_res_pred > 0.5) .astype(np.uint8)
     return medsam_seg
 ##################
 # Code above are from MedSAM Inference file
@@ -252,10 +252,8 @@ for file_path in file_paths:
             # Create new folders to save results
             ds_dir = save_path + ds_name + "/"
             make_dir(ds_dir)
-            uint8_dir = ds_dir + "uint8/"
-            make_dir(uint8_dir)
-            bool_dir = ds_dir + "bool/"
-            make_dir(bool_dir)
+            result_dir = ds_dir + "results/"
+            make_dir(result_dir)
             comb_dir = ds_dir + "comb/"
             make_dir(comb_dir)
             
@@ -263,15 +261,12 @@ for file_path in file_paths:
             ###################
             io.imsave(
                 join(comb_dir, "comb_" + img_name[:-7] + ".png"),
-                medsam_seg,
+                comb_seg,
                 check_contrast=False,
             )
             #####################
             # Code above are from MedSAM Inference file
-            np.savez_compressed(uint8_dir + img_name[:-7] + ".npz", 
-                                gt=gt_seg.astype(np.uint8), 
-                                medsam=medsam_seg.astype(np.uint8))
             
-            np.savez_compressed(bool_dir + img_name[:-7] + ".npz", 
+            np.savez_compressed(result_dir + img_name[:-7] + ".npz", 
                                 gt=gt_seg, 
                                 medsam=medsam_seg)
