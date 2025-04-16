@@ -1,6 +1,16 @@
 # MedSAM
 This is the official repository for MedSAM: Segment Anything in Medical Images.
 
+Welcome to join our [mailing list](https://forms.gle/hk4Efp6uWnhjUHFP6) to get updates.
+
+
+## News
+
+- 2025.04.07: Release [MedSAM2](https://github.com/bowang-lab/MedSAM2) for 3D and video segmentation.
+- 2025.02: Welcome to join CVPR 2025 Challenges: [Interactive](https://www.codabench.org/competitions/5263/) and [Text-guided](https://www.codabench.org/competitions/5651/) 3D Biomedical Image Segmentation
+- 2024.01.15: Welcome to join [CVPR 2024 Challenge: MedSAM on Laptop](https://www.codabench.org/competitions/1847/)
+- 2024.01.15: Release [LiteMedSAM](https://github.com/bowang-lab/MedSAM/blob/LiteMedSAM/README.md) and [3D Slicer Plugin](https://github.com/bowang-lab/MedSAMSlicer), 10x faster than MedSAM! 
+
 
 ## Installation
 1. Create a virtual environment `conda create -n medsam python=3.10 -y` and activate it `conda activate medsam`
@@ -43,10 +53,11 @@ python gui.py
 
 Load the image to the GUI and specify segmentation targets by drawing bounding boxes.
 
-![seg_demo](assets/seg_demo.gif)
 
 
-https://github.com/bowang-lab/MedSAM/assets/19947331/42db8cae-6ad1-41d3-8db7-013ccf8b28b1
+https://github.com/bowang-lab/MedSAM/assets/19947331/a8d94b4d-0221-4d09-a43a-1251842487ee
+
+
 
 
 
@@ -71,7 +82,7 @@ python pre_CT_MR.py
 - split dataset: 80% for training and 20% for testing
 - adjust CT scans to [soft tissue](https://radiopaedia.org/articles/windowing-ct) window level (40) and width (400)
 - max-min normalization
-- resample image size to `1024x2014`
+- resample image size to `1024x1024`
 - save the pre-processed images and labels as `npy` files
 
 
@@ -95,7 +106,6 @@ python utils/ckpt_convert.py # Please set the corresponding checkpoint path firs
 python train_one_gpu.py
 ```
 
-If you only want to train the mask decoder, please check the tutorial on the [0.1 branch](https://github.com/bowang-lab/MedSAM/tree/0.1).
 
 
 ## Acknowledgements
@@ -110,7 +120,9 @@ If you only want to train the mask decoder, please check the tutorial on the [0.
 @article{MedSAM,
   title={Segment Anything in Medical Images},
   author={Ma, Jun and He, Yuting and Li, Feifei and Han, Lin and You, Chenyu and Wang, Bo},
-  journal={arXiv preprint arXiv:2304.12306},
-  year={2023}
+  journal={Nature Communications},
+  volume={15},
+  pages={654},
+  year={2024}
 }
 ```

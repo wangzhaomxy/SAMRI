@@ -80,15 +80,14 @@ def get_test_record_from_ds(model, test_dataset, med_sam=False):
         b_dice, b_hd, b_msd = [], [], []
         pixel_count, area_percentage = [], []
         labels = []
-        H, W = mask.shape[-2:]
-        total_pixels = H * W
+        
         # Image embedding inference
         if med_sam: # for MedSAM evaluation.
             # copied from MedSAM pre_CT_MR.py file MR data preprocessing
-            # lower_bound, upper_bound = np.percentile(
-            #     image[image > 0], 0.5
-            # ), np.percentile(image[image > 0], 99.5)
-            # image = np.clip(image, lower_bound, upper_bound)
+            lower_bound, upper_bound = np.percentile(
+                image[image > 0], 0.5
+            ), np.percentile(image[image > 0], 99.5)
+            image = np.clip(image, lower_bound, upper_bound)
             image = (
                 (image - np.min(image))
                 / (np.max(image) - np.min(image) + 1e-8)
@@ -116,7 +115,9 @@ def get_test_record_from_ds(model, test_dataset, med_sam=False):
                 anti_aliasing=False,
             )
             mask = mask.transpose(2,0,1)
-        
+            
+        H, W = mask.shape[-2:]
+        total_pixels = H * W
         predictor.set_image(image)
         masks = MaskSplit(mask)
 
