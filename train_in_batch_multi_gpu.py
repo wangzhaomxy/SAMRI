@@ -73,7 +73,7 @@ def main(gpu, world_size, num_epochs, save_every):
 
     optimizer = torch.optim.AdamW(
         samri_model.module.mask_decoder.parameters(),
-        lr=1e-4/world_size, 
+        lr=1e-5,
         weight_decay=0.05
     )
     # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=10)
@@ -87,7 +87,6 @@ def main(gpu, world_size, num_epochs, save_every):
     #train
     losses = []
     train_dataset = EmbDataset(train_image_path, 
-                               random_mask=True, 
                                resize_mask=True, 
                                mask_size=256)
     train_loader = DataLoader(train_dataset, 
