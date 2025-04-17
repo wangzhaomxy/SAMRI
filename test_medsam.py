@@ -1,13 +1,11 @@
 import numpy as np
-import matplotlib.pyplot as plt
 import os
 join = os.path.join
 import torch
 from segment_anything import sam_model_registry
-from skimage import io, transform, img_as_ubyte
+from skimage import io, transform
 import torch.nn.functional as F
 from utils.utils import *
-from utils.prompt import *
 from tqdm import tqdm
 from torch.utils.data import Dataset
 import nibabel as nib
@@ -105,42 +103,6 @@ class NiiDataset(Dataset):
     
     def get_name(self):
         return os.path.basename(self.cur_name)
-    
-    
-def gen_bboxes(mask, num_bboxes=1, jitter=0):
-    """
-    Generate a bounding box tupple with a shape of [min_w, min_h, max_w, max_h]
-    or tupple list of multiple bounding boxes.
-
-    Parameters:
-        mask (np.array): the mask in the shape of HW=(255,255) logit type
-        num_bboxes(Tupple): the number of bounding boxes will be generated. If 
-                    the number lager than 1, this function will return to a array
-                    listing all the bounding boxes tupples in a list.
-        jitter (int): the random shift of the original bounding box.
-
-    Returns:
-        (list): a [min_w, min_h, max_w, max_h] bounding box list if the
-                num_bboxes = 1;
-        [[list], ...]: a list of bounding box lists if the num_bboxes > 1. 
-    """
-    h, w = np.nonzero(mask)
-    bbox = [np.min(w), np.min(h), np.max(w), np.max(h)]
-
-    if np.max(h) - np.min(h) > 30:
-        bbox[1] = max(0, (np.min(h) + rand_shift(jitter)))
-        bbox[3] = min(mask.shape[0], (np.max(h) + rand_shift(jitter)))
-    if np.max(w) - np.min(w) > 30:
-        bbox[0] = max(0, (np.min(w) + rand_shift(jitter)))
-        bbox[2] = min(mask.shape[1], (np.max(w) + rand_shift(jitter)))
-        
-    if num_bboxes == 1:
-        return np.array(bbox)
-    else:
-        bboxes = []
-        for _ in range(num_bboxes):
-            bboxes.append(bbox)
-        return np.array(bboxes)
 
 class MaskSplit():
     """
@@ -231,15 +193,32 @@ for file_path in file_paths:
             
             # Generate bounding box for every mask
             for mask, label in MaskSplit(masks):
-                # box_np = np.array([args.box])
-                bbox = gen_bboxes(mask, num_bboxes=1, jitter=0)
-                box_np = np.array([bbox])
                 gt_seg = mask
+                
+                # From MedSAM train_multi_gpus.py file
+                ###################
+                # Generate box prompt from gt mask
+                gt2D = np.uint8(mask)# only one label, (256, 256)
+
+                assert np.max(gt2D) == 1 and np.min(gt2D) == 0.0, "ground truth should be 0, 1"
+                y_indices, x_indices = np.where(gt2D > 0)
+                x_min, x_max = np.min(x_indices), np.max(x_indices)
+                y_min, y_max = np.min(y_indices), np.max(y_indices)
+                # add perturbation to bounding box coordinates
+                H, W = gt2D.shape
+                # No jitter for testing, comment off the following parts
+                # x_min = max(0, x_min - random.randint(0, self.bbox_shift))
+                # x_max = min(W, x_max + random.randint(0, self.bbox_shift))
+                # y_min = max(0, y_min - random.randint(0, self.bbox_shift))
+                # y_max = min(H, y_max + random.randint(0, self.bbox_shift))
+                bboxes = np.array([x_min, y_min, x_max, y_max])
+                #####################
+                # Code above are from MedSAM train_multi_gpus.py file
                 
                 # From MedSAM Inference file
                 ###################
                 # transfer box_np t0 1024x1024 scale
-                box_1024 = box_np / np.array([W, H, W, H]) * 1024               
+                box_1024 = [bboxes] / np.array([W, H, W, H]) * 1024               
                 
                 with torch.no_grad():
                     image_embedding = medsam_model.image_encoder(img_1024_tensor)  # (1, 256, 64, 64)
@@ -248,7 +227,7 @@ for file_path in file_paths:
                 #####################
                 # Code above are from MedSAM Inference file
 
-                comb_seg = img_as_ubyte(np.concatenate([gt_seg, medsam_seg], axis=1))
+                comb_seg = np.concatenate([gt_seg, medsam_seg], axis=1) *255 # For visualize observations
 
                 # Create new folders to save results
                 ds_dir = save_path + ds_name + "/"
@@ -268,6 +247,7 @@ for file_path in file_paths:
                 #####################
                 # Code above are from MedSAM Inference file
                 
+                # Save the ground truth and inference results in .npz files.
                 np.savez_compressed(result_dir + img_name[:-7] + ".npz", 
                                     gt=gt_seg, 
                                     medsam=medsam_seg)
