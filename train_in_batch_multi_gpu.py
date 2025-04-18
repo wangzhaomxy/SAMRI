@@ -73,8 +73,8 @@ def main(gpu, world_size, num_epochs, save_every):
 
     optimizer = torch.optim.AdamW(
         samri_model.module.mask_decoder.parameters(),
-        lr=1e-5,
-        weight_decay=0.05
+        lr=1e-4,
+        weight_decay=0.1
     )
     # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=10)
     dice_focal_loss = DiceFocalLoss(sigmoid=True, 
