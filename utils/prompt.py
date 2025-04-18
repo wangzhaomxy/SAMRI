@@ -160,10 +160,10 @@ def gen_bboxes_torch(mask, num_bboxes=1, jitter=0):
     max_h, max_w = non_zero.max(axis=0).values
     bbox = [min_w, min_h, max_w, max_h]
 
-    if max_h - min_h > 30:
+    if max_h - min_h > jitter + 10:
         bbox[1] = max(torch.tensor(0), (min_h + rand_shift(jitter)))
         bbox[3] = min(mask.shape[0], (max_h + rand_shift(jitter)))
-    if max_w - min_w > 30:
+    if max_w - min_w > jitter + 10:
         bbox[0] = max(torch.tensor(0), (min_w + rand_shift(jitter)))
         bbox[2] = min(mask.shape[1], (max_w + rand_shift(jitter)))
     
