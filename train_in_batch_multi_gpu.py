@@ -26,7 +26,7 @@ from torch.distributed import init_process_group, destroy_process_group
 model_type = "samri"
 encoder_type = ENCODER_TYPE[model_type] # choose one from vit_b and vit_h.
 batch_size = BATCH_SIZE
-model_save_path = MODEL_SAVE_PATH + "box/"
+model_save_path = MODEL_SAVE_PATH + "box-601/"
 num_epochs = NUM_EPOCHS
 train_image_path = TRAIN_IMAGE_PATH
 train_image_path.remove('/scratch/project/samri/Embedding/totalseg_mr/')
@@ -73,7 +73,7 @@ def main(gpu, world_size, num_epochs, save_every):
 
     optimizer = torch.optim.AdamW(
         samri_model.module.mask_decoder.parameters(),
-        lr=1e-4,
+        lr=1e-6,
         weight_decay=0.1
     )
     # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=10)
