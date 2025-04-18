@@ -123,10 +123,10 @@ def gen_bboxes(mask, num_bboxes=1, jitter=0):
     h, w = np.nonzero(mask)
     bbox = [np.min(w), np.min(h), np.max(w), np.max(h)]
 
-    if np.max(h) - np.min(h) > 30:
+    if np.max(h) - np.min(h) > jitter + 10:
         bbox[1] = max(0, (np.min(h) + rand_shift(jitter)))
         bbox[3] = min(mask.shape[0], (np.max(h) + rand_shift(jitter)))
-    if np.max(w) - np.min(w) > 30:
+    if np.max(w) - np.min(w) > jitter + 10:
         bbox[0] = max(0, (np.min(w) + rand_shift(jitter)))
         bbox[2] = min(mask.shape[1], (np.max(w) + rand_shift(jitter)))
         
