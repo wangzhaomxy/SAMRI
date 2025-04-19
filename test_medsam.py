@@ -44,7 +44,7 @@ def medsam_inference(medsam_model, img_embed, box_1024, H, W):
     medsam_seg = (low_res_pred > 0.5) .astype(np.uint8)
     return medsam_seg
 ##################
-# Code above are from MedSAM Inference file
+# Code above are copied from MedSAM Inference file
 
 
 def make_dir(path):
@@ -91,13 +91,13 @@ class NiiDataset(Dataset):
 
     def _load_nii(self, nii_file):
         """
-        load nifty image, (C, H, W) = (1, 256, 256)
+        load nifty image, (C, H, W) = (1, 256, 256) for example.
 
         parameters:
         nii_file(str): The input nifti file path.
 
         returns:
-        (np.ndarray): The numpy format image, (C, H, W) = (1, 256, 256)
+        (np.ndarray): The numpy format image, (C, H, W) = (1, 256, 256) for example.
         """
         return nib.load(nii_file).get_fdata()
     
@@ -109,10 +109,10 @@ class MaskSplit():
     Split the labeled ground truth masks into single binary mask. 
 
     Args:
-        mask (np.darray): the labeled ground truth mask. CHW=(1,255,255)
+        mask (np.darray): the labeled ground truth mask. CHW=(1,255,255) for example.
         
     Returns:
-        masks (list): A list of splited masks. HW=(255,255)
+        masks (list): A list of splited masks. HW=(255,255) for example.
         
         labels (list): The list of splited masks labels.
     
@@ -160,7 +160,7 @@ medsam_model = sam_model_registry["vit_b"](checkpoint=ckpt)
 medsam_model = medsam_model.to(device)
 medsam_model.eval()
 ##################
-# Code above are from MedSAM Inference file
+# Code above are copied from MedSAM Inference file
 
 for file_path in file_paths:
     print("Processing the dataset: ",file_path)
@@ -168,7 +168,7 @@ for file_path in file_paths:
     test_dataset = NiiDataset([file_path], multi_mask= True)
     for img_np, masks in tqdm(test_dataset):
         try:
-            img_name = test_dataset.get_name()
+            img_name = test_dataset.get_name() # file name only, without the folder path.
             
             # Preprocessing image, from MedSAM Inference file
             ###################
@@ -189,7 +189,7 @@ for file_path in file_paths:
                 torch.tensor(img_1024).float().permute(2, 0, 1).unsqueeze(0).to(device)
             )
             #####################
-            # Code above are from MedSAM Inference file
+            # Code above are copied from MedSAM Inference file
             
             # Generate bounding box for every mask
             for mask, label in MaskSplit(masks):
@@ -213,7 +213,7 @@ for file_path in file_paths:
                 # y_max = min(H, y_max + random.randint(0, self.bbox_shift))
                 bboxes = np.array([x_min, y_min, x_max, y_max])
                 #####################
-                # Code above are from MedSAM train_multi_gpus.py file
+                # Code above are copied from MedSAM train_multi_gpus.py file
                 
                 # From MedSAM Inference file
                 ###################
@@ -225,7 +225,7 @@ for file_path in file_paths:
 
                 medsam_seg = medsam_inference(medsam_model, image_embedding, box_1024, H, W)
                 #####################
-                # Code above are from MedSAM Inference file
+                # Code above are copied from MedSAM Inference file
 
                 comb_seg = np.concatenate([gt_seg, medsam_seg], axis=1) *255 # For visualize observations
 
@@ -245,10 +245,10 @@ for file_path in file_paths:
                     check_contrast=False,
                 )
                 #####################
-                # Code above are from MedSAM Inference file
+                # Code above are copied from MedSAM Inference file
                 
                 # Save the ground truth and inference results in .npz files.
-                np.savez_compressed(result_dir + img_name[:-7] + ".npz", 
+                np.savez_compressed(result_dir + img_name[:-7] + "_" + str(label) +".npz", 
                                     gt=gt_seg, 
                                     medsam=medsam_seg)
         except Exception as e:
