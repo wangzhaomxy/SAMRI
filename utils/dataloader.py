@@ -330,7 +330,7 @@ class BalancedEmbDataset(Dataset):
         self.mask_size = mask_size
         
     def __len__(self):
-        return len(self.npz_files)
+        return len(self.file_list)
 
     def __getitem__(self, index):
         """
