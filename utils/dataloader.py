@@ -348,7 +348,7 @@ class BalancedEmbDataset(Dataset):
         npz_file_path = self.file_list[index]["emb_path"]
         label = self.file_list[index]["labels"]
         npz_data = np.load(npz_file_path)
-        self.cur_name = npz_data
+        self.cur_name = npz_file_path
         mask = npz_data["mask"]==label
         if not mask.any():
             raise ValueError(f"The following file contains the empty mask: {self.cur_name}")
