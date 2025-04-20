@@ -10,7 +10,7 @@ from tqdm import tqdm
 import torch
 import numpy as np
 from segment_anything import sam_model_registry
-from utils.dataloader import EmbDataset
+from utils.dataloader import EmbDataset, BalancedEmbDataset
 from torch.utils.data import DataLoader
 from utils.losses import DiceFocalLoss
 from utils.utils import *
@@ -86,9 +86,14 @@ def main(gpu, world_size, num_epochs, save_every):
     
     #train
     losses = []
-    train_dataset = EmbDataset(train_image_path, 
+    # train_dataset = EmbDataset(train_image_path, 
+    #                            resize_mask=True, 
+    #                            mask_size=256)
+    train_dataset = BalancedEmbDataset(train_image_path, 
+                               sub_set="60_up",
                                resize_mask=True, 
                                mask_size=256)
+    
     train_loader = DataLoader(train_dataset, 
                               batch_size=batch_size, 
                               shuffle=False, 
