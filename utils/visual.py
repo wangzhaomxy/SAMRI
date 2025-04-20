@@ -37,15 +37,13 @@ def show_box(box, ax):
     w, h = box[2] - box[0], box[3] - box[1]
     ax.add_patch(plt.Rectangle((x0, y0), w, h, edgecolor='green', facecolor=(0,0,0,0), lw=2))    
 
-def get_test_record_from_ds(model, test_dataset, med_sam=False):
+def get_test_record_from_ds(model, test_dataset):
     """
     Calculate the dice score for the test dataset using the SAM model.
 
     Args:
         model (SAM model): The SAM model loaded from Checkpoint.
         test_dataset (Dataset): The pytorch dataset from torch.Dataset.
-        med_sam (bool): Use the image preprocessing method from medSAM. Defalt
-                        is False.
 
     Returns:
         (list):A list of record for every data, and each data consists of a 
@@ -82,40 +80,6 @@ def get_test_record_from_ds(model, test_dataset, med_sam=False):
         labels = []
         
         # Image embedding inference
-        if med_sam: # for MedSAM evaluation.
-            # copied from MedSAM pre_CT_MR.py file MR data preprocessing
-            lower_bound, upper_bound = np.percentile(
-                image[image > 0], 0.5
-            ), np.percentile(image[image > 0], 99.5)
-            image = np.clip(image, lower_bound, upper_bound)
-            image = (
-                (image - np.min(image))
-                / (np.max(image) - np.min(image) + 1e-8)
-                * 255.0
-            )
-            image[image == 0] = 0
-
-            image = np.uint8(image)
-            
-            image = transform.resize(
-                image,
-                (1024, 1024),
-                order=3,
-                preserve_range=True,
-                mode="constant",
-                anti_aliasing=True,
-            )
-
-            mask = transform.resize(
-                mask.transpose(1,2,0),
-                (1024, 1024),
-                order=0,
-                preserve_range=True,
-                mode="constant",
-                anti_aliasing=False,
-            )
-            mask = mask.transpose(2,0,1)
-            
         H, W = mask.shape[-2:]
         total_pixels = H * W
         predictor.set_image(image)
@@ -132,7 +96,6 @@ def get_test_record_from_ds(model, test_dataset, med_sam=False):
                                 point_coords=point,
                                 point_labels=point_label,
                                 multimask_output=False,
-                                med_sam=med_sam
                             )
             
             pre_mask_b, _, _ = predictor.predict(
@@ -140,7 +103,6 @@ def get_test_record_from_ds(model, test_dataset, med_sam=False):
                                 point_labels=None,
                                 box=bbox[None, :],
                                 multimask_output=False,
-                                med_sam=med_sam
                             )
 
             # save DSC

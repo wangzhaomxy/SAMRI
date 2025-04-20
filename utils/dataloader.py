@@ -221,6 +221,8 @@ class NiiDataset(Dataset):
 class EmbDataset(Dataset):
     def __init__(self, 
                  data_root, 
+                 balanced_data=False,
+                 bal_subset="60_up",
                  shuffle=False,
                  random_mask=False,
                  resize_mask=False,
@@ -228,7 +230,11 @@ class EmbDataset(Dataset):
         """
         Args:
             data_root (list[str]): The path list of the datasets. The path
-                        eliments should be in format of xxx/xxx/xxx/.
+                        eliments should be in format of "xxx/xxx/xxx/".
+            balanced_data (bool): If True, the dataset will be balanced by
+                        the number of images in each class. Default is False.
+            bal_subset (str): The subset of the dataset. Choose from "60_up" and
+                        "60_down". Default is "60_up".
             shuffle (bool): If shuffle the data. Default is False.
             random_mask(bool): If True, return a random mask from the multi masks.
             resize_mask(bool): If True, resize the mask into the mask size.

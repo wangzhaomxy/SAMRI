@@ -22,7 +22,6 @@ ckpt_list = [
              ]
 # ckpt_list = ["/scratch/user/s4670484/Model_dir/sam_vit_b_01ec64.pth"]
 # ckpt_list = ["/scratch/user/s4670484/Model_dir/sam_vit_h_4b8939.pth"]
-# ckpt_list = ["/scratch/user/s4670484/Model_dir/medsam_vit_b.pth"]
 
 for ckpt in ckpt_list:
     model_type = 'vit_b'# Choose one from vit_b, vit_h, samri, and med_sam
@@ -40,7 +39,6 @@ for ckpt in ckpt_list:
     save_test_record(file_paths=file_paths,
                      sam_model=sam_model, 
                      save_path=save_path_all, 
-                     med_sam=False, 
                      by_ds=False)
 
 
