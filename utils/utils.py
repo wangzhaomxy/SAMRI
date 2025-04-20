@@ -39,9 +39,13 @@ SAM_CHECKPOINT = {"vit_b": ch_root + "sam_vit_b_01ec64.pth",
 
 def get_checkpoint(path):
     cp_list = sorted(glob(path + "*pth"))
-    cp_names = [(os.path.basename(cp)[:-4]) for cp in cp_list]
-    start_epoch = max([int(cp.split('_')[-1]) for cp in cp_names if cp != ""])
-    cp_name = glob(path + f"*_{str(start_epoch)}.pth*")[0]
+    if len(cp_list) == 0:
+        cp_name = SAM_CHECKPOINT["vit_b"]
+        start_epoch = 0
+    else:
+        cp_names = [(os.path.basename(cp)[:-4]) for cp in cp_list]
+        start_epoch = max([int(cp.split('_')[-1]) for cp in cp_names if cp != ""])
+        cp_name = glob(path + f"*_{str(start_epoch)}.pth*")[0]
     return cp_name, start_epoch
 
 def get_preprocess_shape(oldh: int, oldw: int, long_side_length: int) :
