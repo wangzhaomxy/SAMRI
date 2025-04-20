@@ -61,18 +61,18 @@ def get_test_record_from_ds(test_dataset):
         pixel_count.append(np.sum(gt))
         area_percentage.append(np.sum(gt) / total_pixels)
     
-    single_data_result = {"img_name": "NaN",
-                            "mask_name": each_data,
-                            "labels": labels,
-                            "p_dice": "NaN",
-                            "b_dice":b_dice,
-                            "p_hd": "NaN",
-                            "b_hd": b_hd,
-                            "p_msd": "NaN",
-                            "b_msd": b_msd,
-                            "pixel_count":pixel_count,
-                            "area_percentage":area_percentage}
-    final_record.append(single_data_result)
+        single_data_result = {"img_name": "NaN",
+                                "mask_name": each_data,
+                                "labels": labels,
+                                "p_dice": "NaN",
+                                "b_dice":b_dice,
+                                "p_hd": "NaN",
+                                "b_hd": b_hd,
+                                "p_msd": "NaN",
+                                "b_msd": b_msd,
+                                "pixel_count":pixel_count,
+                                "area_percentage":area_percentage}
+        final_record.append(single_data_result)
     
     return final_record
 
