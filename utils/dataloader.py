@@ -349,9 +349,9 @@ class BalancedEmbDataset(Dataset):
         label = self.file_list[index]["labels"]
         npz_data = np.load(npz_file_path)
         self.cur_name = npz_file_path
-        mask = npz_data["mask"]==label
+        mask = npz_data["mask"] == int(label)
         if not mask.any():
-            raise ValueError(f"The following file contains the empty mask: {self.cur_name}")
+            raise ValueError(f"The following file contains the empty mask: {self.cur_name}, label: {label}")
 
         if self.resize_mask:
             mask = torch.tensor(mask, dtype=torch.float)[None, :, :, :]
