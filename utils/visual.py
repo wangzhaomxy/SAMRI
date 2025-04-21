@@ -137,8 +137,6 @@ def get_pix_num_from_ds(test_dataset):
     Args:
         model (SAM model): The SAM model loaded from Checkpoint.
         test_dataset (Dataset): The pytorch dataset from torch.Dataset.
-        med_sam (bool): using the data preprocessing method from medSAM. Defalt
-                        is False.
 
     Returns:
         ([p_record], [b_record]): 
@@ -157,7 +155,7 @@ def get_pix_num_from_ds(test_dataset):
             area_percentage.append(np.sum(each_mask) / total_pixels)
     return pixel_count, area_percentage
         
-def save_test_record(file_paths, sam_model, save_path, med_sam=False, by_ds=False):
+def save_test_record(file_paths, sam_model, save_path, by_ds=False):
     """Save the test record for the test model and dataset.
     
 
@@ -165,8 +163,6 @@ def save_test_record(file_paths, sam_model, save_path, med_sam=False, by_ds=Fals
         file_paths (list): The testing dataset path list. Ex.["DS1", "DS2", ...]
         sam_model (SAM model): The SAM model loaded from Checkpoint.
         save_path (str): The path to save the record.
-        med_sam (bool, optional): If true, using the data preprocessing method
-                                  from medSAM. Defaults to False.
         by_ds (bool, optional): if true, saving the result by dataset. 
                                 Defaults to False. 
     """
@@ -176,8 +172,7 @@ def save_test_record(file_paths, sam_model, save_path, med_sam=False, by_ds=Fals
         ds_name = file_path.split("/")[-3]
         test_dataset = NiiDataset([file_path], multi_mask= True)    
         ds_record = get_test_record_from_ds(model=sam_model, 
-                                                 test_dataset=test_dataset, 
-                                                 med_sam=med_sam)
+                                                 test_dataset=test_dataset)
         final_record[ds_name] = ds_record
         if by_ds:
             make_dir(save_path + "/")
