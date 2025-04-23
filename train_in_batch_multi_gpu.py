@@ -79,7 +79,7 @@ def main(gpu, world_size, num_epochs, save_every):
         weight_decay=0.1
     )
     # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=10)
-    dice_focal_loss = DiceFocalLoss(sigmoid=False, 
+    dice_focal_loss = DiceFocalLoss(sigmoid=True, 
                                      squared_pred=True,
                                      batch= True, 
                                      reduction="mean",

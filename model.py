@@ -127,7 +127,7 @@ class SAMRI(Sam):
         )
         
         if train_mode:
-            masks = torch.sigmoid(low_res_masks)
+            masks = low_res_masks
             return masks
         else:
             masks = self.postprocess_masks(

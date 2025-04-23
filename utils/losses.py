@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
 """
-The loss functions that SAMRI uses.
+The loss functions that SAMRI uses. The focal loss and dice loss are referenced 
+from monai.
 """
 import numpy as np
 import warnings
