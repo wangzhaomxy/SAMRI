@@ -75,7 +75,7 @@ def main(gpu, world_size, num_epochs, save_every):
 
     optimizer = torch.optim.AdamW(
         samri_model.module.mask_decoder.parameters(),
-        lr=1e-5,
+        lr=5e-6,
         weight_decay=0.01
     )
     # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=10)
