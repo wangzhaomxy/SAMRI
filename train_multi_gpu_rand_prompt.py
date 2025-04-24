@@ -104,6 +104,13 @@ def main(gpu, world_size, num_epochs, save_every):
                               sampler=DistributedSampler(train_dataset))
     
     for epoch in range(start_epoch, num_epochs):
+        # if epoch == 0:
+        #     for name, p in samri_model.mask_decoder.named_parameters():
+        #         p.requires_grad = ("mask_tokens" in name or "cross_attn_layer_N" in name)
+        #     optimizer.lr = 1e-5 * 0.1
+        # else:
+        #     for p in samri_model.mask_decoder.parameters(): p.requires_grad = True
+        #     optimizer.lr = 1e-5
         # training part
         samri_model.train()
         epoch_loss = 0
