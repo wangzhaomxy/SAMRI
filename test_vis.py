@@ -5,7 +5,7 @@ from utils.utils import *
 
 file_paths = TEST_IMAGE_PATH
 ckpt_root_path = "/scratch/project/samri/Model_save/"
-model_folder = "box-501_balance/"
+model_folder = "box-501-ji10_balance/"
 save_path = "/scratch/project/samri/Eval_results/" + model_folder
 ckpt_list = [
             #  ckpt_root_path + model_folder + "samri_vitb_box_0.pth",
