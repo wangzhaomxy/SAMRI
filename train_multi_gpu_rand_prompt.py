@@ -27,7 +27,7 @@ from torch.distributed import init_process_group, destroy_process_group
 model_type = "samri"
 encoder_type = ENCODER_TYPE[model_type] # choose one from vit_b and vit_h.
 batch_size = BATCH_SIZE
-model_save_path = MODEL_SAVE_PATH + "box-501-ji10_balance/"
+model_save_path = MODEL_SAVE_PATH + "bp501/"
 if not os.path.exists(model_save_path):
     os.makedirs(model_save_path)
 num_epochs = NUM_EPOCHS
@@ -42,7 +42,7 @@ def ddp_setup(rank: int, world_size: int):
     world_size: Total number of processes
     """
     os.environ["MASTER_ADDR"] = "localhost"
-    os.environ["MASTER_PORT"] = "29600"
+    os.environ["MASTER_PORT"] = "29700"
     torch.cuda.set_device(rank)
     init_process_group(backend="nccl", rank=rank, world_size=world_size)
 
