@@ -71,9 +71,13 @@ class SAMRI(Sam):
                 in the form Bx1xHxW.
           multimask_output (bool): Whether the model should predict multiple
             disambiguating masks, or return a single mask.
-          train_mode(str): "single", "batch" or None. "single" means training 
-            model with single input, and "batch" means training model with batch
-            inputs. None means inference mode. Default None.
+          train_mode(bool): Whether the model is in training mode or not. If True,
+            the model will return low resolution masks. If False, the model
+            will return post-processed masks. Default False.
+          embedding_inputs (bool): Whether the input is image embeddings or
+            original images. If True, the input is image embeddings, and
+            the model will not apply any preprocessing to the input.
+            Default False.
 
         Returns:
           (list(dict)): A list over input images, where each element is
@@ -144,7 +148,7 @@ class SAMRI(Sam):
                        img_names: list, 
                        output_path: str):
       """
-      Save embeddings to the cach files with pytorch save function.
+      Save embeddings to the catch files with pytorch save function.
 
       Args:
           batched_input (List[Dict[str, Any]]): The input images with the shape
