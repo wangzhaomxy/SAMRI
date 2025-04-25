@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 
 """
-The SAMRI model
+The SAMRI model, which is a modified version of the Segment Anything Model (SAM)
+for MRI segmentation. The model is designed to work with MRI images and
+incorporates a few modifications to the original SAM architecture.
+
 Reference: The model is referenced from the segment anything model, 
             link: https://github.com/facebookresearch/segment-anything
 """
