@@ -104,20 +104,12 @@ def main(gpu, world_size, num_epochs, save_every):
                               sampler=DistributedSampler(train_dataset))
     
     for epoch in range(start_epoch, num_epochs):
-        # if epoch == 0:
-        #     for name, p in samri_model.mask_decoder.named_parameters():
-        #         p.requires_grad = ("mask_tokens" in name or "cross_attn_layer_N" in name)
-        #     optimizer.lr = 1e-5 * 0.1
-        # else:
-        #     for p in samri_model.mask_decoder.parameters(): p.requires_grad = True
-        #     optimizer.lr = 1e-5
-        # training part
         samri_model.train()
         epoch_loss = 0
         for step, (embedding, masks, ori_size) in enumerate(tqdm(train_loader)):
             # Train model
             ori_size = [(ori_size[0].numpy()[i], ori_size[1].numpy()[i]) for i in range(len(ori_size[0]))]
-            if random.random() > 0.8:
+            if random.random() > 0.5:
                 prompt = "point"
             else:
                 prompt = "bbox"
@@ -126,7 +118,7 @@ def main(gpu, world_size, num_epochs, save_every):
             if prompt == "point":
                 batch_input = [
                     {'image': image.squeeze(),
-                        'point_coords':resize_transform.apply_coords_torch(torch.as_tensor(np.array([gen_points(mask.squeeze(0).numpy())]), device=gpu), original_size=ori_size),
+                        'point_coords':resize_transform.apply_coords_torch(torch.as_tensor(np.array([gen_points(mask.squeeze(0).numpy())]), device=gpu), original_size=(256, 256)),
                         'point_labels':torch.as_tensor([[1]]),
                         'original_size':ori_size
                         } 
@@ -135,7 +127,7 @@ def main(gpu, world_size, num_epochs, save_every):
             if prompt == "bbox":
                 batch_input = [
                     {'image': image.squeeze(),
-                        'boxes':resize_transform.apply_boxes_torch(torch.as_tensor(np.array([gen_bboxes(mask.squeeze(0).numpy(),jitter=JITTER)]), device=gpu), original_size=ori_size),
+                        'boxes':resize_transform.apply_boxes_torch(torch.as_tensor(np.array([gen_bboxes(mask.squeeze(0).numpy(),jitter=JITTER)]), device=gpu), original_size=(256, 256)),
                         'original_size':ori_size
                         } 
                     for image, mask, ori_size in zip(embedding, masks, ori_size)
