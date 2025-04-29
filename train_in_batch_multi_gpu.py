@@ -84,7 +84,7 @@ def main(gpu, world_size, num_epochs, save_every):
                                      batch= True, 
                                      reduction="mean",
                                      lambda_dice=1,
-                                     lambda_focal=20)
+                                     lambda_focal=10)
     
     #train
     losses = []
