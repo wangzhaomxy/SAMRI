@@ -100,7 +100,7 @@ class SAMRI(Sam):
         else:
             input_images = torch.stack([self.preprocess(x["image"]) for x in batched_input], dim=0)
             image_embeddings = self.image_encoder(input_images)
-
+        print(batched_input)
         if "point_coords" in batched_input:
             if batched_input["point_coords"] != None:
                 point_coords = [point["point_coords"] for point in batched_input]
