@@ -116,7 +116,7 @@ def main(gpu, world_size, num_epochs, save_every):
                 if prompt == "point":
                     batch_input = [
                         {'image': image.squeeze(),
-                            'point_coords':resize_transform.apply_coords_torch(torch.as_tensor(np.array([gen_points(mask.squeeze(0).numpy())]), device=gpu), original_size=(256, 256)),
+                            'point_coords':resize_transform.apply_coords_torch(torch.as_tensor(np.array(gen_points(mask.squeeze(0).numpy())), device=gpu), original_size=(256, 256)),
                             'point_labels':torch.as_tensor([[1]]),
                             'original_size':ori_size
                             } 
@@ -125,7 +125,7 @@ def main(gpu, world_size, num_epochs, save_every):
                 if prompt == "bbox":
                     batch_input = [
                         {'image': image.squeeze(),
-                            'boxes':resize_transform.apply_boxes_torch(torch.as_tensor(np.array([gen_bboxes(mask.squeeze(0).numpy(),jitter=JITTER)]), device=gpu), original_size=(256, 256)),
+                            'boxes':resize_transform.apply_boxes_torch(torch.as_tensor(np.array(gen_bboxes(mask.squeeze(0).numpy(),jitter=JITTER)), device=gpu), original_size=(256, 256)).squeeze(0),
                             'original_size':ori_size
                             } 
                         for image, mask, ori_size in zip(embedding, masks, ori_size)
