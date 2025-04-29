@@ -119,7 +119,8 @@ class SAMRI(Sam):
                 bboxes = None
         else:
             bboxes = None
-        
+        print("points:", points)
+        print("bboxes:", bboxes)
         sparse_embeddings, dense_embeddings = self.prompt_encoder(
             points=points,
             boxes=bboxes,
