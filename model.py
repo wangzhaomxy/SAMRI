@@ -100,7 +100,7 @@ class SAMRI(Sam):
         else:
             input_images = torch.stack([self.preprocess(x["image"]) for x in batched_input], dim=0)
             image_embeddings = self.image_encoder(input_images)
-        print(batched_input[0].keys())
+
         points, bboxes = None, None
         if "point_coords" in batched_input[0].keys():
             point_coords = [point["point_coords"] for point in batched_input]
@@ -114,8 +114,8 @@ class SAMRI(Sam):
             bboxes = torch.stack(bboxes, dim=0)
         else:
             bboxes = None
-        print("points:", points)
-        print("bboxes:", bboxes)
+        print(points[0].shape, points[1].shape)
+        print(bboxes.shape)
         sparse_embeddings, dense_embeddings = self.prompt_encoder(
             points=points,
             boxes=bboxes,
