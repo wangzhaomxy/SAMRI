@@ -114,8 +114,12 @@ class SAMRI(Sam):
             bboxes = torch.stack(bboxes, dim=0)
         else:
             bboxes = None
-        print(points[0].shape, points[1].shape)
-        print(bboxes.shape)
+            
+        if "point_coords" is None:
+            print(bboxes.shape)
+        if "boxes" is None:
+            print(points[0].shape, points[1].shape)
+
         sparse_embeddings, dense_embeddings = self.prompt_encoder(
             points=points,
             boxes=bboxes,
