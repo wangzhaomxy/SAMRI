@@ -115,9 +115,9 @@ class SAMRI(Sam):
         else:
             bboxes = None
             
-        if "point_coords":
+        if bboxes:
             print(bboxes.shape)
-        if "boxes":
+        if points:
             print(points[0].shape, points[1].shape)
 
         sparse_embeddings, dense_embeddings = self.prompt_encoder(
