@@ -110,7 +110,7 @@ class SAMRI(Sam):
             points = None
 
         if "boxes" in batched_input[0].keys():
-            bboxes = [box["boxes"][None, :] for box in batched_input]
+            bboxes = [box["boxes"] for box in batched_input]
             bboxes = torch.stack(bboxes, dim=0)
         else:
             bboxes = None
