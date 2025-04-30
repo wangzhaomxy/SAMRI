@@ -6,13 +6,13 @@ from utils.utils import *
 file_paths = TEST_IMAGE_PATH
 ckpt_root_path = "/scratch/project/samri/Model_save/"
 model_folder = "box/"
-# model_folder = "box-501_balance/"
+model_folder = "box-501_balance/"
 save_path = "/scratch/project/samri/Eval_results/" + model_folder
 ckpt_list = [
             #  ckpt_root_path + model_folder + "samri_vitb_box_0.pth",
-            #  ckpt_root_path + model_folder + "samri_vitb_box_1.pth",
+             ckpt_root_path + model_folder + "samri_vitb_box_1.pth",
             #  ckpt_root_path + model_folder + "samri_vitb_box_2.pth",
-             ckpt_root_path + model_folder + "samri_vitb_box_3.pth",
+            #  ckpt_root_path + model_folder + "samri_vitb_box_3.pth",
             #  ckpt_root_path + model_folder + "samri_vitb_box_4.pth",
             #  ckpt_root_path + model_folder + "samri_vitb_box_5.pth",
             #  ckpt_root_path + model_folder + "samri_vitb_box_6.pth",
