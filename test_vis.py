@@ -12,14 +12,16 @@ ckpt_list = [
             #  ckpt_root_path + model_folder + "samri_vitb_box_0.pth",
             #  ckpt_root_path + model_folder + "samri_vitb_box_1.pth",
             #  ckpt_root_path + model_folder + "samri_vitb_box_2.pth",
-             ckpt_root_path + model_folder + "samri_vitb_box_3.pth",
-            #  ckpt_root_path + model_folder + "samri_vitb_box_4.pth",
-            #  ckpt_root_path + model_folder + "samri_vitb_box_5.pth",
+            #  ckpt_root_path + model_folder + "samri_vitb_box_3.pth",
+             ckpt_root_path + model_folder + "samri_vitb_box_4.pth",
+             ckpt_root_path + model_folder + "samri_vitb_box_5.pth",
             #  ckpt_root_path + model_folder + "samri_vitb_box_6.pth",
             #  ckpt_root_path + model_folder + "samri_vitb_box_7.pth",
             #  ckpt_root_path + model_folder + "samri_vitb_box_8.pth",
             #  ckpt_root_path + model_folder + "samri_vitb_box_9.pth",
-            #  ckpt_root_path + model_folder + "samri_vitb_box_10.pth",
+             ckpt_root_path + model_folder + "samri_vitb_box_10.pth",
+             ckpt_root_path + model_folder + "samri_vitb_box_14.pth",
+             ckpt_root_path + model_folder + "samri_vitb_box_15.pth",
              ]
 # ckpt_list = ["/scratch/user/s4670484/Model_dir/sam_vit_b_01ec64.pth"]
 # ckpt_list = ["/scratch/user/s4670484/Model_dir/sam_vit_h_4b8939.pth"]
