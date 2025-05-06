@@ -240,7 +240,7 @@ for file_path in file_paths:
                 # From MedSAM Inference file
                 ###################
                 io.imsave(
-                    join(comb_dir, "comb_" + img_name[:-7] + ".png"),
+                    join(comb_dir, "comb_" + img_name[:-7] + str(label) + ".png"),
                     comb_seg,
                     check_contrast=False,
                 )
