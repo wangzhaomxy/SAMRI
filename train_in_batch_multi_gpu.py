@@ -93,7 +93,7 @@ def main(gpu, world_size, num_epochs, save_every):
     #                            mask_size=256)
     train_image_path = "/scratch/project/samri/train_list.pkl"
     train_dataset = BalancedEmbDataset(train_image_path, 
-                               sub_set="60_up",
+                               sub_set="all",
                                resize_mask=True, 
                                mask_size=256)
     
