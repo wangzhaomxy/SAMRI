@@ -326,7 +326,8 @@ class BalancedEmbDataset(Dataset):
                 self.file_list = pickle.load(f)["train_60_down"]
         elif sub_set == "all":
             with open(self.data_root, "rb") as f:
-                self.file_list = pickle.load(f)["train_60_up"] + pickle.load(f)["train_60_down"]
+                file_lists = pickle.load(f)
+                self.file_list = file_lists["train_60_up"] + file_lists["train_60_down"]
 
         self.cur_name = ""
         self.resize_mask = resize_mask
