@@ -21,10 +21,10 @@ ckpt_list = [
             #  ckpt_root_path + model_folder + "samri_vitb_box_9.pth",
             #  ckpt_root_path + model_folder + "samri_vitb_box_10.pth",
             #  ckpt_root_path + model_folder + "samri_vitb_box_11.pth",
-             ckpt_root_path + model_folder + "samri_vitb_box_17.pth",
-             ckpt_root_path + model_folder + "samri_vitb_box_18.pth",
-             ckpt_root_path + model_folder + "samri_vitb_box_19.pth",
-             ckpt_root_path + model_folder + "samri_vitb_box_20.pth",
+            #  ckpt_root_path + model_folder + "samri_vitb_box_17.pth",
+            #  ckpt_root_path + model_folder + "samri_vitb_box_18.pth",
+             ckpt_root_path + model_folder + "samri_vitb_box_21.pth",
+             ckpt_root_path + model_folder + "samri_vitb_box_22.pth",
              ]
 # ckpt_list = ["/scratch/user/s4670484/Model_dir/sam_vit_b_01ec64.pth"]
 # ckpt_list = ["/scratch/user/s4670484/Model_dir/sam_vit_h_4b8939.pth"]
