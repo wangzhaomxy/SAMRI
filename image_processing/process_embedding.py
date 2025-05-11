@@ -9,9 +9,10 @@ from tqdm import tqdm
 from model import SAMRI
 from image_processing.data_processing_code.processing_utile import create_folders, fname_from_path
 from glob import glob
+import torch
 
 base_path = "/scratch/project/samri/"
-img_path = base_path + "Datasets_new/SAMRI_train_test2"
+img_path = base_path + "Datasets_new/SAMRI_train_test1"
 save_path = base_path + "Embedding_new"
 
 folder_names = [fname_from_path(ds) + "/" for ds in sorted(glob(img_path + "/*"))]
@@ -20,7 +21,7 @@ create_folders(save_path + "/", folder_names)
 model_type = 'samri'# Choose one from vit_b, vit_h, samri, and med_sam
 encoder_tpye = ENCODER_TYPE[model_type]
 checkpoint = SAM_CHECKPOINT[model_type]
-device = "CUDA:1" #DEVICE
+device = torch.device("CUDA:1") #DEVICE
 
 # regist the SAMRI model.
 sam_model = sam_model_registry[encoder_tpye](checkpoint)
