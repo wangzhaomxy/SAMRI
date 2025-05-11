@@ -21,7 +21,7 @@ create_folders(save_path + "/", folder_names)
 model_type = 'samri'# Choose one from vit_b, vit_h, samri, and med_sam
 encoder_tpye = ENCODER_TYPE[model_type]
 checkpoint = SAM_CHECKPOINT[model_type]
-device = torch.device("CUDA:1") #DEVICE
+device = DEVICE
 
 # regist the SAMRI model.
 sam_model = sam_model_registry[encoder_tpye](checkpoint)
