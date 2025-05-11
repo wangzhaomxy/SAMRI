@@ -12,7 +12,7 @@ from glob import glob
 import torch
 
 base_path = "/scratch/project/samri/"
-img_path = base_path + "Datasets_new/SAMRI_train_test1"
+img_path = base_path + "Datasets_new/SAMRI_train_test2"
 save_path = base_path + "Embedding_new"
 
 folder_names = [fname_from_path(ds) + "/" for ds in sorted(glob(img_path + "/*"))]
