@@ -5,8 +5,8 @@
 #SBATCH --mem=32G
 #SBATCH --job-name=SAMRI
 #SBATCH --time=24:00:00
-#SBATCH --partition=gpu_rocm
-#SBATCH --gres=gpu:mi210:2
+#SBATCH --partition=gpu_cuda
+#SBATCH --gres=gpu:h100:2
 #SBATCH --account=a_auto_mr_disease
 #SBATCH --qos=gpu
 #SBATCH -o /home/s4670484/Documents/slurm-%j.output
