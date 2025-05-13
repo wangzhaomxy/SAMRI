@@ -6,7 +6,7 @@ from utils.utils import *
 file_paths = TEST_IMAGE_PATH
 ckpt_root_path = "/scratch/project/samri/Model_save/"
 model_folder = "box/"
-model_folder = "box-501_balance/"
+# model_folder = "box-501_balance/"
 save_path = "/scratch/project/samri/Eval_results/" + model_folder
 ckpt_list = [
             #  ckpt_root_path + model_folder + "samri_vitb_box_0.pth",
@@ -21,9 +21,9 @@ ckpt_list = [
             #  ckpt_root_path + model_folder + "samri_vitb_box_9.pth",
             #  ckpt_root_path + model_folder + "samri_vitb_box_10.pth",
             #  ckpt_root_path + model_folder + "samri_vitb_box_11.pth",
-             ckpt_root_path + model_folder + "samri_vitb_box_23.pth",
-             ckpt_root_path + model_folder + "samri_vitb_box_24.pth",
-             ckpt_root_path + model_folder + "samri_vitb_box_25.pth",
+            #  ckpt_root_path + model_folder + "samri_vitb_box_23.pth",
+            #  ckpt_root_path + model_folder + "samri_vitb_box_24.pth",
+            #  ckpt_root_path + model_folder + "samri_vitb_box_25.pth",
              ckpt_root_path + model_folder + "samri_vitb_box_26.pth",
              ]
 # ckpt_list = ["/scratch/user/s4670484/Model_dir/sam_vit_b_01ec64.pth"]
