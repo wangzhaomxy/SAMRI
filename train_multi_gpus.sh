@@ -14,7 +14,7 @@
 
 module load anaconda3
 source $EBROOTANACONDA3/etc/profile.d/conda.sh
-conda activate samri-rocm
+conda activate samri
 
 nvidia-smi
 python train_in_batch_multi_gpu.py
