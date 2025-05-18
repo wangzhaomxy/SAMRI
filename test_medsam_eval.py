@@ -99,8 +99,8 @@ def save_test_record(ds_path,  save_path):
 
         final_record[ds_name] = ds_record
 
-        with open(save_path, "wb") as f:
-            pickle.dump(final_record, f)
+    with open(save_path, "wb") as f:
+        pickle.dump(final_record, f)
             
 if __name__ == "__main__":
     data_path = "/scratch/project/samri/MedSAM_inference/"
