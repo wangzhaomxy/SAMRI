@@ -3,7 +3,7 @@ from utils.visual import save_test_record
 from utils.utils import *
 
 
-file_paths = TEST_IMAGE_PATH
+file_paths = TEST_IMAGE_PATH + TEST_ZEROSHOT_PATH
 ckpt_root_path = "/scratch/project/samri/Model_save/"
 # model_folder = "box/"
 model_folder = "box-501_balance/"
