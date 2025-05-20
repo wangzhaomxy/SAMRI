@@ -1,12 +1,12 @@
 #!/bin/bash --login
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=32
+#SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=1
-#SBATCH --mem=32G
+#SBATCH --mem=16G
 #SBATCH --job-name=SAMRI
-#SBATCH --time=24:00:00
+#SBATCH --time=7-00:00:00
 #SBATCH --partition=gpu_cuda
-#SBATCH --gres=gpu:h100:2
+#SBATCH --gres=gpu:h100:3
 #SBATCH --account=a_auto_mr_disease
 #SBATCH --qos=gpu
 #SBATCH -o /home/s4670484/Documents/slurm-%j.output
