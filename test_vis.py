@@ -23,8 +23,8 @@ ckpt_list = [
             #  ckpt_root_path + model_folder + "samri_vitb_box_11.pth",
             #  ckpt_root_path + model_folder + "samri_vitb_box_23.pth",
             #  ckpt_root_path + model_folder + "samri_vitb_box_24.pth",
-            #  ckpt_root_path + model_folder + "samri_vitb_box_25.pth",
-             ckpt_root_path + model_folder + "samri_vitb_box_35.pth",
+             ckpt_root_path + model_folder + "samri_vitb_box_19.pth",
+             ckpt_root_path + model_folder + "samri_vitb_box_24.pth",
              ]
 # ckpt_list = ["/scratch/user/s4670484/Model_dir/sam_vit_b_01ec64.pth"]
 # ckpt_list = ["/scratch/user/s4670484/Model_dir/sam_vit_h_4b8939.pth"]
