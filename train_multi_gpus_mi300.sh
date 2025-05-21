@@ -8,7 +8,7 @@
 #SBATCH --partition=gpu_rocm
 #SBATCH --gres=gpu:mi300x:4
 #SBATCH --account=a_auto_mr_disease
-#SBATCH --qos=sdf
+#SBATCH --qos=gpu
 #SBATCH -o /home/s4670484/Documents/slurm-%j.output
 #SBATCH -e /home/s4670484/Documents/slurm-%j.error
 
