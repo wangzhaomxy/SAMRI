@@ -1,6 +1,6 @@
 import os
 import glob
-# import h5py as h5
+import h5py as h5
 import numpy as np
 import nibabel as nib
 import cv2
