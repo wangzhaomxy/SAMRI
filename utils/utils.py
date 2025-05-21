@@ -15,7 +15,7 @@ TEST_ZERO_PATH = root_path + "Datasets/Zero_shot/"
 MODEL_SAVE_PATH = root_path + "Model_save/"
 DEVICE = "cuda"
 BATCH_SIZE = 512
-NUM_EPOCHS = 60
+NUM_EPOCHS = 100
 JITTER = 10
 
 TRAIN_IMAGE_PATH = [ds + "/" for ds in sorted(glob(EMBEDDING_PATH + "*"))]
