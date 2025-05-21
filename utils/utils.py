@@ -14,7 +14,7 @@ TEST_PATH = root_path + "Datasets/SAMRI_train_test/"
 TEST_ZERO_PATH = root_path + "Datasets/Zero_shot/"
 MODEL_SAVE_PATH = root_path + "Model_save/"
 DEVICE = "cuda"
-BATCH_SIZE = 512
+BATCH_SIZE = 384
 NUM_EPOCHS = 100
 JITTER = 10
 
