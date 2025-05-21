@@ -12,11 +12,11 @@ from glob import glob
 import torch
 
 base_path = "/scratch/project/samri/"
-img_path = base_path + "Datasets_temp/ZIB_OAI"
-save_path = base_path + "Emb_temp"
+img_path = base_path + "Datasets/SAMRI_train_test/"
+save_path = base_path + "Embedding_test/"
 
 folder_names = [fname_from_path(ds) + "/" for ds in sorted(glob(img_path + "/*"))]
-create_folders(save_path + "/", folder_names)
+create_folders(save_path, folder_names)
 
 model_type = 'samri'# Choose one from vit_b, vit_h, samri, and med_sam
 encoder_tpye = ENCODER_TYPE[model_type]
@@ -42,7 +42,7 @@ def save_embedding(img, mask, img_name, save_path):
     
 for fo_name in tqdm(folder_names):
     print(f"Processing the {fo_name} dataset...")
-    img_folder = [img_path + "/" + fo_name + "training/"]
+    img_folder = [img_path + "/" + fo_name + "testing/"]
     dataset = NiiDataset(img_folder, multi_mask= True)
     emb_save_path = save_path + "/" + fo_name
     for data, mask in tqdm(dataset):
