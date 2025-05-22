@@ -31,7 +31,7 @@ if not os.path.exists(model_save_path):
     os.makedirs(model_save_path)
 num_epochs = NUM_EPOCHS
 train_image_path = TRAIN_IMAGE_PATH
-# train_image_path.remove('/scratch/project/samri/Embedding/totalseg_mr/')
+train_image_path.remove('/scratch/project/samri/Embedding/totalseg_mr/')
 save_every = 1
 
 def ddp_setup(rank: int, world_size: int):
@@ -41,7 +41,7 @@ def ddp_setup(rank: int, world_size: int):
     world_size: Total number of processes
     """
     os.environ["MASTER_ADDR"] = "localhost"
-    os.environ["MASTER_PORT"] = "29205"
+    os.environ["MASTER_PORT"] = "29210"
     torch.cuda.set_device(rank)
     init_process_group(backend="nccl", rank=rank, world_size=world_size)
 
