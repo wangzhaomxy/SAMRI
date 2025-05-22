@@ -1,5 +1,5 @@
 from segment_anything import sam_model_registry
-from utils.visual import save_test_record
+from utils.visual import save_test_record, save_test_record_from_emb
 from utils.utils import *
 
 
@@ -45,7 +45,7 @@ for ckpt in ckpt_list:
     sam_model.eval()
     save_path_all = save_path + model_name[:-4]
 
-    save_test_record(file_paths=file_paths,
+    save_test_record_from_emb(file_paths=file_paths,
                      sam_model=sam_model, 
                      save_path=save_path_all, 
                      by_ds=False)
