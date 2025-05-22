@@ -177,7 +177,7 @@ def get_test_record_from_emb_ds(model, test_dataset):
         total_pixels = H * W
         predictor.reset_image()
         predictor.original_size = ori_size
-        predictor.features = emb
+        predictor.features = torch.from_numpy(emb)
         predictor.is_image_set = True
         
         masks = MaskSplit(mask)
