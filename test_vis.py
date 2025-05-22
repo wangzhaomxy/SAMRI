@@ -46,9 +46,7 @@ for ckpt in ckpt_list:
 
     save_test_record_from_emb(file_paths=file_paths,
                      sam_model=sam_model, 
-                     save_path=save_path_all, 
-                     by_ds=False)
-
+                     save_path=save_path_all)
 
 # save_pxl_record(file_paths, save_path)
 # print("Done!")
