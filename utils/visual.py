@@ -72,7 +72,7 @@ def get_test_record_from_ds(model, test_dataset):
     
     for image, mask in tqdm(test_dataset):
         img_fullpath = test_dataset.cur_name
-        mask_fullpath = test_dataset.cur_gt_name
+        mask_fullpath = test_dataset.cur_name
         p_dice, p_hd, p_msd = [], [], []
         b_dice, b_hd, b_msd = [], [], []
         pixel_count, area_percentage = [], []
