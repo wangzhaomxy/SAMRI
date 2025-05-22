@@ -11,8 +11,10 @@ from image_processing.data_processing_code.processing_utile import create_folder
 from glob import glob
 
 base_path = "/scratch/project/samri/"
-img_path = base_path + "Datasets/SAMRI_train_test/"
-save_path = base_path + "Embedding/"
+# img_path = base_path + "Datasets/SAMRI_train_test/"
+img_path = base_path + "Datasets/Zero_shot/"
+# save_path = base_path + "Embedding/"
+save_path = base_path + "Embedding_test/"
 
 folder_names = [fname_from_path(ds) + "/" for ds in sorted(glob(img_path + "/*"))]
 create_folders(save_path, folder_names)
