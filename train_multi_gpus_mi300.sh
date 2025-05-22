@@ -2,7 +2,7 @@
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=1
-#SBATCH --mem=16G
+#SBATCH --mem=64G
 #SBATCH --job-name=SAMRI
 #SBATCH --time=7-00:00:00
 #SBATCH --partition=gpu_rocm
