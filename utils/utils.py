@@ -10,6 +10,7 @@ from torch.nn import functional as F
 root_path = "/scratch/project/samri/"
 ch_root = "/scratch/user/s4670484/Model_dir/"
 EMBEDDING_PATH = root_path + "Embedding/" # The main folder of datasets
+TEST_EMBEDDING_PATH = root_path + "Embedding_test/" # The main folder of datasets
 TEST_PATH = root_path + "Datasets/SAMRI_train_test/"
 TEST_ZERO_PATH = root_path + "Datasets/Zero_shot/"
 MODEL_SAVE_PATH = root_path + "Model_save/"
@@ -22,6 +23,7 @@ TRAIN_IMAGE_PATH = [ds + "/" for ds in sorted(glob(EMBEDDING_PATH + "*"))]
 TEST_IMAGE_PATH = [ds + "/testing/" for ds in sorted(glob(TEST_PATH + "*"))]
 TEST_ZEROSHOT_PATH = [ds + "/testing/" for ds in sorted(glob(TEST_ZERO_PATH + "*"))]
 TEST_IMAGE_PATH_DA = [ds + "/training/" for ds in sorted(glob(TEST_PATH + "*"))]
+TEST_EMB_PATH = [ds + "/" for ds in sorted(glob(TEST_EMBEDDING_PATH + "*"))]
 
 IMAGE_KEYS = "*_img_*"  # The image file names containing letters between *
 MASK_KEYS = "*_seg_*"   # The mask file names containing letters between *
