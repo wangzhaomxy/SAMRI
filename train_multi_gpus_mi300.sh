@@ -1,8 +1,8 @@
 #!/bin/bash --login
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=1
-#SBATCH --mem=64G
+#SBATCH --cpus-per-task=32
+#SBATCH --mem=256G
 #SBATCH --job-name=SAMRI
 #SBATCH --time=7-00:00:00
 #SBATCH --partition=gpu_rocm
@@ -11,10 +11,12 @@
 #SBATCH --qos=gpu
 #SBATCH -o /home/s4670484/Documents/slurm-%j.output
 #SBATCH -e /home/s4670484/Documents/slurm-%j.error
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=zhao.wang1@uq.edu.au
 
 module load anaconda3
 source $EBROOTANACONDA3/etc/profile.d/conda.sh
-conda activate samri-rocm
+conda activate samri-mi300
 
 python train_in_batch_multi_gpu.py
 
