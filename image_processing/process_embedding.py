@@ -9,11 +9,10 @@ from tqdm import tqdm
 from model import SAMRI
 from image_processing.data_processing_code.processing_utile import create_folders, fname_from_path
 from glob import glob
-import torch
 
 base_path = "/scratch/project/samri/"
 img_path = base_path + "Datasets/SAMRI_train_test/"
-save_path = base_path + "Embedding_test/"
+save_path = base_path + "Embedding/"
 
 folder_names = [fname_from_path(ds) + "/" for ds in sorted(glob(img_path + "/*"))]
 create_folders(save_path, folder_names)
@@ -42,7 +41,7 @@ def save_embedding(img, mask, img_name, save_path):
     
 for fo_name in tqdm(folder_names):
     print(f"Processing the {fo_name} dataset...")
-    img_folder = [img_path + "/" + fo_name + "testing/"]
+    img_folder = [img_path + "/" + fo_name + "training/"]
     dataset = NiiDataset(img_folder, multi_mask= True)
     emb_save_path = save_path + "/" + fo_name
     for data, mask in tqdm(dataset):
