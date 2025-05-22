@@ -22,7 +22,8 @@ class NiiDataset(Dataset):
                  multi_mask=False):
         """
         Args:
-            data_root (str): The path of the dataset
+            data_root (list[str]): The path list of the datasets. The path
+                        eliments should be in format of "xxx/xxx/xxx/".
             shuffle (bool): If shuffle the data
             multi_mask (bool): if Ture, return multi-labeld masks; if false, 
                                 return a random mask from masks.
@@ -39,15 +40,6 @@ class NiiDataset(Dataset):
         self.cur_name = ""
         self.cur_gt_name = ""
         self.multi_mask = multi_mask
-
-        # print(f"number of images: {len(self.img_file)}")
-        """
-        Args:
-            data_root (str): The path of the dataset
-            img_file (list): The absolute path of the image files list
-            gt_file (list): The absolute pathe of the ground truth masks list.
-            cur_name: The current image name that the dataset is loading.
-        """
 
     def __len__(self):
         return len(self.img_file)
