@@ -291,7 +291,7 @@ def save_test_record_from_emb(file_paths, sam_model, save_path):
     for file_path in file_paths:
         print("Processing the dataset: ",file_path)
         ds_name = file_path.split("/")[-3]
-        test_dataset = EmbDataset([file_path], multi_mask= True)
+        test_dataset = EmbDataset([file_path])
         ds_record = get_test_record_from_emb_ds(model=sam_model, 
                                                  test_dataset=test_dataset)
         final_record[ds_name] = ds_record
