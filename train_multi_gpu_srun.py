@@ -67,7 +67,6 @@ def main(gpu, world_size, num_epochs, save_every):
             "Number of trainable parameters: ",
             sum(p.numel() for p in samri_model.parameters() if p.requires_grad),
         )
-        print("Number of GPUs: ", world_size)
         print("Batch size: ", batch_size)
 
 
