@@ -55,7 +55,7 @@ def main(gpu, world_size, num_epochs, save_every):
         image_encoder=sam_model.image_encoder,
         mask_decoder=sam_model.mask_decoder,
         prompt_encoder=sam_model.prompt_encoder,
-    ).cuda()
+    ).to(gpu)
     resize_transform = ResizeLongestSide(samri_model.image_encoder.img_size)
     
     if gpu == 0:
@@ -67,6 +67,9 @@ def main(gpu, world_size, num_epochs, save_every):
             "Number of trainable parameters: ",
             sum(p.numel() for p in samri_model.parameters() if p.requires_grad),
         )
+        print("Number of GPUs: ", world_size)
+        print("Batch size: ", batch_size)
+
 
     samri_model = DDP(
                     samri_model,
