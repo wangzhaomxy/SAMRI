@@ -1,6 +1,6 @@
 #!/bin/bash --login
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=1
+#SBATCH --ntasks-per-node=2
 #SBATCH --cpus-per-task=128
 #SBATCH --mem=512G
 #SBATCH --job-name=SAMRI
@@ -18,5 +18,5 @@ module load anaconda3
 source $EBROOTANACONDA3/etc/profile.d/conda.sh
 conda activate samri-mi300
 
-python train_in_batch_multi_gpu.py
+srun python train_in_batch_multi_gpu.py
 
