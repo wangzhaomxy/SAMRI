@@ -101,7 +101,7 @@ def main(gpu, world_size, num_epochs, save_every):
                                sub_set="all",
                                resize_mask=True, 
                                mask_size=256)
-    num_workers = 24
+    num_workers = 12
     train_loader = DataLoader(train_dataset, 
                               batch_size=batch_size, 
                               shuffle=False,
