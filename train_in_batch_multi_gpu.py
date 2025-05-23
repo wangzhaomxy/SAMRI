@@ -139,7 +139,15 @@ def main(gpu, world_size, num_epochs, save_every):
                     ]
 
                 y_pred = samri_model(batch_input, multimask_output=False, train_mode=True, embedding_inputs=True)
+                # observe the model output
+                if torch.isnan(y_pred).any():
+                    print(f"[Rank {gpu}] NaN in model output at step {step}")
+                    continue
                 loss = dice_focal_loss(y_pred, masks.to(gpu))
+                # observe the loss
+                if torch.isnan(y_pred).any():
+                    print(f"[Rank {gpu}] NaN in model output at step {step}")
+                    continue
                 loss.backward()
                 optimizer.step()
 
