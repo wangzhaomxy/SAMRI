@@ -155,7 +155,8 @@ class EmbDataset(Dataset):
                  shuffle=False,
                  random_mask=False,
                  resize_mask=False,
-                 mask_size=256):
+                 mask_size=256,
+                 with_name=False):
         """
         Args:
             data_root (list[str]): The path list of the datasets. The path
@@ -164,7 +165,9 @@ class EmbDataset(Dataset):
             random_mask(bool): If True, return a random mask from the multi masks.
             resize_mask(bool): If True, resize the mask into the mask size.
             mask_size(int): The target size of the mask, HW=(256, 256). Default is 256.
-
+            with_name (bool): if True, return the image name and mask name in 
+                                the format of (embedding, mask, original_size, 
+                                emb_name).
         """
         super().__init__()
         self.data_root = data_root
@@ -178,6 +181,7 @@ class EmbDataset(Dataset):
         self.random_mask = random_mask
         self.resize_mask = resize_mask
         self.mask_size = mask_size
+        self.with_name = with_name
 
         """
         Vars:
@@ -217,8 +221,10 @@ class EmbDataset(Dataset):
             mask = mask.squeeze(0).numpy()
             if not mask.any():
                 raise ValueError(f"After resize, The following file contains the empty mask: {self.get_name()}")
-            
-        return (npz_data["img"], mask, tuple(npz_data["ori_size"]))
+        if self.with_name:
+            return (npz_data["img"], mask, tuple(npz_data["ori_size"]), self.cur_name)
+        else:
+            return (npz_data["img"], mask, tuple(npz_data["ori_size"]))
 
     def get_name(self):
         """
