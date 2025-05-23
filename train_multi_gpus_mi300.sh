@@ -1,7 +1,7 @@
 #!/bin/bash --login
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=8
-#SBATCH --cpus-per-task=64
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=96
 #SBATCH --mem=512G
 #SBATCH --job-name=SAMRI
 #SBATCH --time=7-00:00:00
@@ -18,5 +18,6 @@ module load anaconda3
 source $EBROOTANACONDA3/etc/profile.d/conda.sh
 conda activate samri-mi300
 
-srun python train_in_batch_multi_gpu.py
+export MASTER_PORT=$((25000 + RANDOM % 1000))  # Pick a port between 25000 ~ 25999
+python train_in_batch_multi_gpu.py
 

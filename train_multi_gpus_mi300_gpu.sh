@@ -1,6 +1,6 @@
 #!/bin/bash --login
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=2
+#SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=64
 #SBATCH --mem=256G
 #SBATCH --job-name=SAMRI
@@ -19,5 +19,5 @@ source $EBROOTANACONDA3/etc/profile.d/conda.sh
 conda activate samri-mi300
 
 export MASTER_PORT=$((26000 + RANDOM % 1000))  # Pick a port between 26000 ~ 26999
-srun python train_in_batch_multi_gpu.py
+python train_in_batch_multi_gpu.py
 
