@@ -101,10 +101,11 @@ def main(gpu, world_size, num_epochs, save_every):
                                sub_set="all",
                                resize_mask=True, 
                                mask_size=256)
-    
+    num_workers = 24
     train_loader = DataLoader(train_dataset, 
                               batch_size=batch_size, 
-                              shuffle=False, 
+                              shuffle=False,
+                              num_workers=num_workers,
                               sampler=DistributedSampler(train_dataset))
     
     prompts = ["bbox"] #  ["point", "bbox"]
