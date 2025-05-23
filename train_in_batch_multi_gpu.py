@@ -93,14 +93,14 @@ def main(gpu, world_size, num_epochs, save_every):
     
     #train
     losses = []
-    # train_dataset = EmbDataset(train_image_path, 
-    #                            resize_mask=True, 
-    #                            mask_size=256)
-    train_image_path = "/scratch/project/samri/train_list.pkl"
-    train_dataset = BalancedEmbDataset(train_image_path, 
-                               sub_set="all",
+    train_dataset = EmbDataset(train_image_path, 
                                resize_mask=True, 
                                mask_size=256)
+    # train_image_path = "/scratch/project/samri/train_list.pkl"
+    # train_dataset = BalancedEmbDataset(train_image_path, 
+    #                            sub_set="all",
+    #                            resize_mask=True, 
+    #                            mask_size=256)
     num_workers = 8
     train_loader = DataLoader(train_dataset, 
                               batch_size=batch_size, 

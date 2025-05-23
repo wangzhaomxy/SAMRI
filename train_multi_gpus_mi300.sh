@@ -18,7 +18,11 @@ module load anaconda3
 source $EBROOTANACONDA3/etc/profile.d/conda.sh
 conda activate samri-mi300
 
-export MASTER_PORT=$((25000 + RANDOM % 1000))  # Pick a port between 25000 ~ 25999
+# Dynamically assign port from job ID to avoid collisions
+export MASTER_ADDR=localhost
+export MASTER_PORT=$((26000 + RANDOM % 1000))  # Pick a port between 26000 ~ 26999
+
 amd-smi monitor
 python train_in_batch_multi_gpu.py
+# srun python train_multi_gpu_srun.py
 
