@@ -166,9 +166,12 @@ def get_test_record_from_emb_ds(model, test_dataset):
     predictor.input_size = (1024, 1024)
     final_record = []
     
-    for emb, mask, ori_size in tqdm(test_dataset):
-        img_fullpath = test_dataset.cur_name
-        mask_fullpath = test_dataset.cur_name
+    for emb, mask, ori_size, file_name in tqdm(test_dataset):
+        emb = emb.squeeze(0).detach().cpu().numpy()
+        mask = mask.squeeze(0).detach().cpu().numpy()
+        ori_size = (ori_size[0].detach().cpu().numpy()[0], ori_size[1].detach().cpu().numpy()[0])
+        img_fullpath = file_name
+        mask_fullpath = file_name
         p_dice, p_hd, p_msd = [], [], []
         b_dice, b_hd, b_msd = [], [], []
         pixel_count, area_percentage = [], []
@@ -273,7 +276,7 @@ def save_test_record(file_paths, sam_model, save_path, by_ds=False):
                                   multi_mask= True, 
                                   with_name=True)
         test_loader = DataLoader(test_dataset, 
-                        num_workers=12)
+                        num_workers=24)
         ds_record = get_test_record_from_ds(model=sam_model, 
                                                  test_dataset=test_loader)
         final_record[ds_name] = ds_record
@@ -296,10 +299,12 @@ def save_test_record_from_emb(file_paths, sam_model, save_path):
     final_record = {}
     for file_path in file_paths:
         print("Processing the dataset: ",file_path)
-        ds_name = file_path.split("/")[-3]
-        test_dataset = EmbDataset([file_path])
+        ds_name = file_path.split("/")[-2]
+        test_dataset = EmbDataset([file_path], with_name=True)
+        test_loader = DataLoader(test_dataset, 
+                        num_workers=24)
         ds_record = get_test_record_from_emb_ds(model=sam_model, 
-                                                 test_dataset=test_dataset)
+                                                 test_dataset=test_loader)
         final_record[ds_name] = ds_record
         
     with open(save_path, "wb") as f:
