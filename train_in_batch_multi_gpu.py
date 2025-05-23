@@ -112,6 +112,7 @@ def main(gpu, world_size, num_epochs, save_every):
     for epoch in range(start_epoch, num_epochs):
         # training part
         samri_model.train()
+        train_loader.sampler.set_epoch(epoch)
         epoch_loss = 0
         for prompt in prompts:
             for step, (embedding, masks, ori_size) in enumerate(tqdm(train_loader)):

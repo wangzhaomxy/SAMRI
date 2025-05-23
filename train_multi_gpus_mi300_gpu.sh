@@ -1,6 +1,6 @@
 #!/bin/bash --login
 #SBATCH --nodes=1
-#SBATCH --ntasks-per-node=2
+#SBATCH --ntasks-per-node=1
 #SBATCH --cpus-per-task=64
 #SBATCH --mem=1T
 #SBATCH --job-name=SAMRI

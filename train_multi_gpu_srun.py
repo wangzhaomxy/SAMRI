@@ -110,6 +110,7 @@ def main(gpu, world_size, num_epochs, save_every):
     prompts = ["bbox"] #  ["point", "bbox"]
     for epoch in range(start_epoch, num_epochs):
         # training part
+        train_loader.sampler.set_epoch(epoch)
         samri_model.train()
         epoch_loss = 0
         for prompt in prompts:
