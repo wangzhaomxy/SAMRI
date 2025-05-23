@@ -26,8 +26,8 @@ from torch.distributed import init_process_group, destroy_process_group
 model_type = "samri"
 encoder_type = ENCODER_TYPE[model_type] # choose one from vit_b and vit_h.
 batch_size = BATCH_SIZE
-# model_save_path = MODEL_SAVE_PATH + "box/"
-model_save_path = MODEL_SAVE_PATH + "fullds_balance/"
+model_save_path = MODEL_SAVE_PATH + "box/"
+# model_save_path = MODEL_SAVE_PATH + "fullds_balance/"
 if not os.path.exists(model_save_path):
     os.makedirs(model_save_path)
 num_epochs = NUM_EPOCHS
@@ -93,14 +93,14 @@ def main(gpu, world_size, num_epochs, save_every):
     
     #train
     losses = []
-    # train_dataset = EmbDataset(train_image_path, 
-    #                            resize_mask=True, 
-    #                            mask_size=256)
-    train_image_path = "/scratch/project/samri/train_list.pkl"
-    train_dataset = BalancedEmbDataset(train_image_path, 
-                               sub_set="all",
+    train_dataset = EmbDataset(train_image_path, 
                                resize_mask=True, 
                                mask_size=256)
+    # train_image_path = "/scratch/project/samri/train_list.pkl"
+    # train_dataset = BalancedEmbDataset(train_image_path, 
+    #                            sub_set="all",
+    #                            resize_mask=True, 
+    #                            mask_size=256)
     num_workers = 8
     train_loader = DataLoader(train_dataset, 
                               batch_size=batch_size, 
@@ -148,6 +148,7 @@ def main(gpu, world_size, num_epochs, save_every):
                 if torch.isnan(y_pred).any():
                     print(f"[Rank {gpu}] NaN in model output at step {step}")
                     continue
+                
                 loss.backward()
                 optimizer.step()
 

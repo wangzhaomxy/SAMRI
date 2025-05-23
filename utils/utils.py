@@ -17,7 +17,7 @@ MODEL_SAVE_PATH = root_path + "Model_save/"
 DEVICE = "cuda"
 # BATCH_SIZE = 512
 BATCH_SIZE = 1280
-NUM_EPOCHS = 100
+NUM_EPOCHS = 300
 JITTER = 10
 
 TRAIN_IMAGE_PATH = [ds + "/" for ds in sorted(glob(EMBEDDING_PATH + "*"))]
