@@ -24,5 +24,4 @@ export MASTER_PORT=$((26000 + RANDOM % 1000))  # Pick a port between 26000 ~ 269
 
 amd-smi monitor
 python train_in_batch_multi_gpu.py
-# srun python train_multi_gpu_srun.py
 
