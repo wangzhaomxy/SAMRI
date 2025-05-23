@@ -1,7 +1,7 @@
 from segment_anything import sam_model_registry
 from utils.visual import save_test_record, save_test_record_from_emb
 from utils.utils import *
-
+import time
 
 file_paths = TEST_EMB_PATH
 # file_paths = TEST_IMAGE_PATH
@@ -32,6 +32,7 @@ ckpt_list = ["/scratch/user/s4670484/Model_dir/sam_vit_b_01ec64.pth"]
 # ckpt_list = ["/scratch/user/s4670484/Model_dir/samri_vitb.pth"]
 
 for ckpt in ckpt_list:
+    start = time.time()
     model_type = 'vit_b'# Choose one from vit_b, vit_h, samri, and med_sam
     encoder_tpye = ENCODER_TYPE[model_type] 
     checkpoint = ckpt
@@ -48,6 +49,7 @@ for ckpt in ckpt_list:
     save_test_record_from_emb(file_paths=file_paths,
                      sam_model=sam_model, 
                      save_path=save_path_all)
-
+    end = time.time()
+    print(f"Elapsed time: {end - start:.2f} seconds")
 # save_pxl_record(file_paths, save_path)
 # print("Done!")
