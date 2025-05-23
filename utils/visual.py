@@ -7,6 +7,8 @@ reference: https://github.com/facebookresearch/segment-anything/blob/main/notebo
 
 import numpy as np
 import matplotlib.pyplot as plt
+import torch
+from torch.utils.data import DataLoader
 from tqdm import tqdm
 from segment_anything import SamPredictor
 from utils.utils import *
@@ -71,6 +73,8 @@ def get_test_record_from_ds(model, test_dataset):
     final_record = []
     
     for image, mask in tqdm(test_dataset):
+        image = image.squeeze(0).detach().cpu().numpy()
+        mask = mask.squeeze(0).detach().cpu().numpy()
         img_fullpath = test_dataset.cur_name
         mask_fullpath = test_dataset.cur_gt_name
         p_dice, p_hd, p_msd = [], [], []
@@ -268,8 +272,10 @@ def save_test_record(file_paths, sam_model, save_path, by_ds=False):
         print("Processing the dataset: ",file_path)
         ds_name = file_path.split("/")[-3]
         test_dataset = NiiDataset([file_path], multi_mask= True)
+        test_loader = DataLoader(test_dataset, 
+                        num_workers=12)
         ds_record = get_test_record_from_ds(model=sam_model, 
-                                                 test_dataset=test_dataset)
+                                                 test_dataset=test_loader)
         final_record[ds_name] = ds_record
         if by_ds:
             make_dir(save_path + "/")
