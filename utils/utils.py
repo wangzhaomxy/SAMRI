@@ -16,7 +16,7 @@ TEST_ZERO_PATH = root_path + "Datasets/Zero_shot/"
 MODEL_SAVE_PATH = root_path + "Model_save/"
 DEVICE = "cuda"
 # BATCH_SIZE = 512
-BATCH_SIZE = 1280
+BATCH_SIZE = 1024
 NUM_EPOCHS = 300
 JITTER = 10
 
