@@ -19,7 +19,8 @@ class NiiDataset(Dataset):
     def __init__(self, 
                  data_root, 
                  shuffle=False, 
-                 multi_mask=False):
+                 multi_mask=False,
+                 with_name=False):
         """
         Args:
             data_root (list[str]): The path list of the datasets. The path
@@ -27,6 +28,8 @@ class NiiDataset(Dataset):
             shuffle (bool): If shuffle the data
             multi_mask (bool): if Ture, return multi-labeld masks; if false, 
                                 return a random mask from masks.
+            with_name (bool): if True, return the image name and mask name in 
+                                the format of (image, mask, image_name, mask_name).
         """
         super().__init__()
         self.data_root = data_root
@@ -40,6 +43,7 @@ class NiiDataset(Dataset):
         self.cur_name = ""
         self.cur_gt_name = ""
         self.multi_mask = multi_mask
+        self.with_name = with_name
 
     def __len__(self):
         return len(self.img_file)
@@ -70,9 +74,15 @@ class NiiDataset(Dataset):
 
         # shape of nii_img is (256, 256, 3), nii_seg is (1, 256, 256)
         if self.multi_mask:
-            return (nii_img, nii_seg)
+            if self.with_name:
+                return (nii_img, nii_seg, self.cur_name, self.cur_gt_name)
+            else:
+                return (nii_img, nii_seg)
         else:
-            return (nii_img, nii_seg==np.unique(nii_seg)[random.choice(np.unique(nii_seg).nonzero()[0])])
+            if self.with_name:
+                return (nii_img, nii_seg==np.unique(nii_seg)[random.choice(np.unique(nii_seg).nonzero()[0])], self.cur_name, self.cur_gt_name)
+            else:
+                return (nii_img, nii_seg==np.unique(nii_seg)[random.choice(np.unique(nii_seg).nonzero()[0])])
         
     def _shuffle(self, data1, data2):
         """

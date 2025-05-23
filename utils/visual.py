@@ -72,11 +72,9 @@ def get_test_record_from_ds(model, test_dataset):
     predictor = SamPredictor(model)
     final_record = []
     
-    for image, mask in tqdm(test_dataset):
+    for image, mask, img_fullpath, mask_fullpath in tqdm(test_dataset):
         image = image.squeeze(0).detach().cpu().numpy()
         mask = mask.squeeze(0).detach().cpu().numpy()
-        img_fullpath = test_dataset.cur_name
-        mask_fullpath = test_dataset.cur_gt_name
         p_dice, p_hd, p_msd = [], [], []
         b_dice, b_hd, b_msd = [], [], []
         pixel_count, area_percentage = [], []
@@ -271,7 +269,9 @@ def save_test_record(file_paths, sam_model, save_path, by_ds=False):
     for file_path in file_paths:
         print("Processing the dataset: ",file_path)
         ds_name = file_path.split("/")[-3]
-        test_dataset = NiiDataset([file_path], multi_mask= True)
+        test_dataset = NiiDataset([file_path], 
+                                  multi_mask= True, 
+                                  with_name=True)
         test_loader = DataLoader(test_dataset, 
                         num_workers=12)
         ds_record = get_test_record_from_ds(model=sam_model, 
