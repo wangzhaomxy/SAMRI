@@ -6,9 +6,9 @@
 #SBATCH --job-name=SAMRI
 #SBATCH --time=7-00:00:00
 #SBATCH --partition=gpu_rocm
-#SBATCH --gres=gpu:mi300x:2
+#SBATCH --gres=gpu:mi300x:8
 #SBATCH --account=a_auto_mr_disease
-#SBATCH --qos=gpu
+#SBATCH --qos=sdf
 #SBATCH -o /home/s4670484/Documents/slurm-%j.output
 #SBATCH -e /home/s4670484/Documents/slurm-%j.error
 #SBATCH --mail-type=ALL
