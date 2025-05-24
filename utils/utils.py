@@ -7,24 +7,26 @@ from glob import glob
 import os
 from torch.nn import functional as F
 
-root_path = "/scratch/project/samri/"
-ch_root = "/scratch/user/s4670484/Model_dir/"
-EMBEDDING_PATH = root_path + "Embedding/" # The main folder of datasets
-TEST_EMBEDDING_PATH = root_path + "Embedding_test/" # The main folder of datasets
-TEST_PATH = root_path + "Datasets/SAMRI_train_test/"
-TEST_ZERO_PATH = root_path + "Datasets/Zero_shot/"
-MODEL_SAVE_PATH = root_path + "Model_save/"
-DEVICE = "cuda"
+root_path = "/scratch/project/samri/"   # The root path of the project
+ch_root = "/scratch/user/s4670484/Model_dir/" # The root path of the checkpoint files
+EMBEDDING_PATH = root_path + "Embedding/" # The main folder of datasets embeddings
+TEST_EMBEDDING_PATH = root_path + "Embedding_test/" # The main folder of test datasets embeddings
+TEST_PATH = root_path + "Datasets/SAMRI_train_test/" # The main folder of test datasets
+TEST_ZERO_PATH = root_path + "Datasets/Zero_shot/" # The main folder of zero-shot test datasets
+MODEL_SAVE_PATH = root_path + "Model_save/" # The main folder of model save
+VAL_EMBEDDING_PATH = root_path + "Embedding_val/" # The main folder of datasets
+DEVICE = "cuda" # The device to use, can be "cuda", "cpu" or "mps" for Apple Silicon
 # BATCH_SIZE = 512
-BATCH_SIZE = 1024
-NUM_EPOCHS = 200
-JITTER = 10
+BATCH_SIZE = 1024 # The batch size for training, change it according to your GPU memory
+NUM_EPOCHS = 200 # The number of epochs for training
+JITTER = 10 # The jitter value for box prompt data augmentation, change it according to your needs
 
 TRAIN_IMAGE_PATH = [ds + "/" for ds in sorted(glob(EMBEDDING_PATH + "*"))]
 TEST_IMAGE_PATH = [ds + "/testing/" for ds in sorted(glob(TEST_PATH + "*"))]
 TEST_ZEROSHOT_PATH = [ds + "/testing/" for ds in sorted(glob(TEST_ZERO_PATH + "*"))]
 TEST_IMAGE_PATH_DA = [ds + "/training/" for ds in sorted(glob(TEST_PATH + "*"))]
 TEST_EMB_PATH = [ds + "/" for ds in sorted(glob(TEST_EMBEDDING_PATH + "*"))]
+VAL_EMBEDDING_PATH = [ds + "/" for ds in sorted(glob(VAL_EMBEDDING_PATH + "*"))]
 
 IMAGE_KEYS = "*_img_*"  # The image file names containing letters between *
 MASK_KEYS = "*_seg_*"   # The mask file names containing letters between *
