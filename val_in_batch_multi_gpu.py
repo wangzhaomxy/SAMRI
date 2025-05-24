@@ -30,7 +30,6 @@ model_type = "samri"
 encoder_type = ENCODER_TYPE[model_type] # choose one from vit_b and vit_h.
 batch_size = BATCH_SIZE
 model_path = MODEL_SAVE_PATH + "sam_vitb/"
-num_epochs = NUM_EPOCHS
 val_emb_path = VAL_EMBEDDING_PATH
 model_files = [f for f in os.listdir(model_path) if f.startswith("samri_vitb_box_")]
 
@@ -56,7 +55,7 @@ def ddp_setup(rank: int, world_size: int):
     torch.cuda.set_device(rank)
     init_process_group(backend="nccl", rank=rank, world_size=world_size)
 
-def main(gpu, world_size, num_epochs, save_every):
+def main(gpu, world_size):
     ddp_setup(rank=gpu, world_size=world_size)
 
     if gpu == 0:
@@ -139,5 +138,5 @@ def main(gpu, world_size, num_epochs, save_every):
 
 if __name__ == "__main__":
     world_size = torch.cuda.device_count()
-    mp.spawn(main, args=(world_size, num_epochs), nprocs=world_size)
+    mp.spawn(main, args=(world_size), nprocs=world_size)
         
