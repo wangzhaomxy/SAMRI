@@ -65,7 +65,7 @@ def main(gpu, world_size):
     val_dataset = EmbDataset(val_emb_path, 
                                resize_mask=True, 
                                mask_size=256)
-    num_workers = 24
+    num_workers = 8
     val_loader = DataLoader(val_dataset, 
                               batch_size=batch_size, 
                               shuffle=False,
