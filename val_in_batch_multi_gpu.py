@@ -74,7 +74,6 @@ def main(gpu, world_size):
  
     dice_loss = DiceLoss(sigmoid=True, 
                                      squared_pred=True,
-                                     batch= True, 
                                      reduction="mean")    
 
     # Validate the model files
