@@ -11,10 +11,10 @@ from image_processing.data_processing_code.processing_utile import create_folder
 from glob import glob
 
 base_path = "/scratch/project/samri/"
-# img_path = base_path + "Datasets/SAMRI_train_test/"
-img_path = base_path + "Datasets/Zero_shot/"
+img_path = base_path + "Datasets/SAMRI_train_test/"
+# img_path = base_path + "Datasets/Zero_shot/"
 # save_path = base_path + "Embedding/"
-save_path = base_path + "Embedding_test/"
+save_path = base_path + "Embedding_val/"
 
 folder_names = [fname_from_path(ds) + "/" for ds in sorted(glob(img_path + "/*"))]
 create_folders(save_path, folder_names)
@@ -43,7 +43,7 @@ def save_embedding(img, mask, img_name, save_path):
     
 for fo_name in tqdm(folder_names):
     print(f"Processing the {fo_name} dataset...")
-    img_folder = [img_path + "/" + fo_name + "training/"]
+    img_folder = [img_path + "/" + fo_name + "validation/"]
     dataset = NiiDataset(img_folder, multi_mask= True)
     emb_save_path = save_path + "/" + fo_name
     for data, mask in tqdm(dataset):
