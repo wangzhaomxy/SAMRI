@@ -1,9 +1,8 @@
 from segment_anything import sam_model_registry
-from utils.visual import save_test_record, save_test_record_from_emb
+from utils.visual import save_test_record
 from utils.utils import *
 import time
 
-# file_paths = TEST_EMB_PATH
 file_paths = TEST_IMAGE_PATH + TEST_ZEROSHOT_PATH
 ckpt_root_path = "/scratch/project/samri/Model_save/"
 # model_folder = "box/"
