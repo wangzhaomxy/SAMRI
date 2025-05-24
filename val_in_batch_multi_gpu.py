@@ -130,7 +130,7 @@ def main(gpu, world_size):
         
         result_path = join(model_path, "validation_results")
         os.makedirs(result_path, exist_ok=True)
-        df.to_csv(result_path)
+        df.to_csv(join(result_path, "dice_loss_results.csv"))
         print(f"Validation results saved to {result_path}")
         
     destroy_process_group()
