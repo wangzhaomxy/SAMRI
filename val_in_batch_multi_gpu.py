@@ -112,7 +112,7 @@ def main(gpu, world_size):
                     for emb, mask, size in zip(embeddings, masks, ori_size)
                 ]
 
-                preds = samri_model(batch_input, multimask_output=False, train_mode=False, embedding_inputs=True)
+                preds = samri_model(batch_input, multimask_output=False, train_mode=True, embedding_inputs=True)
 
                 loss = dice_loss(preds.cpu().numpy(), masks.cpu().numpy())
                 loss_list.append(loss)
