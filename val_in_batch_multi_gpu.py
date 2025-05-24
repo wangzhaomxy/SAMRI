@@ -114,7 +114,7 @@ def main(gpu, world_size):
 
                 preds = samri_model(batch_input, multimask_output=False, train_mode=True, embedding_inputs=True)
 
-                loss = dice_loss(preds.cpu().numpy(), masks.cpu().numpy())
+                loss = dice_loss(preds.cpu(), masks.cpu())
                 loss_list.append(loss)
         avg_loss = np.mean(loss_list)
         print(f"Epoch {epoch}: Mean Loss = {avg_loss:.4f}")
