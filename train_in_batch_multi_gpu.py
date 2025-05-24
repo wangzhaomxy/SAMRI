@@ -26,7 +26,7 @@ from torch.distributed import init_process_group, destroy_process_group
 model_type = "samri"
 encoder_type = ENCODER_TYPE[model_type] # choose one from vit_b and vit_h.
 batch_size = BATCH_SIZE
-model_save_path = MODEL_SAVE_PATH + "med/"
+model_save_path = MODEL_SAVE_PATH + "fullds_balance_up/"
 # model_save_path = MODEL_SAVE_PATH + "fullds_balance/"
 if not os.path.exists(model_save_path):
     os.makedirs(model_save_path)
@@ -100,7 +100,7 @@ def main(gpu, world_size, num_epochs, save_every):
     #                            mask_size=256)
     train_image_path = "/scratch/project/samri/train_list.pkl"
     train_dataset = BalancedEmbDataset(train_image_path, 
-                               sub_set="all",
+                               sub_set="60_up",
                                resize_mask=True, 
                                mask_size=256)
     num_workers = 8
