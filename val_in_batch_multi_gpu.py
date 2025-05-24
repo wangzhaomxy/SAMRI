@@ -71,7 +71,7 @@ def main(gpu, world_size):
                               shuffle=False,
                               num_workers=num_workers,
                               sampler=DistributedSampler(val_dataset))
-    resize_transform = ResizeLongestSide(samri_model.image_encoder.img_size)    
+ 
     dice_loss = DiceLoss(sigmoid=True, 
                                      squared_pred=True,
                                      batch= True, 
@@ -90,6 +90,7 @@ def main(gpu, world_size):
             mask_decoder=sam_model.mask_decoder,
             prompt_encoder=sam_model.prompt_encoder,
         ).to(gpu)
+        resize_transform = ResizeLongestSide(samri_model.image_encoder.img_size)   
         samri_model = DDP(
                         samri_model,
                         device_ids=[gpu],
