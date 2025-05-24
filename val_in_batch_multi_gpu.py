@@ -81,8 +81,8 @@ def main(gpu, world_size):
     losses = []
     for model_file in model_files:
         epoch = get_epoch_num(model_file)
-        print(f"Validating model from epoch {epoch}...")
-
+        if gpu == 0:
+            print(f"Validating model: {model_file} (Epoch {epoch})")
         # Load model
         sam_model = sam_model_registry[encoder_type](model_path + model_file)
         samri_model = SAMRI(
