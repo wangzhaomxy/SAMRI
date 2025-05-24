@@ -88,7 +88,6 @@ def main(gpu, world_size, num_epochs, save_every):
     #                                                        eta_min=1e-6)
     dice_focal_loss = DiceFocalLoss(sigmoid=True, 
                                      squared_pred=True,
-                                     batch= True, 
                                      reduction="mean",
                                      lambda_dice=1,
                                      lambda_focal=10)
