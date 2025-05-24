@@ -84,7 +84,7 @@ def main(gpu, world_size):
         print(f"Validating model from epoch {epoch}...")
 
         # Load model
-        sam_model = sam_model_registry[encoder_type](model_file)
+        sam_model = sam_model_registry[encoder_type](model_path + model_file)
         samri_model = SAMRI(
             image_encoder=sam_model.image_encoder,
             mask_decoder=sam_model.mask_decoder,
