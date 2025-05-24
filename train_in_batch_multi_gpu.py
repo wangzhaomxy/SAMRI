@@ -69,6 +69,7 @@ def main(gpu, world_size, num_epochs, save_every):
         )
         print("Number of GPUs: ", world_size)
         print("Batch size: ", batch_size)
+        print("The model will be saved to: ", model_save_path)
 
 
     samri_model = DDP(
