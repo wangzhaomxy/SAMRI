@@ -106,10 +106,7 @@ def main(gpu, world_size):
                     {
                         'image': emb.squeeze(),
                         'boxes': resize_transform.apply_boxes_torch(
-                            torch.as_tensor(np.array(gen_bboxes(mask.squeeze(0).numpy(), 
-                                                        jitter=0), device=gpu)),
-                                                        original_size=(256, 256)
-                        ),
+                            torch.as_tensor(np.array(gen_bboxes(mask.squeeze(0).numpy(),jitter=0)), device=gpu),original_size=(256, 256)),
                         'original_size': size,
                     }
                     for emb, mask, size in zip(embeddings, masks, ori_size)
