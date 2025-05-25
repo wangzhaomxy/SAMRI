@@ -64,7 +64,7 @@ def main():
                 ori_size = [(ori_size[0][i].item(), ori_size[1][i].item()) for i in range(len(ori_size[0]))]
                 batch_input = [
                     {
-                        'image': emb.squeeze(),
+                        'image': emb.squeeze().to(device),
                         'boxes': resize_transform.apply_boxes_torch(
                             torch.as_tensor(np.array(gen_bboxes(mask.squeeze(0).numpy(), jitter=0)), device=device),
                             original_size=(256, 256)),
@@ -73,8 +73,8 @@ def main():
                     for emb, mask, size in zip(embeddings, masks, ori_size)
                 ]
 
-                preds = samri_model(batch_input, multimask_output=False, train_mode=False, embedding_inputs=True)
-                loss = dice_loss(preds.cpu(), masks.cpu())
+                preds = samri_model(batch_input, multimask_output=False, train_mode=True, embedding_inputs=True)
+                loss = dice_loss(preds, masks.to(device))
                 loss_list.append(loss.item())
 
         avg_loss = np.mean(loss_list)
