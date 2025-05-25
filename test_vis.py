@@ -5,8 +5,8 @@ import time
 
 file_paths = TEST_IMAGE_PATH + TEST_ZEROSHOT_PATH
 ckpt_root_path = "/scratch/project/samri/Model_save/"
-# model_folder = "box/"
-model_folder = "fullds_balance/"
+model_folder = "box_new_loss/"
+# model_folder = "fullds_balance/"
 save_path = "/scratch/project/samri/Eval_results/" + model_folder
 ckpt_list = [
              ckpt_root_path + model_folder + "samri_vitb_box_60.pth",
@@ -15,11 +15,11 @@ ckpt_list = [
              ckpt_root_path + model_folder + "samri_vitb_box_30.pth",
              ckpt_root_path + model_folder + "samri_vitb_box_20.pth",
              ckpt_root_path + model_folder + "samri_vitb_box_10.pth",
-             ckpt_root_path + model_folder + "samri_vitb_box_5.pth",
-             ckpt_root_path + model_folder + "samri_vitb_box_4.pth",
-             ckpt_root_path + model_folder + "samri_vitb_box_3.pth",
-             ckpt_root_path + model_folder + "samri_vitb_box_2.pth",
-             ckpt_root_path + model_folder + "samri_vitb_box_1.pth",
+            #  ckpt_root_path + model_folder + "samri_vitb_box_5.pth",
+            #  ckpt_root_path + model_folder + "samri_vitb_box_4.pth",
+            #  ckpt_root_path + model_folder + "samri_vitb_box_3.pth",
+            #  ckpt_root_path + model_folder + "samri_vitb_box_2.pth",
+            #  ckpt_root_path + model_folder + "samri_vitb_box_1.pth",
             #  ckpt_root_path + model_folder + "samri_vitb_box_11.pth",
             #  ckpt_root_path + model_folder + "samri_vitb_box_23.pth",
             #  ckpt_root_path + model_folder + "samri_vitb_box_24.pth",
