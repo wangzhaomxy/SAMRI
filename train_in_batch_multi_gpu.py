@@ -27,7 +27,7 @@ model_type = "samri"
 encoder_type = ENCODER_TYPE[model_type] # choose one from vit_b and vit_h.
 batch_size = BATCH_SIZE
 # model_save_path = MODEL_SAVE_PATH + "box_new_loss/"
-model_save_path = MODEL_SAVE_PATH + "fullds_balance_up/"
+model_save_path = MODEL_SAVE_PATH + "fullds_balance_up_new_loss/"
 if not os.path.exists(model_save_path):
     os.makedirs(model_save_path)
 num_epochs = NUM_EPOCHS
