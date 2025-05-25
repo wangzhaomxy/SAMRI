@@ -29,7 +29,7 @@ from torch.distributed import init_process_group, destroy_process_group
 model_type = "samri"
 encoder_type = ENCODER_TYPE[model_type] # choose one from vit_b and vit_h.
 batch_size = BATCH_SIZE
-model_path = MODEL_SAVE_PATH + "sam_vitb/"
+model_path = MODEL_SAVE_PATH + "box_new_loss/"
 val_emb_path = VAL_EMBEDDING_PATH
 model_files = [f for f in os.listdir(model_path) if f.startswith("samri_vitb_box_")]
 
