@@ -35,6 +35,7 @@ def get_epoch_num(filename):
 def main():
     print("Device:", torch.cuda.get_device_name(0))
     print("Batch size:", batch_size)
+    print("Model path:", model_path)
 
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
