@@ -16,8 +16,9 @@ TEST_ZERO_PATH = root_path + "Datasets/Zero_shot/" # The main folder of zero-sho
 MODEL_SAVE_PATH = root_path + "Model_save/" # The main folder of model save
 VAL_EMBEDDING_PATH = root_path + "Embedding_val/" # The main folder of datasets
 DEVICE = "cuda" # The device to use, can be "cuda", "cpu" or "mps" for Apple Silicon
-# BATCH_SIZE = 512
-BATCH_SIZE = 1024 # The batch size for training, change it according to your GPU memory
+BATCH_SIZE = 256 # The batch size for training. For L40 46GB GPU, 256 is recommended.
+# BATCH_SIZE = 512 # The batch size for training. For H100 80GB GPU, 512 is recommended.
+# BATCH_SIZE = 1024 # The batch size for training. For Mi300x 192GB GPU, 1024 is recommended.
 NUM_EPOCHS = 50 # The number of epochs for training
 JITTER = 10 # The jitter value for box prompt data augmentation, change it according to your needs
 
