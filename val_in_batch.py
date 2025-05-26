@@ -22,7 +22,7 @@ from segment_anything.utils.transforms import ResizeLongestSide
 model_type = "samri"
 encoder_type = ENCODER_TYPE[model_type]  # choose one from vit_b and vit_h.
 batch_size = BATCH_SIZE
-model_path = MODEL_SAVE_PATH + "fullds_balance/"
+model_path = MODEL_SAVE_PATH + "fullds_balance_up/"
 val_emb_path = VAL_EMBEDDING_PATH
 model_files = sorted([f for f in os.listdir(model_path) if f.startswith("samri_vitb_box_")])
 
