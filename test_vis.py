@@ -5,7 +5,7 @@ import time
 
 file_paths = TEST_IMAGE_PATH + TEST_ZEROSHOT_PATH
 ckpt_root_path = "/scratch/project/samri/Model_save/"
-model_folder = "med_new_loss/"
+model_folder = "box_new_loss/"
 # model_folder = "fullds_balance_up_new_loss/"
 save_path = "/scratch/project/samri/Eval_results/" + model_folder
 ckpt_list = [
