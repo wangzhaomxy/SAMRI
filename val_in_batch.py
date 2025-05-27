@@ -106,6 +106,9 @@ def main():
         losses.append((epoch, avg_loss))
 
     df = pd.DataFrame(losses, columns=["Epoch", "DiceScore"])
+    if os.path.exists(result_save_path):
+        df0 = pd.read_csv(result_save_path)
+        df = pd.concat([df0, df], ignore_index=True)
     df.set_index("Epoch", inplace=True)
     df.sort_index(inplace=True)
     df.to_csv(result_save_path)
