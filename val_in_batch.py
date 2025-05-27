@@ -18,19 +18,41 @@ from utils.prompt import *
 from model import SAMRI
 from segment_anything.utils.transforms import ResizeLongestSide
 
-# setup global parameters
-model_type = "samri"
-encoder_type = ENCODER_TYPE[model_type]  # choose one from vit_b and vit_h.
-batch_size = BATCH_SIZE
-model_path = MODEL_SAVE_PATH + "sam_vitb/"
-val_emb_path = VAL_EMBEDDING_PATH
-model_files = sorted([f for f in os.listdir(model_path) if f.startswith("samri_vitb_box_")])
+# Define global parameters
+model_sub_path = "sam_vitb/"
 
 def get_epoch_num(filename):
     match = filename.split('_')[-1].split('.')[0]
     if match:
         return int(match)
     return None
+
+def get_epoch_list_from_df(df_path):
+    """
+    Extract epoch numbers from a DataFrame saved as a CSV file.
+    """
+    if os.path.exists(df_path):
+        df = pd.read_csv(df_path)
+        if 'Epoch' in df.columns:
+            return df['Epoch'].tolist()
+        else:
+            raise ValueError("The DataFrame does not contain an 'Epoch' column.")
+    else:
+        return []
+
+# setup parameters
+model_type = "samri"
+encoder_type = ENCODER_TYPE[model_type]  # choose one from vit_b and vit_h.
+batch_size = BATCH_SIZE
+model_path = MODEL_SAVE_PATH + model_sub_path
+val_emb_path = VAL_EMBEDDING_PATH
+result_path = os.path.join(model_path, "validation_results")
+os.makedirs(result_path, exist_ok=True)
+result_save_path = os.path.join(result_path, "dice_loss_results.csv")
+model_files = sorted([f for f in os.listdir(model_path) if 
+                                    f.startswith("samri_vitb_box_") and 
+                                    get_epoch_num(f) not in 
+                                    get_epoch_list_from_df(result_save_path)])
 
 def main():
     print("Device:", torch.cuda.get_device_name(0))
@@ -85,10 +107,7 @@ def main():
     df = pd.DataFrame(losses, columns=["Epoch", "DiceScore"])
     df.set_index("Epoch", inplace=True)
     df.sort_index(inplace=True)
-
-    result_path = os.path.join(model_path, "validation_results")
-    os.makedirs(result_path, exist_ok=True)
-    df.to_csv(os.path.join(result_path, "dice_loss_results.csv"))
+    df.to_csv(result_save_path)
     print(f"Validation results saved to {result_path}")
 
 if __name__ == "__main__":
