@@ -37,7 +37,7 @@ for ckpt in ckpt_list:
     checkpoint = ckpt
     device = DEVICE
     model_name = ckpt.split("/")[-1]
-    print("Testing Check-point " + model_name)
+    print("Testing Check-point: " + ckpt)
 
     # regist the MRI-SAM model and predictor.
     sam_model = sam_model_registry[encoder_tpye](checkpoint)
