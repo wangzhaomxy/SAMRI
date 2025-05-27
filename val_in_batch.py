@@ -19,7 +19,7 @@ from model import SAMRI
 from segment_anything.utils.transforms import ResizeLongestSide
 
 # Define global parameters
-model_sub_path = "sam_vitb/"
+model_sub_path = "fullds_balance_up_new_loss/"
 
 def get_epoch_num(filename):
     match = filename.split('_')[-1].split('.')[0]
