@@ -9,22 +9,9 @@ ckpt_root_path = "/scratch/project/samri/Model_save/"
 model_folder = "fullds_balance_up_new_loss/"
 save_path = "/scratch/project/samri/Eval_results/" + model_folder
 ckpt_list = [
-             ckpt_root_path + model_folder + "samri_vitb_box_120.pth",
+             ckpt_root_path + model_folder + "samri_vitb_box_147.pth",
             #  ckpt_root_path + model_folder + "samri_vitb_box_70.pth",
             #  ckpt_root_path + model_folder + "samri_vitb_box_40.pth",
-            #  ckpt_root_path + model_folder + "samri_vitb_box_30.pth",
-            #  ckpt_root_path + model_folder + "samri_vitb_box_40.pth",
-            #  ckpt_root_path + model_folder + "samri_vitb_box_10.pth",
-            #  ckpt_root_path + model_folder + "samri_vitb_box_5.pth",
-            #  ckpt_root_path + model_folder + "samri_vitb_box_4.pth",
-            #  ckpt_root_path + model_folder + "samri_vitb_box_3.pth",
-            #  ckpt_root_path + model_folder + "samri_vitb_box_2.pth",
-            #  ckpt_root_path + model_folder + "samri_vitb_box_1.pth",
-            #  ckpt_root_path + model_folder + "samri_vitb_box_11.pth",
-            #  ckpt_root_path + model_folder + "samri_vitb_box_23.pth",
-            #  ckpt_root_path + model_folder + "samri_vitb_box_24.pth",
-            #  ckpt_root_path + model_folder + "samri_vitb_box_19.pth",
-            #  ckpt_root_path + model_folder + "samri_vitb_box_24.pth",
              ]
 # ckpt_list = ["/scratch/user/s4670484/Model_dir/sam_vit_b_01ec64.pth"]
 # ckpt_list = ["/scratch/user/s4670484/Model_dir/sam_vit_h_4b8939.pth"]
@@ -50,5 +37,4 @@ for ckpt in ckpt_list:
                      save_path=save_path_all)
     end = time.time()
     print(f"Elapsed time: {end - start:.2f} seconds")
-# save_pxl_record(file_paths, save_path)
-# print("Done!")
+    print("Done!")

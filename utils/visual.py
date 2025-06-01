@@ -7,7 +7,6 @@ reference: https://github.com/facebookresearch/segment-anything/blob/main/notebo
 
 import numpy as np
 import matplotlib.pyplot as plt
-import torch
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 from segment_anything import SamPredictor
@@ -16,7 +15,6 @@ from utils.prompt import *
 from utils.losses import dice_similarity, sd_hausdorff_distance, sd_mean_surface_distance
 from utils.dataloader import NiiDataset, EmbDataset
 import pickle
-
 
 def show_mask(mask, ax, random_color=False):
     if random_color:
@@ -130,132 +128,6 @@ def get_test_record_from_ds(model, test_dataset):
                               "area_percentage":area_percentage}
         final_record.append(single_data_result)
     return final_record
-
-def get_test_record_from_emb_ds(model, test_dataset):
-    """
-    Calculate the dice score for the test dataset using the SAM model.
-
-    Args:
-        model (SAM model): The SAM model loaded from Checkpoint.
-        test_dataset (Dataset): The pytorch dataset from torch.Dataset.
-
-    Returns:
-        (list):A list of record for every data, and each data consists of a 
-            dictionary. For example:
-            
-            [{
-            "img_name":img_fullpath,     # image full path. (str)
-            "mask_name":mask_fullpath,   # mask full path. (str)
-            "labels":labels,             # list of labels. (list)
-            "p_dice":p_dice,         # list of DSC of point prompt. (list)
-            "b_dice":b_dice,         # list of DSC of bbox prompt. (list)
-            "p_hd":p_hd,             # list of HD of point prompt. (list)
-            "b_hd":b_hd,             # list of HD of bbox prompt. (list)
-            "p_msd":p_msd,           # list of MSD of point prompt. (list)
-            "b_msd":b_msd,           # list of MSD of bbox prompt. (list)
-            "pixel_count":pixel_count,  # list of pixel count. (list)
-            "area_percentage":area_percentage # list of area percentage. (list)
-            },
-            {
-                ......
-            }
-            ......                
-            ]
-    """
-    predictor = SamPredictor(model)
-    predictor.input_size = (1024, 1024)
-    final_record = []
-    
-    for emb, mask, ori_size, file_name in tqdm(test_dataset):
-        emb = emb.squeeze(0).detach().cpu().numpy()
-        mask = mask.squeeze(0).detach().cpu().numpy()
-        ori_size = (ori_size[0].detach().cpu().numpy()[0], ori_size[1].detach().cpu().numpy()[0])
-        img_fullpath = file_name
-        mask_fullpath = file_name
-        p_dice, p_hd, p_msd = [], [], []
-        b_dice, b_hd, b_msd = [], [], []
-        pixel_count, area_percentage = [], []
-        labels = []
-        
-        # Image embedding inference
-        H, W = mask.shape[-2:]
-        total_pixels = H * W
-        predictor.reset_image()
-        predictor.original_size = ori_size
-        predictor.features = torch.from_numpy(emb).to(DEVICE)
-        predictor.is_image_set = True
-        
-        masks = MaskSplit(mask)
-
-        for each_mask, label in masks:
-            # generate prompts
-            point = gen_points(each_mask)
-            point_label = np.array([1])
-            bbox = gen_bboxes(each_mask, jitter=0)
-
-            # generate mask
-            pre_mask_p, _, _ = predictor.predict(
-                                point_coords=point,
-                                point_labels=point_label,
-                                multimask_output=False,
-                            )
-            
-            pre_mask_b, _, _ = predictor.predict(
-                                point_coords=None,
-                                point_labels=None,
-                                box=bbox[None, :],
-                                multimask_output=False,
-                            )
-
-            # save DSC
-            labels.append(label)
-            p_dice.append(dice_similarity(pre_mask_p[0, :, :], each_mask))
-            b_dice.append(dice_similarity(pre_mask_b[0, :, :], each_mask))
-            p_hd.append(sd_hausdorff_distance(pre_mask_p[0, :, :], each_mask))
-            b_hd.append(sd_hausdorff_distance(pre_mask_b[0, :, :], each_mask))
-            p_msd.append(sd_mean_surface_distance(pre_mask_p[0, :, :], each_mask))
-            b_msd.append(sd_mean_surface_distance(pre_mask_b[0, :, :], each_mask))
-            pixel_count.append(np.sum(each_mask))
-            area_percentage.append(np.sum(each_mask) / total_pixels) 
-        
-        single_data_result = {"img_name":img_fullpath,
-                              "mask_name":mask_fullpath,
-                              "labels":labels,
-                              "p_dice":p_dice,
-                              "b_dice":b_dice,
-                              "p_hd":p_hd,
-                              "b_hd":b_hd,
-                              "p_msd":p_msd,
-                              "b_msd":b_msd,
-                              "pixel_count":pixel_count,
-                              "area_percentage":area_percentage}
-        final_record.append(single_data_result)
-    return final_record
-
-def get_pix_num_from_ds(test_dataset):
-    """
-    Calculate the dice score for the test dataset using the SAM model.
-
-    Args:
-        model (SAM model): The SAM model loaded from Checkpoint.
-        test_dataset (Dataset): The pytorch dataset from torch.Dataset.
-
-    Returns:
-        ([p_record], [b_record]): 
-            p_record:A list of DSC of point prompt for the test dataset.
-            b_record:A list of DSC of bbox prompt for the test dataset.
-    """
-    
-    pixel_count = []
-    area_percentage = []
-    for _, mask in tqdm(test_dataset):
-        H, W = mask.shape[-2:]
-        total_pixels = H * W
-        masks = MaskSplit(mask)
-        for each_mask in masks:
-            pixel_count.append(np.sum(each_mask))
-            area_percentage.append(np.sum(each_mask) / total_pixels)
-    return pixel_count, area_percentage
         
 def save_test_record(file_paths, sam_model, save_path, by_ds=False):
     """Save the test record for the test model and dataset.
@@ -287,46 +159,6 @@ def save_test_record(file_paths, sam_model, save_path, by_ds=False):
     if not by_ds:
         with open(save_path, "wb") as f:
             pickle.dump(final_record, f)
-
-def save_test_record_from_emb(file_paths, sam_model, save_path):
-    """Save the test record for the test model and embedding dataset.
-    
-    Args:
-        file_paths (list): The testing dataset path list. Ex.["DS1", "DS2", ...]
-        sam_model (SAM model): The SAM model loaded from Checkpoint.
-        save_path (str): The path to save the record.
-    """
-    final_record = {}
-    for file_path in file_paths:
-        print("Processing the dataset: ",file_path)
-        ds_name = file_path.split("/")[-2]
-        test_dataset = EmbDataset([file_path], with_name=True)
-        test_loader = DataLoader(test_dataset, 
-                        num_workers=24)
-        ds_record = get_test_record_from_emb_ds(model=sam_model, 
-                                                 test_dataset=test_loader)
-        final_record[ds_name] = ds_record
-        
-    with open(save_path, "wb") as f:
-        pickle.dump(final_record, f)
-                        
-def save_pxl_record(file_paths, save_path):
-    """Save the mask pixel count result for the test dataset.
-    
-    Args:
-        file_paths (list): The testing dataset path list. Ex.["DS1", "DS2", ...]
-        save_path (list): The path to save the record.
-    """
-    pixel_count, area_percentage = [], []
-    for idx, file_path in enumerate(file_paths):
-        print(f"{idx+1}/{len(file_paths)} :Processing the dataset: ",file_path)
-        test_dataset = NiiDataset([file_path], multi_mask= True)
-        pixel_count_vit, area_percentage_vit = get_pix_num_from_ds(test_dataset=test_dataset)
-        pixel_count.append(pixel_count_vit)
-        area_percentage.append(area_percentage_vit)
-        final_record = {"pixel_count":pixel_count,"area_percentage":area_percentage}
-    with open(save_path, "wb") as f:
-        pickle.dump(final_record, f)
         
 def make_dir(path):
     if not os.path.exists(path):
