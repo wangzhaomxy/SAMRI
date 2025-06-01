@@ -9,8 +9,8 @@ ckpt_root_path = "/scratch/project/samri/Model_save/"
 model_folder = "fullds_balance_up_new_loss/"
 save_path = "/scratch/project/samri/Eval_results/" + model_folder
 ckpt_list = [
-             ckpt_root_path + model_folder + "samri_vitb_box_146.pth",
-            #  ckpt_root_path + model_folder + "samri_vitb_box_70.pth",
+             ckpt_root_path + model_folder + "samri_vitb_box_10.pth",
+             ckpt_root_path + model_folder + "samri_vitb_box_15.pth",
             #  ckpt_root_path + model_folder + "samri_vitb_box_40.pth",
              ]
 # ckpt_list = ["/scratch/user/s4670484/Model_dir/sam_vit_b_01ec64.pth"]
