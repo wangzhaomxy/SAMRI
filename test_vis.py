@@ -8,7 +8,7 @@ ckpt_root_path = "/scratch/project/samri/Model_save/"
 # model_folder = "box_new_loss/"
 model_folder = "fullds_balance_up_new_loss/"
 save_path = "/scratch/project/samri/Eval_results/" + model_folder
-save_path1 = "/scratch/project/samri/Inference_results/" + "SAM_vitb/"
+save_path1 = "/scratch/project/samri/Inference_results/" + "SAMRI/"
 make_dir(save_path)
 make_dir(save_path1)
 
