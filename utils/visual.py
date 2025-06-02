@@ -184,7 +184,10 @@ def save_infer_outputs_from_ds(model, test_dataset, save_path, ds_name):
         H, W = mask.shape[-2:]
 
         predictor.set_image(image)
-        img_name = img_fullpath.split("/")[-1].replace(".nii.gz", "")
+        
+        if isinstance(img_fullpath, (tuple, list)):
+            img_fullpath = img_fullpath[0]
+        img_name = os.path.basename(img_fullpath).replace(".nii.gz", "")
 
         for each_mask, label in MaskSplit(mask):
             gt_seg = each_mask
