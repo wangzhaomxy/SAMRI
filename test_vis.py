@@ -12,12 +12,12 @@ save_path1 = "/scratch/project/samri/Inference_results/" + "SAM_vitb/"
 make_dir(save_path)
 make_dir(save_path1)
 
-# ckpt_list = [
-#              ckpt_root_path + model_folder + "samri_vitb_box_10.pth",
-#              ckpt_root_path + model_folder + "samri_vitb_box_15.pth",
+ckpt_list = [
+             ckpt_root_path + model_folder + "samri_vitb_box_146.pth",
+            #  ckpt_root_path + model_folder + "samri_vitb_box_15.pth",
             #  ckpt_root_path + model_folder + "samri_vitb_box_40.pth",
-            #  ]
-ckpt_list = ["/scratch/user/s4670484/Model_dir/sam_vit_b_01ec64.pth"]
+             ]
+# ckpt_list = ["/scratch/user/s4670484/Model_dir/sam_vit_b_01ec64.pth"]
 # ckpt_list = ["/scratch/user/s4670484/Model_dir/sam_vit_h_4b8939.pth"]
 # ckpt_list = ["/scratch/user/s4670484/Model_dir/samri_vitb.pth"]
 
