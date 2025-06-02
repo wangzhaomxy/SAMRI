@@ -15,6 +15,8 @@ from utils.prompt import *
 from utils.losses import dice_similarity, sd_hausdorff_distance, sd_mean_surface_distance
 from utils.dataloader import NiiDataset, EmbDataset
 import pickle
+import os
+from skimage import io, transform
 
 def show_mask(mask, ax, random_color=False):
     if random_color:
@@ -159,7 +161,76 @@ def save_test_record(file_paths, sam_model, save_path, by_ds=False):
     if not by_ds:
         with open(save_path, "wb") as f:
             pickle.dump(final_record, f)
-        
+    
 def make_dir(path):
     if not os.path.exists(path):
         os.makedirs(path)
+
+
+def save_infer_outputs_from_ds(model, test_dataset, save_path, ds_name):
+    """
+    Save SAM model inference and ground truth results as image/npz files.
+    Args:
+        model: SAM model.
+        test_dataset: PyTorch Dataset loader.
+        save_path: Base path to save outputs.
+        ds_name: Dataset name for folder structuring.
+    """
+    predictor = SamPredictor(model)
+
+    for image, mask, img_fullpath, _ in tqdm(test_dataset):
+        image = image.squeeze(0).detach().cpu().numpy()
+        mask = mask.squeeze(0).detach().cpu().numpy()
+        H, W = mask.shape[-2:]
+
+        predictor.set_image(image)
+        img_name = img_fullpath.split("/")[-1].replace(".nii.gz", "")
+
+        for each_mask, label in MaskSplit(mask):
+            gt_seg = each_mask
+            bbox = gen_bboxes(each_mask, jitter=0)
+
+            pre_mask_b, _, _ = predictor.predict(
+                point_coords=None,
+                point_labels=None,
+                box=bbox[None, :],
+                multimask_output=False,
+            )
+
+            pre_seg = pre_mask_b[0, :, :]
+            comb_seg = np.concatenate([gt_seg, pre_seg], axis=1) * 255
+
+            ds_dir = os.path.join(save_path, ds_name)
+            result_dir = os.path.join(ds_dir, "results")
+            comb_dir = os.path.join(ds_dir, "comb")
+            make_dir(result_dir)
+            make_dir(comb_dir)
+
+            io.imsave(
+                os.path.join(comb_dir, f"comb_{img_name}_{label}.png"),
+                comb_seg.astype(np.uint8),
+                check_contrast=False,
+            )
+
+            np.savez_compressed(
+                os.path.join(result_dir, f"{img_name}_{label}.npz"),
+                img = image[..., 0],
+                gt=gt_seg,
+                pred=pre_seg,
+            )
+            
+def save_infer_results(file_paths, sam_model, save_path):
+    """
+    Save inference outputs as images for the test model and datasets.
+    Args:
+        file_paths (list): List of dataset paths.
+        sam_model: Loaded SAM model.
+        save_path (str): Path to save results.
+    """
+    for file_path in file_paths:
+        print("Processing the dataset:", file_path)
+        ds_name = file_path.split("/")[-3]
+        test_dataset = NiiDataset([file_path], multi_mask=True, with_name=True)
+        test_loader = DataLoader(test_dataset, num_workers=1)
+
+        save_infer_outputs_from_ds(model=sam_model, test_dataset=test_loader, save_path=save_path, ds_name=ds_name)
