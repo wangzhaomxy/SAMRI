@@ -1,5 +1,5 @@
 from segment_anything import sam_model_registry
-from utils.visual import save_test_record, save_infer_results
+from utils.visual import *
 from utils.utils import *
 import time
 
@@ -9,6 +9,9 @@ ckpt_root_path = "/scratch/project/samri/Model_save/"
 model_folder = "fullds_balance_up_new_loss/"
 save_path = "/scratch/project/samri/Eval_results/" + model_folder
 save_path1 = "/scratch/project/samri/Inference_results/" + "SAM_vitb"
+make_dir(save_path)
+make_dir(save_path1)
+
 # ckpt_list = [
 #              ckpt_root_path + model_folder + "samri_vitb_box_10.pth",
 #              ckpt_root_path + model_folder + "samri_vitb_box_15.pth",
