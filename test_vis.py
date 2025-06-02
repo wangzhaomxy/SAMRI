@@ -8,7 +8,7 @@ ckpt_root_path = "/scratch/project/samri/Model_save/"
 # model_folder = "box_new_loss/"
 model_folder = "fullds_balance_up_new_loss/"
 save_path = "/scratch/project/samri/Eval_results/" + model_folder
-save_path1 = "/scratch/project/samri/Inference_results/" + "SAM_vitb"
+save_path1 = "/scratch/project/samri/Inference_results/" + "SAM_vitb/"
 make_dir(save_path)
 make_dir(save_path1)
 
@@ -41,7 +41,7 @@ for ckpt in ckpt_list:
     #                  save_path=save_path_all)
     save_infer_results(file_paths=file_paths,
                        sam_model=sam_model, 
-                       save_path=save_path_all)
+                       save_path=save_path1)
     end = time.time()
     print(f"Elapsed time: {end - start:.2f} seconds")
     print("Done!")
