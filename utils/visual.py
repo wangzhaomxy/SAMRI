@@ -203,6 +203,10 @@ def save_infer_outputs_from_ds(model, test_dataset, save_path, ds_name):
             pre_seg = pre_mask_b[0, :, :]
             comb_seg = np.concatenate([gt_seg, pre_seg], axis=1) * 255
 
+            print(f"Saving results for {img_name} with label {label}...")
+            print(f"Ground Truth shape: {gt_seg.shape}, Predicted shape: {pre_seg.shape}")
+            
+            # Save results
             ds_dir = os.path.join(save_path, ds_name)
             result_dir = os.path.join(ds_dir, "results")
             comb_dir = os.path.join(ds_dir, "comb")
