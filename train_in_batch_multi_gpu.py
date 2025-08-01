@@ -110,7 +110,7 @@ def main(gpu, world_size, num_epochs, save_every):
                               num_workers=num_workers,
                               sampler=DistributedSampler(train_dataset))
     
-    prompts = ["bbox"] #  ["point", "bbox"]
+    prompts = ["mixed"] #  ["point", "bbox"]
     for epoch in range(start_epoch, num_epochs):
         # training part
         samri_model.train()
@@ -139,7 +139,17 @@ def main(gpu, world_size, num_epochs, save_every):
                             } 
                         for image, mask, ori_size in zip(embedding, masks, ori_size)
                     ]
-
+                if prompt == "mixed":
+                    batch_input = [
+                        {'image': image.squeeze(),
+                            'point_coords':resize_transform.apply_coords_torch(torch.as_tensor(np.array(gen_points(mask.squeeze(0).numpy())), device=gpu), original_size=(256, 256)),
+                            'point_labels':torch.as_tensor([1]),
+                            'boxes':resize_transform.apply_boxes_torch(torch.as_tensor(np.array(gen_bboxes(mask.squeeze(0).numpy(),jitter=JITTER)), device=gpu), original_size=(256, 256)),
+                            'original_size':ori_size
+                            } 
+                        for image, mask, ori_size in zip(embedding, masks, ori_size)
+                    ]
+                    
                 y_pred = samri_model(batch_input, multimask_output=False, train_mode=True, embedding_inputs=True)
                 # observe the model output
                 if torch.isnan(y_pred).any():
