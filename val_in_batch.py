@@ -44,7 +44,7 @@ def get_epoch_list_from_df(df_path):
 # setup parameters
 model_type = "samri"
 encoder_type = ENCODER_TYPE[model_type]  # choose one from vit_b and vit_h.
-batch_size = BATCH_SIZE
+batch_size = 512
 model_path = MODEL_SAVE_PATH + model_sub_path
 val_emb_path = VAL_EMBEDDING_PATH
 result_path = os.path.join(model_path, "validation_results")
