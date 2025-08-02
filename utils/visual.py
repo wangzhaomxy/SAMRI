@@ -77,6 +77,7 @@ def get_test_record_from_ds(model, test_dataset):
         mask = mask.squeeze(0).detach().cpu().numpy()
         p_dice, p_hd, p_msd = [], [], []
         b_dice, b_hd, b_msd = [], [], []
+        bp_dice, bp_hd, bp_msd = [], [], []
         pixel_count, area_percentage = [], []
         labels = []
         
@@ -105,15 +106,25 @@ def get_test_record_from_ds(model, test_dataset):
                                 box=bbox[None, :],
                                 multimask_output=False,
                             )
+            
+            pre_mask_bp, _, _ = predictor.predict(
+                                point_coords=point,
+                                point_labels=point_label,
+                                box=bbox[None, :],
+                                multimask_output=False,
+                            )
 
             # save DSC
             labels.append(label)
             p_dice.append(dice_similarity(pre_mask_p[0, :, :], each_mask))
             b_dice.append(dice_similarity(pre_mask_b[0, :, :], each_mask))
+            bp_dice.append(dice_similarity(pre_mask_bp[0, :, :], each_mask))
             p_hd.append(sd_hausdorff_distance(pre_mask_p[0, :, :], each_mask))
             b_hd.append(sd_hausdorff_distance(pre_mask_b[0, :, :], each_mask))
+            bp_hd.append(sd_hausdorff_distance(pre_mask_bp[0, :, :], each_mask))
             p_msd.append(sd_mean_surface_distance(pre_mask_p[0, :, :], each_mask))
             b_msd.append(sd_mean_surface_distance(pre_mask_b[0, :, :], each_mask))
+            bp_msd.append(sd_mean_surface_distance(pre_mask_bp[0, :, :], each_mask))
             pixel_count.append(np.sum(each_mask))
             area_percentage.append(np.sum(each_mask) / total_pixels) 
         
@@ -122,10 +133,13 @@ def get_test_record_from_ds(model, test_dataset):
                               "labels":labels,
                               "p_dice":p_dice,
                               "b_dice":b_dice,
+                              "bp_dice":bp_dice,
                               "p_hd":p_hd,
                               "b_hd":b_hd,
+                              "bp_hd":bp_hd,
                               "p_msd":p_msd,
                               "b_msd":b_msd,
+                              "bp_msd":bp_msd,
                               "pixel_count":pixel_count,
                               "area_percentage":area_percentage}
         final_record.append(single_data_result)
