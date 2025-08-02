@@ -86,17 +86,31 @@ def main():
         with torch.no_grad():
             for embeddings, masks, ori_size in tqdm(val_loader, desc=f"Epoch {epoch}"):
                 ori_size = [(ori_size[0][i].item(), ori_size[1][i].item()) for i in range(len(ori_size[0]))]
+                
+                # batch_input = [
+                #     {
+                #         'image': emb.squeeze().to(device),
+                #         'boxes': resize_transform.apply_boxes_torch(
+                #             torch.as_tensor(np.array(gen_bboxes(mask.squeeze(0).numpy(), jitter=0)), device=device),
+                #             original_size=(256, 256)),
+                #         'original_size': size,
+                #     }
+                #     for emb, mask, size in zip(embeddings, masks, ori_size)
+                # ]
+                
                 batch_input = [
-                    {
-                        'image': emb.squeeze().to(device),
-                        'boxes': resize_transform.apply_boxes_torch(
-                            torch.as_tensor(np.array(gen_bboxes(mask.squeeze(0).numpy(), jitter=0)), device=device),
+                    {'image': emb.squeeze().to(device),
+                        'point_coords':resize_transform.apply_coords_torch(
+                            torch.as_tensor(np.array(gen_points(mask.squeeze(0).numpy())), device=device), 
                             original_size=(256, 256)),
-                        'original_size': size,
-                    }
+                        'point_labels':torch.as_tensor([1]),
+                        'boxes': resize_transform.apply_boxes_torch(
+                            torch.as_tensor(np.array(gen_bboxes(mask.squeeze(0).numpy(), jitter=0)), device=device), 
+                            original_size=(256, 256)),
+                        'original_size':size,
+                        } 
                     for emb, mask, size in zip(embeddings, masks, ori_size)
                 ]
-
                 preds = samri_model(batch_input, multimask_output=False, train_mode=True, embedding_inputs=True)
                 loss = dice_loss(preds, masks.to(device))
                 loss_list.append(loss.item())
