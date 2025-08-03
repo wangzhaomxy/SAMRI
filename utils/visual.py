@@ -164,7 +164,7 @@ def save_test_record(file_paths, sam_model, save_path, by_ds=False):
                                   multi_mask= True, 
                                   with_name=True)
         test_loader = DataLoader(test_dataset, 
-                        num_workers=24)
+                        num_workers=12)
         ds_record = get_test_record_from_ds(model=sam_model, 
                                                  test_dataset=test_loader)
         final_record[ds_name] = ds_record
@@ -251,6 +251,6 @@ def save_infer_results(file_paths, sam_model, save_path):
         print("Processing the dataset:", file_path)
         ds_name = file_path.split("/")[-3]
         test_dataset = NiiDataset([file_path], multi_mask=True, with_name=True)
-        test_loader = DataLoader(test_dataset, num_workers=1)
+        test_loader = DataLoader(test_dataset, num_workers=12)
 
         save_infer_outputs_from_ds(model=sam_model, test_dataset=test_loader, save_path=save_path, ds_name=ds_name)
