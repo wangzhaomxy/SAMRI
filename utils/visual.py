@@ -206,10 +206,12 @@ def save_infer_outputs_from_ds(model, test_dataset, save_path, ds_name):
         for each_mask, label in MaskSplit(mask):
             gt_seg = each_mask
             bbox = gen_bboxes(each_mask, jitter=0)
+            point = gen_points(each_mask)
+            point_label = np.array([1])
 
             pre_mask_b, _, _ = predictor.predict(
-                point_coords=None,
-                point_labels=None,
+                point_coords=point,
+                point_labels=point_label,
                 box=bbox[None, :],
                 multimask_output=False,
             )
