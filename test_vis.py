@@ -5,15 +5,15 @@ import time
 
 file_paths = TEST_IMAGE_PATH + TEST_ZEROSHOT_PATH
 ckpt_root_path = "/scratch/project/samri/Model_save/"
-# model_folder = "box_new_loss/"
-model_folder = "fullds_balance_up_new_loss/"
+model_folder = "bp_fullds_balance_up/"
+# model_folder = "fullds_balance_up_new_loss/"
 save_path = "/scratch/project/samri/Eval_results/" + model_folder
 save_path1 = "/scratch/project/samri/Inference_results/" + "SAMRI/"
 make_dir(save_path)
 make_dir(save_path1)
 
 ckpt_list = [
-             ckpt_root_path + model_folder + "samri_vitb_box_146.pth",
+             ckpt_root_path + model_folder + "samri_vitb_box_98.pth",
             #  ckpt_root_path + model_folder + "samri_vitb_box_15.pth",
             #  ckpt_root_path + model_folder + "samri_vitb_box_40.pth",
              ]
@@ -36,12 +36,13 @@ for ckpt in ckpt_list:
     sam_model.eval()
     save_path_all = save_path + model_name[:-4]
 
-    # save_test_record(file_paths=file_paths,
-    #                  sam_model=sam_model, 
-    #                  save_path=save_path_all)
-    save_infer_results(file_paths=file_paths,
-                       sam_model=sam_model, 
-                       save_path=save_path1)
+    save_test_record(file_paths=file_paths,
+                     sam_model=sam_model, 
+                     save_path=save_path_all)
+    
+    # save_infer_results(file_paths=file_paths,
+    #                    sam_model=sam_model, 
+    #                    save_path=save_path1)
     end = time.time()
     print(f"Elapsed time: {end - start:.2f} seconds")
     print("Done!")
