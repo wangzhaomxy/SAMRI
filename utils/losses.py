@@ -689,8 +689,8 @@ def dice_similarity(y_true, y_pred, square = False, smooth=1e-10):
         sum_of_pred = np.sum(np.square(y_pred))
         sum_of_true = np.sum(np.square(y_true))
     else:
-        sum_of_pred = np.sum(y_pred ** 2)
-        sum_of_true = np.sum(y_true ** 2)
+        sum_of_pred = np.sum(y_pred)
+        sum_of_true = np.sum(y_true)
     dice = (2.0 * intersection + smooth) / (sum_of_pred + 
                                           sum_of_true + smooth)
     return dice
