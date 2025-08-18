@@ -44,12 +44,12 @@ def get_epoch_list_from_df(df_path):
 # setup parameters
 model_type = "samri"
 encoder_type = ENCODER_TYPE[model_type]  # choose one from vit_b and vit_h.
-batch_size = 512
+batch_size = 256  # Adjust batch size as needed
 model_path = MODEL_SAVE_PATH + model_sub_path
-val_emb_path = VAL_EMBEDDING_PATH
+val_emb_path = VAL_EMBEDDING_PATH[:-1] + "_zero/"
 result_path = os.path.join(model_path, "validation_results")
 os.makedirs(result_path, exist_ok=True)
-result_save_path = os.path.join(result_path, "dice_loss_results.csv")
+result_save_path = os.path.join(result_path, "dice_loss_results_zero.csv")
 model_files = sorted([f for f in os.listdir(model_path) if 
                                     f.startswith("samri_vitb_box_") and 
                                     get_epoch_num(f) not in 
