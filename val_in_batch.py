@@ -21,6 +21,7 @@ from segment_anything.utils.transforms import ResizeLongestSide
 # Define global arguments
 # model_sub_path = "bp_fullds_balance_up/"
 model_sub_path = "fullds_balance_up_new_loss/"
+file_name = "dice_loss_results_zero.csv"  # Example file name, adjust as needed
 
 # Define the path to the zero shot validation embeddings
 data_path = "/scratch/project/samri/Embedding_val_zero/"
@@ -53,7 +54,7 @@ model_path = MODEL_SAVE_PATH + model_sub_path
 val_emb_path = VAL_EMBEDDING_PATH
 result_path = os.path.join(model_path, "validation_results")
 os.makedirs(result_path, exist_ok=True)
-result_save_path = os.path.join(result_path, "dice_loss_results_zero.csv")
+result_save_path = os.path.join(result_path, file_name)
 model_files = sorted([f for f in os.listdir(model_path) if 
                                     f.startswith("samri_vitb_box_") and 
                                     get_epoch_num(f) not in 
