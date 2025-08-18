@@ -4,6 +4,7 @@ sys.path.append("..")
 import numpy as np
 from segment_anything import sam_model_registry, SamPredictor
 from utils.utils import *
+from utils.visual import *
 from utils.dataloader import NiiDataset
 from tqdm import tqdm
 from model import SAMRI
@@ -11,10 +12,14 @@ from image_processing.data_processing_code.processing_utile import create_folder
 from glob import glob
 
 base_path = "/scratch/project/samri/"
-img_path = base_path + "Datasets/SAMRI_train_test/"
-# img_path = base_path + "Datasets/Zero_shot/"
+# img_path = base_path + "Datasets/SAMRI_train_test/"
+img_path = base_path + "Datasets/Zero_shot_val/"
 # save_path = base_path + "Embedding/"
-save_path = base_path + "Embedding_val/"
+save_path = base_path + "Embedding_val_zero/"
+img_sub_path = "validation/"    # Choose one from "training/", "validation/", and "testing/"
+
+make_dir(save_path)
+make_dir(img_path)
 
 folder_names = [fname_from_path(ds) + "/" for ds in sorted(glob(img_path + "/*"))]
 create_folders(save_path, folder_names)
@@ -43,7 +48,7 @@ def save_embedding(img, mask, img_name, save_path):
     
 for fo_name in tqdm(folder_names):
     print(f"Processing the {fo_name} dataset...")
-    img_folder = [img_path + "/" + fo_name + "validation/"]
+    img_folder = [img_path + "/" + fo_name + img_sub_path]
     dataset = NiiDataset(img_folder, multi_mask= True)
     emb_save_path = save_path + "/" + fo_name
     for data, mask in tqdm(dataset):
