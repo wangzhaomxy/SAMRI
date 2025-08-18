@@ -22,6 +22,10 @@ from segment_anything.utils.transforms import ResizeLongestSide
 model_sub_path = "bp_fullds_balance_up/"
 # model_sub_path = "fullds_balance_up_new_loss/"
 
+# Define the path to the zero shot validation embeddings
+data_path = "/scratch/project/samri/Embedding_val_zero/"
+VAL_EMBEDDING_PATH = [ds + "/" for ds in sorted(glob(data_path + "*"))]
+
 def get_epoch_num(filename):
     match = filename.split('_')[-1].split('.')[0]
     if match:
@@ -46,7 +50,7 @@ model_type = "samri"
 encoder_type = ENCODER_TYPE[model_type]  # choose one from vit_b and vit_h.
 batch_size = 256  # Adjust batch size as needed
 model_path = MODEL_SAVE_PATH + model_sub_path
-val_emb_path = [VAL_EMBEDDING_PATH[0][:-1] + "_zero/"] # VAL_EMBEDDING_PATH
+val_emb_path = VAL_EMBEDDING_PATH
 result_path = os.path.join(model_path, "validation_results")
 os.makedirs(result_path, exist_ok=True)
 result_save_path = os.path.join(result_path, "dice_loss_results_zero.csv")
