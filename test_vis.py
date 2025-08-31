@@ -4,7 +4,7 @@ from utils.utils import *
 import time
 
 # file_paths = TEST_IMAGE_PATH + TEST_ZEROSHOT_PATH
-file_paths = TEST_IMAGE_PATH + TEST_ZEROSHOT_PATH
+file_paths = TEST_ZEROSHOT_PATH
 ckpt_root_path = "/scratch/project/samri/Model_save/"
 model_folder = "bp_fullds_balance_up/"
 # model_folder = "fullds_balance_up_new_loss/"
