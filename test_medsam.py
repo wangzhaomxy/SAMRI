@@ -148,9 +148,11 @@ class MaskSplit():
         return masks, labels
     
 # Setup
-file_paths = TEST_IMAGE_PATH
+# file_paths = TEST_IMAGE_PATH
+file_paths = TEST_ZEROSHOT_PATH + VAL_ZEROSHOT_PATH + TRAIM_ZEROSHOT_PATH
 model_name = "MedSAM"
-save_path = "/scratch/project/samri/MedSAM_inference/"
+save_path = "/scratch/project/samri/MedSAM_inference_zero/"
+make_dir(save_path)
 
 # From MedSAM Inference file
 #################

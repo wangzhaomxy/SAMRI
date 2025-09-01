@@ -6,6 +6,7 @@ from utils.losses import (dice_similarity,
                           sd_mean_surface_distance)
 import pickle
 from tqdm import tqdm
+from utils.visual import *
 
 def get_test_record_from_ds(test_dataset):
     """
@@ -103,7 +104,8 @@ def save_test_record(ds_path,  save_path):
         pickle.dump(final_record, f)
             
 if __name__ == "__main__":
-    data_path = "/scratch/project/samri/MedSAM_inference/"
-    save_path = "/home/s4670484/Desktop/Scratch/samri/samri/Eval_results/med_sam_rep/med_sam_rep.pkl"
+    data_path = "/scratch/project/samri/MedSAM_inference_zero/"
+    save_path = "/home/s4670484/Desktop/Scratch/samri/samri/Eval_results/med_sam_rep/med_sam_rep_zero.pkl"
+    make_dir(save_path)
     save_test_record(data_path, save_path)
     print("Done!")
