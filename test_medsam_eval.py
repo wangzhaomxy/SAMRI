@@ -105,7 +105,7 @@ def save_test_record(ds_path,  save_path):
             
 if __name__ == "__main__":
     data_path = "/scratch/project/samri/MedSAM_inference_zero/"
-    save_path = "/home/s4670484/Desktop/Scratch/samri/samri/Eval_results/med_sam_rep/med_sam_rep_zero.pkl"
+    save_path = "/home/s4670484/Desktop/Scratch/samri/samri/Eval_results/med_sam_rep/"
     make_dir(save_path)
-    save_test_record(data_path, save_path)
+    save_test_record(data_path, save_path + "med_sam_rep.pkl")
     print("Done!")
