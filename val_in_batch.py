@@ -19,8 +19,8 @@ from model import SAMRI
 from segment_anything.utils.transforms import ResizeLongestSide
 
 # Define global arguments
-# model_sub_path = "bp_fullds_balance_up/"
-model_sub_path = "fullds_balance_up_new_loss/"
+model_sub_path = "bp_fullds_balance_up/"
+# model_sub_path = "fullds_balance_up_new_loss/"
 file_name = "dice_loss_results_zero.csv"  # Example file name, adjust as needed
 
 # Define the path to the zero shot validation embeddings
