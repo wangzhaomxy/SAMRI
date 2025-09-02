@@ -4,7 +4,7 @@ from utils.utils import *
 import time
 
 # TEST_ZERO_PATH = root_path + "Datasets/Zero_shot_val/"
-# TEST_ZEROSHOT_PATH = [ds + "/validation/" for ds in sorted(glob(TEST_ZERO_PATH + "*"))]
+# TEST_ZEROSHOT_PATH = [ds + "/testing/" for ds in sorted(glob(TEST_ZERO_PATH + "*"))]
 file_paths = TEST_IMAGE_PATH + TEST_ZEROSHOT_PATH
 # file_paths = TEST_ZEROSHOT_PATH + VAL_ZEROSHOT_PATH + TRAIM_ZEROSHOT_PATH
 # file_paths = TEST_ZEROSHOT_PATH
