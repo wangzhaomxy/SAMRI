@@ -36,8 +36,8 @@ make_dir(save_path)
 #              ]
 # ckpt_list = ["/scratch/user/s4670484/Model_dir/sam_vit_b_01ec64.pth"]
 # ckpt_list = ["/scratch/user/s4670484/Model_dir/sam_vit_h_4b8939.pth"]
-ckpt_list = ["/scratch/user/s4670484/Model_dir/samri_vitb_box.pth"]
-# ckpt_list = ["/scratch/user/s4670484/Model_dir/samri_vitb_bp.pth"]
+# ckpt_list = ["/scratch/user/s4670484/Model_dir/samri_vitb_box.pth"]
+ckpt_list = ["/scratch/user/s4670484/Model_dir/samri_vitb_bp.pth"]
 
 for ckpt in ckpt_list:
     start = time.time()
