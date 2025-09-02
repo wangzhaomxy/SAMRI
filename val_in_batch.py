@@ -19,9 +19,10 @@ from model import SAMRI
 from segment_anything.utils.transforms import ResizeLongestSide
 
 # Define global arguments
-model_sub_path = "bp_fullds_balance_up/"
-# model_sub_path = "fullds_balance_up_new_loss/"
+# model_sub_path = "bp_fullds_balance_up/"
+model_sub_path = "fullds_balance_up_new_loss/"
 file_name = "dice_loss_results_zero.csv"  # Example file name, adjust as needed
+prompt_mode = "box"  # Choose one from "box" and "bp"
 
 # Define the path to the zero shot validation embeddings
 data_path = "/scratch/project/samri/Embedding_val_zero/"
@@ -92,30 +93,33 @@ def main():
             for embeddings, masks, ori_size in tqdm(val_loader, desc=f"Epoch {epoch}"):
                 ori_size = [(ori_size[0][i].item(), ori_size[1][i].item()) for i in range(len(ori_size[0]))]
                 
-                # batch_input = [
-                #     {
-                #         'image': emb.squeeze().to(device),
-                #         'boxes': resize_transform.apply_boxes_torch(
-                #             torch.as_tensor(np.array(gen_bboxes(mask.squeeze(0).numpy(), jitter=0)), device=device),
-                #             original_size=(256, 256)),
-                #         'original_size': size,
-                #     }
-                #     for emb, mask, size in zip(embeddings, masks, ori_size)
-                # ]
-                
-                batch_input = [
-                    {'image': emb.squeeze().to(device),
-                        'point_coords':resize_transform.apply_coords_torch(
-                            torch.as_tensor(np.array(gen_points(mask.squeeze(0).numpy())), device=device), 
-                            original_size=(256, 256)),
-                        'point_labels':torch.as_tensor([1]),
-                        'boxes': resize_transform.apply_boxes_torch(
-                            torch.as_tensor(np.array(gen_bboxes(mask.squeeze(0).numpy(), jitter=0)), device=device), 
-                            original_size=(256, 256)),
-                        'original_size':size,
-                        } 
-                    for emb, mask, size in zip(embeddings, masks, ori_size)
-                ]
+                if prompt_mode == "box":
+                    batch_input = [
+                        {
+                            'image': emb.squeeze().to(device),
+                            'boxes': resize_transform.apply_boxes_torch(
+                                torch.as_tensor(np.array(gen_bboxes(mask.squeeze(0).numpy(), jitter=0)), device=device),
+                                original_size=(256, 256)),
+                            'original_size': size,
+                        }
+                        for emb, mask, size in zip(embeddings, masks, ori_size)
+                    ]
+                elif prompt_mode == "bp":
+                    batch_input = [
+                        {'image': emb.squeeze().to(device),
+                            'point_coords':resize_transform.apply_coords_torch(
+                                torch.as_tensor(np.array(gen_points(mask.squeeze(0).numpy())), device=device), 
+                                original_size=(256, 256)),
+                            'point_labels':torch.as_tensor([1]),
+                            'boxes': resize_transform.apply_boxes_torch(
+                                torch.as_tensor(np.array(gen_bboxes(mask.squeeze(0).numpy(), jitter=0)), device=device), 
+                                original_size=(256, 256)),
+                            'original_size':size,
+                            } 
+                        for emb, mask, size in zip(embeddings, masks, ori_size)
+                    ]
+                else:
+                    raise ValueError("Invalid prompt mode. Choose either 'box' or 'bp'.")
                 preds = samri_model(batch_input, multimask_output=False, train_mode=True, embedding_inputs=True)
                 loss = dice_loss(preds, masks.to(device))
                 loss_list.append(loss.item())
