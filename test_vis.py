@@ -7,7 +7,7 @@ import time
 # TEST_ZEROSHOT_PATH = [ds + "/validation/" for ds in sorted(glob(TEST_ZERO_PATH + "*"))]
 file_paths = TEST_IMAGE_PATH + TEST_ZEROSHOT_PATH
 # file_paths = TEST_ZEROSHOT_PATH + VAL_ZEROSHOT_PATH + TRAIM_ZEROSHOT_PATH
-file_paths = TEST_ZEROSHOT_PATH
+# file_paths = TEST_ZEROSHOT_PATH
 ckpt_root_path = "/scratch/project/samri/Model_save/"
 # model_folder = "bp_fullds_balance_up/"
 model_folder = "fullds_balance_up_new_loss/"
