@@ -70,7 +70,7 @@ class NiiDataset(Dataset):
         self.cur_gt_name = self.gt_file[index]
         
         # preprocess the image to np.ndarray type in unit8 format,(256 ,256 ,3)
-        nii_img = self._preprocess(nii_img)
+        nii_img = self._preprocess(nii_img).astype(np.uint8)
 
         # shape of nii_img is (256, 256, 3), nii_seg is (1, 256, 256)
         if self.multi_mask:
