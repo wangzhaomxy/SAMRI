@@ -9,10 +9,10 @@ file_paths = TEST_IMAGE_PATH + TEST_ZEROSHOT_PATH
 # file_paths = TEST_ZEROSHOT_PATH + VAL_ZEROSHOT_PATH + TRAIM_ZEROSHOT_PATH
 # file_paths = TEST_ZEROSHOT_PATH
 ckpt_root_path = "/scratch/project/samri/Model_save/"
-model_folder = "bp_fullds_balance_up/"
-# model_folder = "fullds_balance_up_new_loss/"
+# model_folder = "bp_fullds_balance_up/"
+model_folder = "fullds_balance_up_new_loss/"
 # save_path = "/scratch/project/samri/Eval_results/" + model_folder
-save_path = "/scratch/project/samri/Eval_results/" + "bp_40/"
+save_path = "/scratch/project/samri/Eval_results/" + "box_40/"
 make_dir(save_path)
 
 # save_path1 = "/scratch/project/samri/Inference_results/" + "SAMRI/"
