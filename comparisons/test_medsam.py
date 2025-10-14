@@ -148,16 +148,15 @@ class MaskSplit():
         return masks, labels
     
 # Setup
-# file_paths = TEST_IMAGE_PATH
-file_paths = TEST_ZEROSHOT_PATH
+file_paths = TEST_IMAGE_PATH
 model_name = "MedSAM"
-save_path = "/scratch/project/samri/MedSAM_inference_zero/"
+save_path = "/MedSAM_inference/"
 make_dir(save_path)
 
 # From MedSAM Inference file
 #################
 device = "cuda"
-ckpt = "/scratch/user/s4670484/Model_dir/medsam_vit_b.pth"
+ckpt = "/model/medsam_vit_b.pth"
 medsam_model = sam_model_registry["vit_b"](checkpoint=ckpt)
 medsam_model = medsam_model.to(device)
 medsam_model.eval()

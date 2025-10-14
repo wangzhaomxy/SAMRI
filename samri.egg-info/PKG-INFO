@@ -1,3 +1,57 @@
+Metadata-Version: 2.4
+Name: samri
+Version: 0.0.1
+Summary: SAMRI: Segment Anything Model for MRI — decoder-only fine-tuning on precomputed MRI embeddings.
+Home-page: https://github.com/zhaowangmxy/SAMRI
+Author: Zhao Wang
+Author-email: zhao.wang1@uq.edu.au
+License: Apache-2.0
+Keywords: MRI,segmentation,medical-imaging,deep-learning,SAM
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: Apache Software License
+Classifier: Programming Language :: Python :: 3 :: Only
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Topic :: Scientific/Engineering :: Medical Science Apps.
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: numpy
+Requires-Dist: scipy
+Requires-Dist: scikit-image
+Requires-Dist: nibabel
+Requires-Dist: SimpleITK>=2.2.1
+Requires-Dist: opencv-python
+Requires-Dist: matplotlib
+Requires-Dist: tqdm
+Requires-Dist: einops
+Provides-Extra: coco
+Requires-Dist: pycocotools; platform_system != "Windows" and extra == "coco"
+Provides-Extra: notebooks
+Requires-Dist: jupyterlab; extra == "notebooks"
+Requires-Dist: ipympl; extra == "notebooks"
+Requires-Dist: ipywidgets; extra == "notebooks"
+Provides-Extra: dev
+Requires-Dist: flake8; extra == "dev"
+Requires-Dist: isort; extra == "dev"
+Requires-Dist: black; extra == "dev"
+Requires-Dist: mypy; extra == "dev"
+Dynamic: author
+Dynamic: author-email
+Dynamic: classifier
+Dynamic: description
+Dynamic: description-content-type
+Dynamic: home-page
+Dynamic: keywords
+Dynamic: license
+Dynamic: license-file
+Dynamic: provides-extra
+Dynamic: requires-dist
+Dynamic: requires-python
+Dynamic: summary
+
 # 🧠 SAMRI: Segment Anything Model for MRI
 
 **SAMRI** is an MRI-specialized adaptation of [Meta AI’s Segment Anything Model (SAM)](https://segment-anything.com/), designed for accurate and efficient segmentation across diverse MRI datasets.  
