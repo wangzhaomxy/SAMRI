@@ -1,2 +1,0 @@
-segment_anything
-utils

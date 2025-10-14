@@ -166,14 +166,14 @@ SAMRI shows the largest gains on **small and medium objects**, consistent with q
 
 If you use SAMRI in your research, please cite:
 
-```bibtex
+<!-- ```bibtex
 @article{wang2025samri,
   title={SAMRI: Segment Anything Model for MRI},
   author={Wang, Zhao and Chandra, Shekhar and Dai, Wei and others},
   journal={Nature Communications},
   year={2025}
 }
-```
+``` -->
 
 ---
 
@@ -183,25 +183,30 @@ This repository is released under the **Apache 2.0 License** (or specify otherwi
 See the [LICENSE](LICENSE) file for details.
 
 ---
-
 ## 🤝 Acknowledgments
 
 Developed at **The University of Queensland (UQ)**,  
-**School of Electrical Engineering and Computer Science (EECS)**.  
+**School of Electrical Engineering and Computer Science (EECS)**.
 
-Special thanks to  
-- **Dr. Shekhar “Shakes” Chandra** (Principal Supervisor)  
-- **Dr. Wei Dai** (Co-supervisor)  
-- **Bunya HPC Team** for infrastructure support  
+Special thanks to the **Bunya HPC Team** for infrastructure support.
 
-Built upon **Meta AI’s Segment Anything Model (SAM)**.  
-We also thank open-source contributors and the MRI research community for dataset availability.
+Built upon **Meta AI’s Segment Anything Model (SAM)**, and inspired by the broader community efforts to adapt SAM to medical imaging.  
+
+We also gratefully acknowledge the **MedSAM team** for pioneering open-source adaptations of SAM for medical images and for releasing code/weights that served as an important baseline and point of comparison.
+
+We thank open-source contributors and the MRI research community for dataset availability.
 
 ---
 
 ## 📬 Contact
 
-**Zhao Wang, Ph.D. Candidate**  
+**Zhao Wang**  
 School of Electrical Engineering and Computer Science (EECS)  
 The University of Queensland, Australia  
 📧 zhao.wang1@uq.edu.au
+
+**Shekhar “Shakes” Chandra**
+ARC Future Fellow & Senior Lecturer
+School of Electrical Engineering and Computer Science (EECS)  
+The University of Queensland, Australia  
+📧 shekhar.chandra@uq.edu.au
