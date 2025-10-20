@@ -26,7 +26,6 @@ model_save_path = MODEL_SAVE_PATH + "ba_rand/"
 device = DEVICE
 num_epochs = NUM_EPOCHS
 train_image_path = TRAIN_IMAGE_PATH
-train_image_path.remove('/scratch/project/samri/Embedding/totalseg_mr/')
 
 def main():
     sam_checkpoint, start_epoch = get_checkpoint(model_save_path)
