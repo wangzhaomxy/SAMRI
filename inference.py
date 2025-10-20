@@ -127,7 +127,7 @@ def run_predict(
     point_coords = None
     point_labels = None
     if point is not None:
-        point_coords = np.array(point, dtype=np.float32)  # (1,2)
+        point_coords = np.array(point, dtype=np.float32)[None, :]  # (1,2)
         point_labels = np.array([point_label], dtype=np.int32)     # (1,)
 
     box_arr = None
@@ -148,7 +148,6 @@ def run_predict(
         pred_1hw = pred_masks[None, ...]
     else:
         pred_1hw = pred_masks[:1, ...]  # take first
-    pred_1hw = (pred_1hw > 0.5).astype(np.uint8)
     return pred_1hw  # (1,H,W)
 
 
