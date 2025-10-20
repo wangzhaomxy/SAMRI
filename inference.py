@@ -127,7 +127,7 @@ def run_predict(
     point_coords = None
     point_labels = None
     if point is not None:
-        point_coords = np.array(point, dtype=np.float32)[None, :]  # (1,2)
+        point_coords = np.array(point, dtype=np.float32)  # (1,2)
         point_labels = np.array([point_label], dtype=np.int32)     # (1,)
 
     box_arr = None
