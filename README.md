@@ -79,30 +79,84 @@ python -c "import torch, nibabel; print('SAMRI environment ready! Torch:', torch
 If it prints without errors, your environment is correctly configured.
 
 ---
-## 🚀 Quick Start
+## 🚀 Quick Start (Inference & Visualization only)
 
-### 1️⃣ Precompute Image Embeddings
-Generate and save SAM ViT-B image embeddings for your MRI dataset:
-```bash
-python preprocess/precompute_embeddings.py   --data_dir /path/to/MRI_dataset   --save_dir ./embeddings   --batch_size 16
-```
+This project ships two entry points for running SAMRI on your data:
 
-### 2️⃣ Train the Mask Decoder
-Fine-tune the decoder using precomputed embeddings:
-```bash
-torchrun --nproc_per_node=8 train_decoder.py   --embedding_dir ./embeddings   --epochs 30   --batch_size 16   --lr 1e-4
-```
+- **CLI**: `inference.py` — fast, scriptable inference and saving of masks/PNGs
+- **Notebook**: `infer_step_by_step.ipynb` — interactive, cell-by-cell walkthrough
 
-### 3️⃣ Inference and Visualization
-Run inference on new MRI slices:
-```bash
-python infer_results.py   --model_path checkpoints/samri_decoder.pth   --input_image sample.nii.gz   --prompt box
-```
-
-The results (mask overlays, metrics, and visual comparisons) are saved under `./Inference_results`.
+Both files live in the **repo root**.
 
 ---
 
+### 1️⃣ Inference (CLI) — `inference.py`
+
+Run SAM/SAMRI on a single NIfTI (`.nii/.nii.gz`) **or** standard image (`.png/.jpg/.tif`) and save the predicted mask.
+
+**Basic usage**
+```bash
+python inference.py \
+  --input ./data/sample_case01.nii.gz \
+  --output ./Inference_results/ \
+  --checkpoint ,/models/samri_vitb_bp.pth \
+  --model-type samri \
+  --device cuda \    # Alter with "mps" for apple silicon
+  --box X1 Y1 X2 Y2\
+  --point X Y \
+  --no-png False
+
+```
+
+**CLI arguments (from `inference.py`)**
+- `--input, -i` (required): path to `.nii/.nii.gz` **or** `.png/.jpg/.tif`
+- `--output, -o` (required): output folder where results are written
+- `--checkpoint, -c` (required): path to SAM/SAMRI checkpoint (`.pth`)
+- `--model-type` (default: `vit_b`): one of `vit_b | vit_h | samri` (`samri` maps to ViT-B backbone)
+- `--device` (default: `cuda`): e.g., `cuda`, `cpu` (or `mps` on Apple Silicon if available)
+- `--box X1 Y1 X2 Y2` (required): bounding box prompt (pixels)
+- `--point X Y` (optional): foreground point prompt (pixels)
+- `--no-png` (flag): if set, do **not** save PNG; only `.nii.gz` mask is written
+
+**Outputs**
+- `<name>_seg_.nii.gz` — predicted mask saved as NIfTI with shape `[1, H, W]`
+- `<name>_seg_.png` — (unless `--no-png`) grayscale binary mask PNG. 
+
+> The input must be a 2D image. It is automatically normalized to 8-bit and converted to RGB to align with SAM’s internal preprocessing. The expected NIfTI file shape is (1, H, W) or (H, W), with (H, W, 1) also supported via automatic squeezing. The image input accepts dimensions in any of the following forms: H×W, H×W×1, H×W×3, or H×W×4.
+---
+
+### 2️⃣ Visualize step-by-step (Notebook) — `infer_step_by_step.ipynb`
+
+Use the notebook to experiment with prompts and visualize each stage.
+
+**Open** `./infer_step_by_step.ipynb` and set the first cell parameters:
+```python
+# --- User configuration ---
+INPUT_PATH = "/path/to/your/input.nii.gz"   # or .png/.jpg
+OUTPUT_DIR = "./Notebook_Visualization"
+CHECKPOINT = "./checkpoints/samri_decoder.pth"  # SAM / SAMRI checkpoint
+MODEL_TYPE = "samri"  # 'vit_b' | 'vit_h' | 'samri'
+DEVICE = "cuda"       # 'cuda' | 'cpu' | 'mps'
+
+# Optional prompts (pixel coords)
+BOX = [30, 40, 200, 220]   # or None
+POINT = [120, 140]         # or None
+SAVE_PNG = True            # also write PNG next to the NIfTI
+```
+
+**Then run cells** to:
+1. Load & normalize the input (NIfTI or image)
+2. Configure optional **box/point** prompts
+3. Run SAMRI inference
+4. Save: `<name>_seg_.nii.gz` (+ optional `<name>_seg_.png`)
+5. Display publication-friendly overlays/contours inside the notebook
+
+> The notebook uses the same image preparation and I/O utilities as the CLI, ensuring identical masks for matching inputs and prompts.
+
+
+
+
+---
 ## 📊 Evaluation
 
 SAMRI is evaluated using:
