@@ -1,3 +1,23 @@
+Metadata-Version: 2.1
+Name: samri
+Version: 0.0.1
+Summary: SAMRI: Segment Anything Model for MRI — decoder-only fine-tuning on precomputed MRI embeddings.
+Home-page: https://github.com/zhaowangmxy/SAMRI
+Author: Zhao Wang
+Author-email: zhao.wang1@uq.edu.au
+License: Apache-2.0
+Keywords: MRI,segmentation,medical-imaging,deep-learning,SAM
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: Apache Software License
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Topic :: Scientific/Engineering :: Medical Science Apps.
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Classifier: Operating System :: OS Independent
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE
+
 # 🧠 SAMRI: Segment Anything Model for MRI
 
 **SAMRI** is an MRI-specialized adaptation of [Meta AI’s Segment Anything Model (SAM)](https://segment-anything.com/), designed for accurate and efficient segmentation across diverse MRI datasets.  
@@ -61,7 +81,7 @@ conda activate samri
 ### 🧪 Step 2 - Install PyTorch
 
 Please install the correct [PyTorch:arrow_upper_right:](https://pytorch.org) version according to your operating system, package manager, language, and compute platform.
-**Note:** This project has been verified on **PyTorch 2.2.0.**
+This project has been verified on PyTorch 2.2.0.
 
 ### 🧰 Step 3 — Clone the Repository and install dependencies
 ```bash
@@ -152,7 +172,7 @@ SAVE_PNG = True            # also write PNG next to the NIfTI
 5. Display publication-friendly overlays/contours inside the notebook
 
 > The notebook uses the same image preparation and I/O utilities as the CLI, ensuring identical masks for matching inputs and prompts.
----
+
 
 
 
