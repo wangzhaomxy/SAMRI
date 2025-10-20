@@ -95,7 +95,8 @@ def main(gpu, world_size, num_epochs, save_every):
     
     #train
     losses = []
-    # train_dataset = EmbDataset(train_image_path, 
+    # train_dataset = EmbDataset(train_image_path,
+    #                            random_mask=True, 
     #                            resize_mask=True, 
     #                            mask_size=256)
     train_image_path = "/scratch/project/samri/train_list.pkl"
@@ -151,12 +152,12 @@ def main(gpu, world_size, num_epochs, save_every):
                     ]
                     
                 y_pred = samri_model(batch_input, multimask_output=False, train_mode=True, embedding_inputs=True)
-                # observe the model output
+                # monitor the model output
                 if torch.isnan(y_pred).any():
                     print(f"[Rank {gpu}] NaN in model output at step {step}")
                     continue
                 loss = dice_focal_loss(y_pred, masks.to(gpu))
-                # observe the loss
+                # monitor the loss
                 if torch.isnan(y_pred).any():
                     print(f"[Rank {gpu}] NaN in model output at step {step}")
                     continue
@@ -166,7 +167,6 @@ def main(gpu, world_size, num_epochs, save_every):
 
                 optimizer.zero_grad()
                 epoch_loss += loss.item()
-        # scheduler.step()
         epoch_loss /= step
         losses.append(epoch_loss)
 
