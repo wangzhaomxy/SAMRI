@@ -100,7 +100,6 @@ class SamPredictor:
         mask_input: Optional[np.ndarray] = None,
         multimask_output: bool = True,
         return_logits: bool = False,
-        med_sam: bool = False,
     ) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
         """
         Predict masks for the given input prompts, using the currently set image.
@@ -162,8 +161,6 @@ class SamPredictor:
                 mask_input, dtype=torch.float, device=self.device
             )
             mask_input_torch = mask_input_torch[None, :, :, :]
-        if med_sam:
-            return_logits = True
         masks, iou_predictions, low_res_masks = self.predict_torch(
             coords_torch,
             labels_torch,
@@ -172,8 +169,6 @@ class SamPredictor:
             multimask_output,
             return_logits=return_logits,
         )
-        if med_sam:
-            masks = (masks.sigmoid() > 0.5)
         masks_np = masks[0].detach().cpu().numpy()
         iou_predictions_np = iou_predictions[0].detach().cpu().numpy()
         low_res_masks_np = low_res_masks[0].detach().cpu().numpy()
