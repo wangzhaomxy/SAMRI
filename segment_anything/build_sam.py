@@ -139,8 +139,25 @@ def _build_sam(
             )
             print(checkpoint.name, " is downloaded!")
 
+    ## The original code:
+    # if checkpoint is not None:
+    #     with open(checkpoint, "rb") as f:
+    #         state_dict = torch.load(f)
+    #     sam.load_state_dict(state_dict)
+    # return sam
+
+    # Modified code to support MPS loading
     if checkpoint is not None:
         with open(checkpoint, "rb") as f:
-            state_dict = torch.load(f)
+            try:
+                # First, try to load normally (will use CUDA if available)
+                state_dict = torch.load(f)
+            except RuntimeError as e:
+                print(f"[Warning] torch.load failed ({e}); retrying with map_location('mps').")
+                # Fallback: load on Apple GPU if available, otherwise CPU
+                map_dev = torch.device("mps") if getattr(torch.backends, "mps", None) and torch.backends.mps.is_available() else torch.device("cpu")
+                with open(checkpoint, "rb") as f2:
+                    state_dict = torch.load(f2, map_location=map_dev)
+
         sam.load_state_dict(state_dict)
     return sam
