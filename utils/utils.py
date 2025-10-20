@@ -3,9 +3,13 @@
 """
 Permanent variables, universal functions, ect
 """
-from glob import glob
+# config_samri.py
 import os
 from torch.nn import functional as F
+from dataclasses import dataclass, field, asdict
+from pathlib import Path
+from glob import glob
+from typing import List, Dict, Any
 
 root_path = "/scratch/project/samri/"   # The root path of the project
 ch_root = "/scratch/user/s4670484/Model_dir/" # The root path of the checkpoint files
@@ -45,6 +49,87 @@ SAM_CHECKPOINT = {"vit_b": ch_root + "sam_vit_b_01ec64.pth",
                   "samri": ch_root + "samri_vitb.pth"
                   }
 
+
+
+
+@dataclass
+class SAMRIConfig:
+    # ---- Core roots ----
+    root_path: Path = Path("/scratch/project/samri/")
+    ch_root: Path = Path("/scratch/user/s4670484/Model_dir/")
+
+    # ---- Runtime/training ----
+    device: str = "cuda"          # "cuda" | "cpu" | "mps"
+    batch_size: int = 1024        # Mi300x 192GB → 1024; H100 80GB → 512
+    num_epochs: int = 200
+    jitter: int = 10              # box prompt augmentation
+
+    # ---- File name patterns ----
+    image_keys: str = "*_img_*"
+    mask_keys: str = "*_seg_*"
+
+    # ---- Encoder map & checkpoints ----
+    encoder_type: Dict[str, str] = field(default_factory=lambda: {
+        "vit_b": "vit_b",
+        "vit_h": "vit_h",
+        "med_sam": "vit_b",
+        "samri": "vit_b",
+    })
+    sam_checkpoint: Dict[str, str] = field(init=False)
+
+    # ---- Derived directory roots (strings for readability) ----
+    EMBEDDING_PATH: str = field(init=False)
+    TEST_EMBEDDING_ROOT: str = field(init=False)
+    TEST_ROOT: str = field(init=False)
+    TEST_ZERO_ROOT: str = field(init=False)
+    MODEL_SAVE_ROOT: str = field(init=False)
+    VAL_EMBEDDING_ROOT: str = field(init=False)
+
+    # ---- Expanded directory lists ----
+    TRAIN_IMAGE_PATH: List[str] = field(init=False)
+    TEST_IMAGE_PATH: List[str] = field(init=False)
+    TEST_ZEROSHOT_PATH: List[str] = field(init=False)
+    VAL_ZEROSHOT_PATH: List[str] = field(init=False)
+    TRAIN_ZEROSHOT_PATH: List[str] = field(init=False)
+    TEST_IMAGE_PATH_DA: List[str] = field(init=False)
+    TEST_EMB_PATH_LIST: List[str] = field(init=False)
+    VAL_EMB_PATH_LIST: List[str] = field(init=False)
+
+    def __post_init__(self):
+        # String paths (keep your original style)
+        self.EMBEDDING_PATH      = str(self.root_path / "Embedding/")
+        self.TEST_EMBEDDING_ROOT = str(self.root_path / "Embedding_test/")
+        self.TEST_ROOT           = str(self.root_path / "Datasets" / "SAMRI_train_test/")
+        self.TEST_ZERO_ROOT      = str(self.root_path / "Datasets" / "Zero_shot/")
+        self.MODEL_SAVE_ROOT     = str(self.root_path / "Model_save/")
+        self.VAL_EMBEDDING_ROOT  = str(self.root_path / "Embedding_val/")
+
+        # Checkpoints
+        self.sam_checkpoint = {
+            "vit_b":   str(self.ch_root / "sam_vit_b_01ec64.pth"),
+            "vit_h":   str(self.ch_root / "sam_vit_h_4b8939.pth"),
+            "med_sam": str(self.ch_root / "medsam_vit_b.pth"),
+            "samri":   str(self.ch_root / "samri_vitb.pth"),
+        }
+
+        # Build the expanded lists (sorted for determinism)
+        self.TRAIN_IMAGE_PATH     = [f"{ds}/"           for ds in sorted(glob(self.EMBEDDING_PATH + "*"))]
+        self.TEST_IMAGE_PATH      = [f"{ds}/testing/"   for ds in sorted(glob(self.TEST_ROOT + "*"))]
+        self.TEST_ZEROSHOT_PATH   = [f"{ds}/testing/"   for ds in sorted(glob(self.TEST_ZERO_ROOT + "*"))]
+        self.VAL_ZEROSHOT_PATH    = [f"{ds}/validation/"for ds in sorted(glob(self.TEST_ZERO_ROOT + "*"))]
+        self.TRAIN_ZEROSHOT_PATH  = [f"{ds}/training/"  for ds in sorted(glob(self.TEST_ZERO_ROOT + "*"))]
+        self.TEST_IMAGE_PATH_DA   = [f"{ds}/training/"  for ds in sorted(glob(self.TEST_ROOT + "*"))]
+        self.TEST_EMB_PATH_LIST   = [f"{ds}/"           for ds in sorted(glob(self.TEST_EMBEDDING_ROOT + "*"))]
+        self.VAL_EMB_PATH_LIST    = [f"{ds}/"           for ds in sorted(glob(self.VAL_EMBEDDING_ROOT + "*"))]
+
+    # Optional: refresh globbed lists if filesystem changes
+    def refresh(self) -> None:
+        self.__post_init__()
+
+    # Optional: export as plain dict (handy for logging/config dumps)
+    def to_dict(self) -> Dict[str, Any]:
+        d = asdict(self)
+        return d
 
 def get_checkpoint(path):
     cp_list = sorted(glob(path + "*pth"))
