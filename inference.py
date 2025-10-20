@@ -165,7 +165,7 @@ def save_mask_nii_gz(out_dir: str, base_name: str, mask_1hw: np.ndarray, affine=
     if affine is None:
         affine = np.eye(4)
     nii = nib.Nifti1Image(mask_1hw.astype(np.uint8), affine=affine, header=header)
-    out_path = os.path.join(out_dir, f"{base_name}_pred.nii.gz")
+    out_path = os.path.join(out_dir, f"{base_name}_seg_.nii.gz")
     nib.save(nii, out_path)
     return out_path
 
@@ -176,7 +176,7 @@ def save_mask_png(out_dir: str, base_name: str, mask_1hw: np.ndarray) -> str:
     os.makedirs(out_dir, exist_ok=True)
     h, w = mask_1hw.shape[1], mask_1hw.shape[2]
     mask_hw = (mask_1hw.reshape(h, w).astype(np.uint8)) * 255
-    out_path = os.path.join(out_dir, f"{base_name}_pred.png")
+    out_path = os.path.join(out_dir, f"{base_name}_seg_.png")
     skio.imsave(out_path, mask_hw, check_contrast=False)
     return out_path
 
