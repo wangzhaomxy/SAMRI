@@ -11,3 +11,6 @@ __pycache__/
 dist/
 build/
 *.egg-info/
+
+# model checkpoints
+models/*.pth
