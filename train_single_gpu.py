@@ -87,7 +87,7 @@ def main():
                 if prompt == "point":
                     batch_input = [
                         {'image': image.squeeze(),
-                            'point_coords':resize_transform.apply_coords_torch(torch.as_tensor(np.array(gen_points(mask.squeeze(0).numpy())), device=gpu), original_size=(256, 256)),
+                            'point_coords':resize_transform.apply_coords_torch(torch.as_tensor(np.array(gen_points(mask.squeeze(0).numpy())), device=device), original_size=(256, 256)),
                             'point_labels':torch.as_tensor([1]),
                             'original_size':ori_size
                             } 
@@ -96,7 +96,7 @@ def main():
                 if prompt == "bbox":
                     batch_input = [
                         {'image': image.squeeze(),
-                            'boxes':resize_transform.apply_boxes_torch(torch.as_tensor(np.array(gen_bboxes(mask.squeeze(0).numpy(),jitter=JITTER)), device=gpu), original_size=(256, 256)),
+                            'boxes':resize_transform.apply_boxes_torch(torch.as_tensor(np.array(gen_bboxes(mask.squeeze(0).numpy(),jitter=JITTER)), device=device), original_size=(256, 256)),
                             'original_size':ori_size
                             } 
                         for image, mask, ori_size in zip(embedding, masks, ori_size)
@@ -104,9 +104,9 @@ def main():
                 if prompt == "mixed":
                     batch_input = [
                         {'image': image.squeeze(),
-                            'point_coords':resize_transform.apply_coords_torch(torch.as_tensor(np.array(gen_points(mask.squeeze(0).numpy())), device=gpu), original_size=(256, 256)),
+                            'point_coords':resize_transform.apply_coords_torch(torch.as_tensor(np.array(gen_points(mask.squeeze(0).numpy())), device=device), original_size=(256, 256)),
                             'point_labels':torch.as_tensor([1]),
-                            'boxes':resize_transform.apply_boxes_torch(torch.as_tensor(np.array(gen_bboxes(mask.squeeze(0).numpy(),jitter=JITTER)), device=gpu), original_size=(256, 256)),
+                            'boxes':resize_transform.apply_boxes_torch(torch.as_tensor(np.array(gen_bboxes(mask.squeeze(0).numpy(),jitter=JITTER)), device=device), original_size=(256, 256)),
                             'original_size':ori_size
                             } 
                         for image, mask, ori_size in zip(embedding, masks, ori_size)
@@ -115,12 +115,12 @@ def main():
                 y_pred = samri_model(batch_input, multimask_output=False, train_mode=True, embedding_inputs=True)
                 # monitor the model output
                 if torch.isnan(y_pred).any():
-                    print(f"[Rank {gpu}] NaN in model output at step {step}")
+                    print(f"NaN in model output at step {step}")
                     continue
-                loss = dice_focal_loss(y_pred, masks.to(gpu))
+                loss = dice_focal_loss(y_pred, masks.to(device))
                 # monitor the loss
                 if torch.isnan(y_pred).any():
-                    print(f"[Rank {gpu}] NaN in model output at step {step}")
+                    print(f"[NaN in model output at step {step}")
                     continue
                 
                 loss.backward()
