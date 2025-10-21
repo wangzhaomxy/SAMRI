@@ -20,7 +20,7 @@ setup(
         "scikit-learn",
         "nibabel",
         "SimpleITK>=2.2.1",
-        "opencv-python==4.10",
+        "opencv-python==4.10.0.82",
         "matplotlib",
         "tqdm",
         "pandas",
