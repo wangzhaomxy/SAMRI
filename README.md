@@ -122,6 +122,18 @@ python inference.py \
 - `<name>_seg_.nii.gz` — predicted mask saved as NIfTI with shape `[1, H, W]`
 - `<name>_seg_.png` — (unless `--no-png`) grayscale binary mask PNG. 
 
+**Example**
+```bash
+python inference.py \
+  --input ./datasets/demoSample/example_img_0.nii.gz \
+  --output ./datasets/infer_output\
+  --checkpoint ./models/samri_vitb_bp.pth \
+  --model-type samri \
+  --device mps \
+  --box 115 130 178 179\
+  --point 133 172
+```
+
 > The input must be a 2D image. It is automatically normalized to 8-bit and converted to RGB to align with SAM’s internal preprocessing. The expected NIfTI file shape is (1, H, W) or (H, W), with (H, W, 1) also supported via automatic squeezing. The image input accepts dimensions in any of the following forms: H×W, H×W×1, H×W×3, or H×W×4.
 ---
 
@@ -153,7 +165,7 @@ SAVE_PNG = True            # also write PNG next to the NIfTI
 
 > The notebook uses the same image preparation and I/O utilities as the CLI, ensuring identical masks for matching inputs and prompts.
 ---
-
+## 📊 Training
 
 
 ---
