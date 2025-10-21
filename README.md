@@ -99,7 +99,7 @@ Run SAM/SAMRI on a single NIfTI (`.nii/.nii.gz`) **or** standard image (`.png/.j
 python inference.py \
   --input ./data/sample_case01.nii.gz \
   --output ./Inference_results/ \
-  --checkpoint ,/models/samri_vitb_bp.pth \
+  --checkpoint ./models/samri_vitb_bp.pth \
   --model-type samri \
   --device cuda \    # Alter with "mps" for apple silicon
   --box X1 Y1 X2 Y2\
