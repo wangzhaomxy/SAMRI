@@ -13,7 +13,6 @@ from torch.utils.data import Dataset
 import glob, random
 import nibabel as nib
 from utils.utils import IMAGE_KEYS, MASK_KEYS, preprocess_mask
-import pickle
 
 class NiiDataset(Dataset):
     def __init__(self, 
@@ -234,83 +233,6 @@ class EmbDataset(Dataset):
             (str): the image name.
         """
         return os.path.basename(self.cur_name)
-    
-
-class BalancedEmbDataset(Dataset):
-    def __init__(self, 
-                 data_root,
-                 sub_set = "60_up", 
-                 resize_mask=False,
-                 mask_size=256):
-        """
-        Args:
-            data_root (str): The path of the balanced dataset file.
-            sub_set (str): The subset of the dataset. The options are "60_up" and "60_down".
-                            60_up: The subset of the dataset with b_dice > 0.6.
-                            60_down: The subset of the dataset with b_dice > 0.2 and <= 0.6.
-            resize_mask(bool): If True, resize the mask into the mask size.
-            mask_size(int): The target size of the mask, HW=(256, 256). Default is 256.
-
-        """
-        super().__init__()
-        self.data_root = data_root
-        if sub_set == "60_up":
-            with open(self.data_root, "rb") as f:
-                self.file_list = pickle.load(f)["train_60_up"]
-        elif sub_set == "60_down":
-            with open(self.data_root, "rb") as f:
-                self.file_list = pickle.load(f)["train_60_down"]
-        elif sub_set == "all":
-            with open(self.data_root, "rb") as f:
-                file_lists = pickle.load(f)
-                self.file_list = file_lists["train_60_up"] + file_lists["train_60_down"]
-
-        self.cur_name = ""
-        self.resize_mask = resize_mask
-        self.mask_size = mask_size
-        
-    def __len__(self):
-        return len(self.file_list)
-
-    def __getitem__(self, index):
-        """
-        Read the npz data. The npz data includes 
-
-        Arguments:
-            index (int): the index of the dataset.
-
-        Return:
-            (np.ndarray): The image embedding with the shape of (1,256,64,64)
-            (np.ndarray): The ground truth mask with the shape of original masks
-                        with shape of (1, H, W) and range of labels.
-            (tuple): The original size of the image.
-        """
-        npz_file_path = self.file_list[index]["emb_path"]
-        label = self.file_list[index]["labels"]
-        npz_data = np.load(npz_file_path)
-        self.cur_name = npz_file_path
-        mask = npz_data["mask"] == int(label)
-        if not mask.any():
-            raise ValueError(f"The following file contains the empty mask: {self.cur_name}, label: {label}")
-
-        if self.resize_mask:
-            mask = torch.tensor(mask, dtype=torch.float)[None, :, :, :]
-            mask = preprocess_mask(mask, target_size=self.mask_size)
-            mask = mask.squeeze(0).numpy()
-            if not mask.any():
-                raise ValueError(f"After resize, The following file contains the empty mask: {self.get_name()}")
-            
-        return (npz_data["img"], mask, tuple(npz_data["ori_size"]))
-
-    def get_name(self):
-        """
-        Get the image name that the iterator is loading.
-
-        Returns:
-            (str): the image name.
-        """
-        return os.path.basename(self.cur_name)
-
 
 def emb_name_split(data_root, 
              num_of_subset=2, 
