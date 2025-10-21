@@ -10,7 +10,7 @@ from tqdm import tqdm
 import torch
 import numpy as np
 from segment_anything import sam_model_registry
-from utils.dataloader import EmbDataset, BalancedEmbDataset
+from utils.dataloader import EmbDataset
 from torch.utils.data import DataLoader
 from utils.losses import DiceFocalLoss
 from utils.utils import *
@@ -21,19 +21,32 @@ import torch.multiprocessing as mp
 from torch.utils.data.distributed import DistributedSampler
 from torch.nn.parallel import DistributedDataParallel as DDP
 from torch.distributed import init_process_group, destroy_process_group
+import argparse
 
 # setup global parameters
-model_type = "samri"
-encoder_type = ENCODER_TYPE[model_type] # choose one from vit_b and vit_h.
-batch_size = BATCH_SIZE
-# model_save_path = MODEL_SAVE_PATH + "box_new_loss/"
-model_save_path = MODEL_SAVE_PATH + "bp_fullds_balance_up/"
+# Converted to CLI-driven while preserving original defaults and behavior.
+_parser = argparse.ArgumentParser(add_help=True)
+_parser.add_argument("--model-type", default="samri", choices=list(ENCODER_TYPE.keys()),
+                     help="Model key used to derive encoder_type from ENCODER_TYPE.")
+_parser.add_argument("--batch-size", type=int, default=BATCH_SIZE)
+_parser.add_argument("--model-save-path", default=MODEL_SAVE_PATH)
+_parser.add_argument("--num-epochs", type=int, default=NUM_EPOCHS)
+_parser.add_argument("--train-image-path", nargs="+", default=TRAIN_IMAGE_PATH,
+                     help="List of embedding directories to use for training.")
+_parser.add_argument("--save-every", type=int, default=1)
+_parser.add_argument("--prompts", nargs="+", default=["mixed"], choices=["point","bbox","mixed"])
+_args, _unknown = _parser.parse_known_args()
+
+model_type = _args.model_type
+encoder_type = ENCODER_TYPE[model_type] 
+batch_size = _args.batch_size
+model_save_path = _args.model_save_path
 if not os.path.exists(model_save_path):
-    os.makedirs(model_save_path)
-num_epochs = NUM_EPOCHS
-train_image_path = TRAIN_IMAGE_PATH
-train_image_path.remove('/scratch/project/samri/Embedding/totalseg_mr/')
-save_every = 1
+    os.makedirs(model_save_path, exist_ok=True)
+num_epochs = _args.num_epochs
+train_image_path = list(_args.train_image_path)  # copy to avoid mutating imported default
+save_every = _args.save_every
+prompts = _args.prompts  
 
 def ddp_setup(rank: int, world_size: int):
     """
@@ -71,7 +84,6 @@ def main(gpu, world_size, num_epochs, save_every):
         print("Batch size: ", batch_size)
         print("The model will be saved to: ", model_save_path)
 
-
     samri_model = DDP(
                     samri_model,
                     device_ids=[gpu],
@@ -84,9 +96,7 @@ def main(gpu, world_size, num_epochs, save_every):
         lr=1e-5,
         weight_decay=0.1
     )
-    # scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, 
-    #                                                        T_max=100, 
-    #                                                        eta_min=1e-6)
+
     dice_focal_loss = DiceFocalLoss(sigmoid=True, 
                                      squared_pred=True,
                                      reduction="mean",
@@ -99,11 +109,7 @@ def main(gpu, world_size, num_epochs, save_every):
                                random_mask=True, 
                                resize_mask=True, 
                                mask_size=256)
-    # train_image_path = "/scratch/project/samri/train_list.pkl"
-    # train_dataset = BalancedEmbDataset(train_image_path, 
-    #                            sub_set="60_up",
-    #                            resize_mask=True, 
-    #                            mask_size=256)
+
     num_workers = 8
     train_loader = DataLoader(train_dataset, 
                               batch_size=batch_size, 
@@ -111,7 +117,6 @@ def main(gpu, world_size, num_epochs, save_every):
                               num_workers=num_workers,
                               sampler=DistributedSampler(train_dataset))
     
-    prompts = ["mixed"] #  ["point", "bbox"]
     for epoch in range(start_epoch, num_epochs):
         # training part
         samri_model.train()
