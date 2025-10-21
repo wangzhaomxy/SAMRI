@@ -125,7 +125,7 @@ python inference.py \
 **Example**
 ```bash
 python inference.py \
-  --input ./datasets/demoSample/example_img_0.nii.gz \
+  --input ./datasets/demoSample/example_img_1.nii.gz \
   --output ./datasets/infer_output\
   --checkpoint ./models/samri_vitb_bp.pth \
   --model-type samri \
@@ -141,7 +141,7 @@ python inference.py \
 
 Use the notebook to experiment with prompts and visualize each stage.
 
-**Open** `./infer_step_by_step.ipynb` and set the first cell parameters:
+**Open** `./infer_step_by_step.ipynb` and set the cell parameters:
 ```python
 # --- User configuration ---
 INPUT_PATH = "/path/to/your/input.nii.gz"   # or .png/.jpg
