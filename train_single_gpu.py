@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-train the mask decoder
+train the mask decoder(single-GPU)
 freeze image encoder and prompt encoder
 """
 
@@ -14,7 +14,6 @@ from utils.dataloader import EmbDataset
 from torch.utils.data import DataLoader
 from utils.losses import DiceFocalLoss
 from utils.utils import *
-from utils.prompt import *
 from model import SAMRI
 from segment_anything.utils.transforms import ResizeLongestSide
 
@@ -28,7 +27,7 @@ num_epochs = NUM_EPOCHS
 train_image_path = TRAIN_IMAGE_PATH
 
 def main():
-    sam_checkpoint, start_epoch = get_checkpoint(model_save_path)
+    sam_checkpoint, start_epoch = get_checkpoint(model_save_path, SAM_CHECKPOINT["vit_b"])
     sam_model = sam_model_registry[encoder_type](sam_checkpoint)
     samri_model = SAMRI(
         image_encoder=sam_model.image_encoder,
