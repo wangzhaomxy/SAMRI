@@ -16,4 +16,4 @@ build/
 # user_data/
 
 # Ignore model checkpoints
-user_data/Model_save/Pretrained_ckpt/*.pth
+user_data/pretrained_ckpt/*.pth
