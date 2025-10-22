@@ -14,8 +14,7 @@ from glob import glob
 class SAMRIConfig:
     def __init__(
         self,
-        root_path="/scratch/project/samri/",
-        ch_root="/scratch/user/s4670484/Model_dir/",
+        root_path="/scratch/project/samri",
         device="cuda",
         batch_size=1024,
         num_epochs=200,
@@ -25,7 +24,6 @@ class SAMRIConfig:
     ):
         # ---- user-tunable ----
         self.root_path = root_path
-        self.ch_root = ch_root
         self.DEVICE = device
         self.BATCH_SIZE = batch_size
         self.NUM_EPOCHS = num_epochs
@@ -39,23 +37,23 @@ class SAMRIConfig:
 
     @property
     def IMAGE_PATH(self):
-        return self.root_path + "Datasets/SAMRI_train_test/"
+        return self.root_path + "/Datasets/SAMRI_train_test/"
 
     @property
     def MODEL_SAVE_PATH(self):
-        return self.root_path + "Model_save/"
+        return self.root_path + "/Model_save/"
 
     @property
     def TRAIN_EMBEDDING_PATH(self):
         return [
-            ds + "/" for ds in sorted(glob(self.root_path + "Datasets/Embedding_train/*"))
+            ds + "/" for ds in sorted(glob(self.root_path + "/Datasets/Embedding_train/*"))
             if os.path.isdir(ds)
         ]
 
     @property
     def VAL_EMBEDDING_PATH(self):
         return [
-            ds + "/" for ds in sorted(glob(self.root_path + "Datasets/Embedding_val/*"))
+            ds + "/" for ds in sorted(glob(self.root_path + "/Datasets/Embedding_val/*"))
             if os.path.isdir(ds)
         ]
 
@@ -83,9 +81,9 @@ class SAMRIConfig:
     @property
     def SAM_CHECKPOINT(self):
         return {
-            "vit_b": self.ch_root + "sam_vit_b_01ec64.pth",
-            "vit_h": self.ch_root + "sam_vit_h_4b8939.pth",
-            "med_sam": self.ch_root + "medsam_vit_b.pth",
+            "vit_b": self.root_path + "/pretrained_ckpt/sam_vit_b_01ec64.pth",
+            "vit_h": self.root_path + "/pretrained_ckpt/sam_vit_h_4b8939.pth",
+            "med_sam": self.root_path + "/pretrained_ckpt/medsam_vit_b.pth",
         }
 
     @property
