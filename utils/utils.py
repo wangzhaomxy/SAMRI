@@ -11,6 +11,9 @@ import torch
 import random
 from glob import glob
 
+IMAGE_KEYS = "*_img_*"
+MASK_KEYS = "*_seg_*"
+
 class SAMRIConfig:
     def __init__(
         self,
@@ -19,8 +22,6 @@ class SAMRIConfig:
         batch_size=1024,
         num_epochs=200,
         jitter=10,
-        image_keys="*_img_*",
-        mask_keys="*_seg_*",
     ):
         # ---- user-tunable ----
         self.root_path = root_path
@@ -28,8 +29,6 @@ class SAMRIConfig:
         self.BATCH_SIZE = batch_size
         self.NUM_EPOCHS = num_epochs
         self.JITTER = jitter
-        self.IMAGE_KEYS = image_keys
-        self.MASK_KEYS = mask_keys
 
     # =====================================================================
     #  Dynamically computed properties (auto-update when root_path changes)
