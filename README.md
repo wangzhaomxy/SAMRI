@@ -165,8 +165,164 @@ SAVE_PNG = True            # also write PNG next to the NIfTI
 
 > The notebook uses the same image preparation and I/O utilities as the CLI, ensuring identical masks for matching inputs and prompts.
 ---
-## 📊 Training
+## 🧑‍🏫 Training the Model
 
+This section covers **end‑to‑end training** of SAMRI’s decoder on precomputed SAM embeddings. The workflow is lightweight:
+1) **Prepare data** → 2) **Precompute embeddings** → 3) **Train decoder** → 4) (Optional) **Evaluate/visualize**.
+
+> SAMRI freezes SAM’s image encoder and fine‑tunes only the **mask decoder** using a Dice+Focal loss.
+
+---
+
+### 📂 1) Prepare Your Data
+
+Organize datasets as patient/study folders with images and masks. Examples:
+```
+/data/SAMRI_train_test/
+├── dataset_A/
+│   ├── images/         # .nii/.nii.gz or 2D .png/.jpg
+│   └── masks/          # matching file names (binary/label masks)
+├── dataset_B/
+│   ├── images/
+│   └── masks/
+└── ...
+```
+
+> Masks should align with images in shape and orientation. For 3D NIfTI, training is typically on **2D slices**.
+
+Optional split files:
+```
+splits/
+  train.txt   # each line = relative path to an image
+  val.txt
+  test.txt
+```
+
+---
+
+### ⚙️ 2) Precompute Image Embeddings
+Use SAM ViT‑B to compute and cache image embeddings (saves training time & memory).
+
+```bash
+python preprocess/precompute_embeddings.py   --data_dir /data/SAMRI_train_test   --save_dir ./embeddings   --batch_size 16   --num_workers 8
+```
+**Key args**
+- `--data_dir` : root folder with datasets
+- `--save_dir` : output folder for `.pt` or `.npy` embeddings
+- `--batch_size` : embedding mini‑batch size (per process if using DDP)
+- `--num_workers` : DataLoader workers (tune to avoid CPU/IO bottlenecks)
+
+> Tip: If you see **OOM** or heavy swapping, lower `--batch_size` or `--num_workers` (e.g., 2–8).
+
+---
+
+### 🎯 3) Train the Decoder
+
+#### Single‑GPU
+```bash
+python train_decoder.py   --embedding_dir ./embeddings   --epochs 30   --batch_size 16   --lr 1e-4   --save_dir ./checkpoints
+```
+
+#### Multi‑GPU (same node, PyTorch DDP)
+```bash
+torchrun --nproc_per_node=8 train_decoder.py   --embedding_dir ./embeddings   --epochs 30   --batch_size 16   --lr 1e-4   --save_dir ./checkpoints
+```
+
+#### SLURM (example for Bunya MI300X nodes)
+```bash
+# sbatch train_samri_ddp.sbatch
+#!/bin/bash
+#SBATCH -J samri_ddp
+#SBATCH -A <your_account>
+#SBATCH -p mi300x
+#SBATCH --nodes=1
+#SBATCH --gpus-per-node=8
+#SBATCH --ntasks-per-node=8
+#SBATCH --cpus-per-task=8
+#SBATCH --mem=0
+#SBATCH -t 24:00:00
+#SBATCH -o logs/%x_%j.out
+#SBATCH -e logs/%x_%j.err
+
+module purge
+# load your conda and env
+source ~/.bashrc
+conda activate samri
+
+export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
+export TORCH_NCCL_BLOCKING_WAIT=1  # easier debugging
+export NCCL_P2P_DISABLE=1          # sometimes helps on ROCm
+
+srun torchrun --nproc_per_node=$SLURM_GPUS_PER_NODE train_decoder.py   --embedding_dir ./embeddings   --epochs 30   --batch_size 16   --lr 1e-4   --save_dir ./checkpoints
+```
+
+**Common args (from `train_decoder.py`)**
+- `--embedding_dir` : path to precomputed embeddings
+- `--epochs` : number of training epochs
+- `--batch_size` : per‑process batch size (effective = batch_size × world_size)
+- `--lr` : learning rate (e.g., 1e‑4)
+- `--save_dir` : where to write checkpoints (`.pth`) & logs
+- `--amp` : (flag) enable mixed precision fp16/bf16 if supported
+- `--seed` : seed for reproducibility
+- `--val_every` : validate every N steps/epochs (if supported)
+
+**Resuming**
+```bash
+python train_decoder.py   --embedding_dir ./embeddings   --epochs 30   --batch_size 16   --lr 1e-4   --save_dir ./checkpoints   --resume ./checkpoints/last.pth
+```
+
+---
+
+### 🧪 4) Evaluate / Visualize (Optional)
+After training, use the inference tools to inspect results:
+
+```bash
+# CLI visualization (PNG + NIfTI)
+python inference.py   --input /path/to/case001.nii.gz   --output ./Inference_results/case001   --checkpoint ./checkpoints/best.pth   --model-type samri   --box 30 40 200 220
+```
+
+Or run the notebook:
+```bash
+jupyter lab
+# open: ./infer_step_by_step.ipynb
+```
+
+---
+
+### 📝 Reproducibility Checklist
+- Fix seeds: `--seed 42` (and set `torch.backends.cudnn.deterministic=True` if applicable)
+- Log environment: `pip freeze > logs/requirements.txt`
+- Save CLI args / config: auto‑dump to `save_dir/args.json`
+- Track git commit: write `git rev-parse HEAD` to logs
+
+---
+
+### 🧯 Troubleshooting
+- **CUDA/ROCm OOM**: lower `--batch_size`; reduce `num_workers`; enable `--amp`
+- **Slow data loading**: set `--num_workers 4..8`, `pin_memory=True` (if CUDA)
+- **DDP hangs**: check `MASTER_ADDR/PORT`; try `export NCCL_P2P_DISABLE=1` on ROCm
+- **Validation mismatch**: confirm same preprocessing/normalization as training
+
+---
+
+### 🔎 Notes on Backends
+- **PyTorch/CUDA**: install a build matching your CUDA version
+- **ROCm (AMD MI300X/MI210)**: use ROCm PyTorch wheels; NCCL flags above may help
+- **Apple Silicon (MPS)**: training is possible, but performance is limited compared to CUDA/ROCm
+
+---
+
+### 📦 Expected Artifacts
+```
+checkpoints/
+  best.pth          # best validation metric
+  last.pth          # last epoch
+  logs.json         # training curves/metrics
+embeddings/
+  dataset_A/*.pt    # precomputed features
+  dataset_B/*.pt
+```
+If you want, you can pin typical hyper‑parameters per dataset in `configs/*.yaml` and pass `--config configs/amosmr.yaml` (if your script supports it).
 
 ---
 ## 📊 Evaluation
