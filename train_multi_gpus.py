@@ -8,7 +8,7 @@ python train_multi_gpus.py \
   --model_type samri \
   --batch_size 48 \
   --data_path ./user_data \
-  --model_save_path /user_data/Model_save \
+  --model_save_path ./user_data/Model_save \
   --num-epochs 120 \
   --save-every 2 \
   --prompts mixed \
