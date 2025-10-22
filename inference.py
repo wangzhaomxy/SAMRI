@@ -189,17 +189,17 @@ def parse_args():
     p = argparse.ArgumentParser(
         description="Infer a single NIfTI or image with SAM/SAMRI and save mask as .nii.gz (+optional PNG)."
     )
-    p.add_argument("--input", "-i", required=True, help="Path to input (.nii/.nii.gz or .png/.jpg/.tif)")
-    p.add_argument("--output", "-o", required=True, help="Output folder")
-    p.add_argument("--checkpoint", "-c", required=True, help="Path to SAM/SAMRI checkpoint (.pth)")
-    p.add_argument("--model-type", default="vit_b", choices=["vit_b", "vit_h", "samri"],
+    p.add_argument("--input", "-i", dest="input", required=True, help="Path to input (.nii/.nii.gz or .png/.jpg/.tif)")
+    p.add_argument("--output", "-o", dest="output", required=True, help="Output folder")
+    p.add_argument("--checkpoint", "-c", dest="checkpoint", required=True, help="Path to SAM/SAMRI checkpoint (.pth)")
+    p.add_argument("--model-type", dest="model_type", default="vit_b", choices=["vit_b", "vit_h", "samri"],
                    help="Backbone key for sam_model_registry (SAMRI usually uses vit_b).")
-    p.add_argument("--device", default="cuda", help='Device, e.g., "cuda" or "cpu"')
-    p.add_argument("--box", nargs=4, type=float, default=None, metavar=("X1", "Y1", "X2", "Y2"),
+    p.add_argument("--device", dest="device", default="cuda", help='Device, e.g., "cuda" or "cpu"')
+    p.add_argument("--box", dest="box", nargs=4, type=float, default=None, metavar=("X1", "Y1", "X2", "Y2"),
                    help="Optional bounding box prompt (pixel coords).")
-    p.add_argument("--point", nargs=2, type=float, default=None, metavar=("X", "Y"),
+    p.add_argument("--point", dest="point", nargs=2, type=float, default=None, metavar=("X", "Y"),
                    help="Optional point prompt (pixel coords).")
-    p.add_argument("--no-png", action="store_true", help="Do not write PNG (only .nii.gz).")
+    p.add_argument("--no-png", dest="no_png", action="store_true", help="Do not write PNG (only .nii.gz).")
     return p.parse_args()
 
 def clean_basename(inp_path: str) -> str:

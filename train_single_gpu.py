@@ -56,9 +56,9 @@ _parser.add_argument("--device",
                     default=cfg.DEVICE,
                     choices=["cuda", "cpu", "mps"],
                     help="Compute device.")
-_parser.add_argument("--save_every", type=int, default=1, 
+_parser.add_argument("--save-every", type=int, default=1, dest="save_every",
                      help="Save the model every N epochs.")
-_parser.add_argument("--prompts", nargs="+", default=["mixed"], 
+_parser.add_argument("--prompts", nargs="+", default=["mixed"], dest="prompts",
                      choices=["point","bbox","mixed"],
                      help = "Prompt types for training, choose from 'point', 'bbox', and 'mixed'. 'mixed' means both point and bbox prompts.")
 _args, _unknown = _parser.parse_known_args()
