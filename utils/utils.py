@@ -96,6 +96,17 @@ class SAMRIConfig:
         }
 
 def get_checkpoint(path, vitb_ckpt):
+    """Get the latest checkpoint and the start epoch number. If no checkpoint found,
+    return the vitb checkpoint and start epoch 0.
+
+    Args:
+        path (_type_): The path to the checkpoint folder.
+        vitb_ckpt (_type_): The vitb checkpoint path.
+
+    Returns:
+        str: The latest checkpoint path.
+        int: The start epoch number.
+    """
     cp_list = sorted(glob(path + "*pth"))
     if len(cp_list) == 0:
         cp_name = vitb_ckpt
