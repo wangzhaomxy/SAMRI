@@ -16,7 +16,6 @@ from collections.abc import Callable, Sequence
 from scipy import ndimage
 
 
-
 class StrEnum(str, Enum):
     """
     Enum subclass that converts its value to a string.
@@ -720,77 +719,4 @@ def sd_mean_surface_distance(input1, input2, sampling=1, connectivity=1):
 def sd_residual_mean_square_distance(input1, input2, sampling=1, connectivity=1):
     sd = surface_distance(input1, input2, sampling=1, connectivity=1)
     return np.sqrt((sd**2).mean())
-
-# def iou(y_true, y_pred, smooth=1e-10):
-#     intersection = np.sum(np.bitwise_and(y_true, y_pred))
-#     union = np.sum(np.bitwise_or(y_true, y_pred))
-#     return (intersection) /  (union + smooth)
-
-
-# def bce_dice_loss(y_true, y_pred):
-#     y_true = y_true.float()
-#     y_pred = y_pred.float()
-    
-#     dicescore = 1 - dice_similarity(y_true, y_pred)
-#     bcescore = nn.BCELoss()
-#     bceloss = bcescore(y_true, y_pred)
-
-#     return bceloss + dicescore
-
-# class MultiClassDiceLoss(nn.Module):
-#     def __init__(self, num_classes=3) -> None:
-#         super().__init__()
-#         self.num_classes = num_classes
-
-#     def forward(self, y_pred, target):
-#         y_pred = F.softmax(y_pred, dim=1).float()
-#         smooth = smooth=1e-5
-#         intersection = (target * y_pred).sum(axis=(-4,-2,-1))
-#         union_a = intersection
-#         union_b = target.sum(axis=(-4,-2,-1))
-#         dice_coef = (2 * intersection) / (union_a + 
-#                                             union_b + smooth)
-#         return (1- dice_coef).mean()
-    
-# class CeDiceLoss(nn.Module):
-#     def __init__(self, num_classes) -> None:
-#         super().__init__()
-#         self.num_classes = num_classes
-
-#     def forward(self,y_pred, target):
-#         y_pred = y_pred.float()
-#         target = target.float()
-
-#         dicescore = MultiClassDiceLoss(self.num_classes)
-#         diceloss = dicescore(y_pred, target)
-#         cescore = nn.CrossEntropyLoss()
-#         celoss = cescore(y_pred, target)
-
-#         return celoss + diceloss
-
-# class BiDiceLoss(nn.Module):
-#     def __init__(self) -> None:
-#         super().__init__()
-
-#     def forward(self,y_pred, target, smooth=1e-10):
-#         y_pred = F.sigmoid(y_pred).float()
-#         intersection = (y_pred * target).sum()
-#         sum_of_pred = y_pred.sum()
-#         sum_of_target = target.sum()
-#         dice_coef = (2 * intersection + smooth) / (sum_of_pred + 
-#                                             sum_of_target + smooth)
-#         return 1 - dice_coef
-    
-# class BatchDiceLoss(nn.Module):
-#     def __init__(self) -> None:
-#         super().__init__()
-
-#     def forward(self,y_pred, target, smooth=1e-10):
-#         y_pred = F.sigmoid(y_pred).float()
-#         intersection = (y_pred * target).sum(axis=(-3,-2,-1))
-#         sum_of_pred = y_pred.pow(2).sum(axis=(-3,-2,-1))
-#         sum_of_target = target.pow(2).sum(axis=(-3,-2,-1))
-#         dice_coef = (2 * intersection + smooth) / (sum_of_pred + 
-#                                             sum_of_target + smooth)
-#         return 1 - dice_coef.mean()
 
