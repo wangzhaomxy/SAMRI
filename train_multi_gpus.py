@@ -63,11 +63,10 @@ model_type = _args.model_type
 encoder_type = cfg.ENCODER_TYPE[model_type] 
 batch_size = _args.batch_size
 model_save_path = _args.model_save_path
-if not os.path.exists(model_save_path):
-    os.makedirs(model_save_path, exist_ok=True)
 num_epochs = _args.num_epochs
 save_every = _args.save_every
 prompts = _args.prompts
+os.makedirs(model_save_path, exist_ok=True)
 train_embedding_paths = cfg.TRAIN_EMBEDDING_PATH
 
 def ddp_setup(rank: int, world_size: int):
