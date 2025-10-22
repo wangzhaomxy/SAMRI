@@ -11,7 +11,6 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 from segment_anything import SamPredictor
 from utils.utils import *
-from utils.prompt import *
 from utils.losses import dice_similarity, sd_hausdorff_distance, sd_mean_surface_distance
 from utils.dataloader import NiiDataset, EmbDataset
 import pickle
