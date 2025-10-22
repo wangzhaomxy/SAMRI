@@ -12,5 +12,8 @@ dist/
 build/
 *.egg-info/
 
-# model checkpoints
-models/*.pth
+# # all user data files.
+# user_data/
+
+# Ignore model checkpoints
+user_data/Model_save/Pretrained_ckpt/*.pth
