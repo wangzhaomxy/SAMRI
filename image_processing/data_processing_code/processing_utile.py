@@ -1,12 +1,13 @@
 import os
-import glob
+from glob import glob
 import h5py as h5
 import numpy as np
 import nibabel as nib
 import cv2
 import json
 from tqdm import tqdm
-# import SimpleITK as sitk
+import SimpleITK as sitk
+from scipy.ndimage import label
 
 
 def read_nii_file(path):
@@ -45,19 +46,21 @@ def read_BTDF_file(path):
         image(np.array): the numpy format of the input image.
         label(str): label classes(1,2,3) with the return of label1,label2,label3
         tumormask(np.array): the numpy format of the mask.
+        p_id(str): the patient ID.
     """
     data = h5.File(path)
     data = data['cjdata']
     filename = fname_from_path(path)[:-4]
     # The entire dataset contains five keys: PID, image, label, tumorBorder, and
     # tumorMask. However, here we just need image, label and tumorMask for study.
-    image, label, tumormask = data['image'], data['label'], data['tumorMask']
+    image, label, tumormask, p_id = data['image'], data['label'], data['tumorMask'], data['PID']
+    p_id = "".join([str(x[0]) for x in p_id])
     return filename, np.array(image), "label"+str(int(np.array(label).item()))\
-            ,np.array(tumormask)
+            ,np.array(tumormask), p_id
 
 def save_nib_data(path, filename, image, mask, 
-                  label="label0", 
-                  modality="T2",
+                  label="1", 
+                  modality="1",
                   sli_idx = "0000"):
     """
     Save images and masks to .nii.gz format. Input save path, filename, image
@@ -73,13 +76,16 @@ def save_nib_data(path, filename, image, mask,
     nib.save(new_mask, mask_name)
 
 def save_img_data(path, filename, image, mask, 
-                  label="label0", 
-                  modality="T2",
+                  label="1", 
+                  modality="1",
                   sli_idx = "0000"):
     """
     Save images and masks to .png format. Input save path, filename, image
     data, label string and mask data, save image and mask data as [w,h] shape.
     """
+    make_dir(path + "mask/")
+    make_dir(path + "combination/")
+    make_dir(path + "img/")
     image_name = path + "img/" + filename + "_" + label + "_" + modality + \
                                                 "_img_" + sli_idx + ".png"
     mask_name = path + "mask/" + filename + "_" + label + "_" + modality + \
@@ -96,7 +102,7 @@ def save_img_data(path, filename, image, mask,
 def min_max_norm(image):
     return (image - np.min(image))/(np.max(image)-np.min(image)+ 1e-10)
 
-def create_save_folder(root_path):
+def create_save_folder(root_path, ds_name):
     """
     
     Create two new folders to save processed nifiy files and image files if
@@ -107,17 +113,23 @@ def create_save_folder(root_path):
                         "D:/xxxx/xxxx/xxxx
     
     Returns:
-        (str) : The path saving processed nifty files.
-        (str) : The path saving processed image files.
+        (str) : The path saving processed nifty files. For example,
+                "D:/xxxx/xxxx/xxxx/
+        (str) : The path saving processed image files. For example, 
+                "D:/xxxx/xxxx/xxxx/
         
     """
-    save_path = root_path + "/processed_data/"
-    save_img_path = root_path + "/processed_img/"
-
-    for sub_path in (save_path, save_img_path):
-        make_dir(sub_path)
-        
-    create_folders(save_img_path, ["img/", "mask/", "combination/"])
+    save_path = root_path + "/SAMRI_train_test/" + ds_name + "/"
+    make_dir(save_path)
+    create_folders(save_path, ["training/",
+                               "validation/",
+                               "testing/"])    
+    
+    save_img_path = root_path + "/SAMRI_train_test_img/" + ds_name + "/"
+    make_dir(save_img_path)
+    create_folders(save_img_path, ["training/",
+                                    "validation/",
+                                    "testing/"])    
     
     return save_path, save_img_path
 
@@ -143,8 +155,6 @@ def create_folders(root_path, folder_names):
 def make_dir(path):
     if not os.path.exists(path):
         os.makedirs(path)
-        
-
 
 def include(ds_root, ds_name):
     """
@@ -184,7 +194,7 @@ def sort_all_fnames(path):
     Returns:
         [list]: A list of all file names (absolute path) under the input folder.
     """
-    return sorted(glob.glob(path + "/*"))
+    return sorted(glob(path + "/*"))
 
 def sort_key_fnames(path, key):
     """
@@ -198,7 +208,37 @@ def sort_key_fnames(path, key):
     Returns:
         [list]: A list of all file names (absolute path) under the input folder.
     """
-    return sorted(glob.glob(path + "/*" + key +"*"))
+    return sorted(glob(path + "/*" + key +"*"))
+
+def split_individual_labels(mask):
+    """Split the individual labels from the components sharing a same label but 
+    are not connected in the mask. 
+
+    Args:
+        mask (np.array): The 2D masks with the shape of HW.
+
+    Returns:
+        (np.array): The label splited new mask.
+    """
+    new_mask = np.zeros_like(mask)
+    current_label = 1
+
+    for original_label in np.unique(mask):
+        if original_label == 0:
+            continue  # skip background
+
+        # Create binary mask for the current label
+        binary_mask = (mask == original_label)
+
+        # Label connected components
+        labeled_components, num = label(binary_mask)
+
+        # Assign new labels
+        for i in range(1, num + 1):
+            new_mask[labeled_components == i] = current_label
+            current_label += 1
+
+    return new_mask
 
 def read_json(path):
     """
@@ -211,13 +251,13 @@ def read_json(path):
         {Dic}: the Dictionary read from the .json file.
     """
     
-    with open(glob.glob(path + "/*.json")[0]) as json_data:
+    with open(glob(path + "/*.json")[0]) as json_data:
         js_data = json.load(json_data)
         json_data.close()        
     return js_data
 
 def process_nii_json(json_ds, root_path, ds_info, save_nii_path_out, 
-                     save_img_path_out):
+                     save_img_path_out, ds_type="training"):
     for data in tqdm(json_ds):
         img_nD = read_nii_file(root_path + '/' + data["image"])
         gt_nD = read_nii_file(root_path + '/' + data["label"])
@@ -228,31 +268,34 @@ def process_nii_json(json_ds, root_path, ds_info, save_nii_path_out,
                 filename = fname_from_path(data["image"])[:-7]
                 modality=ds_info["modality"][str(i)]
                 sli_idx = str(slice_num).zfill(4)
-                if len(np.nonzero(gt_nD[:,:,slice_num])[0]) > 30:
+                if len(np.nonzero(gt_nD[:,:,slice_num])[0]) > 20:
                     if len(img_nD.shape) == 4:
                         image = img_nD[:,:,slice_num,i]
                     if len(img_nD.shape) == 3:
                         image = img_nD[:,:,slice_num]                            
                     mask = gt_nD[:,:,slice_num]
+                    mask = clean_mask(mask)
+                    if np.sum(image) * np.sum(mask) == 0:
+                        continue
+                    else:
+                        save_nib_data(save_nii_path_out+ds_type+"/", filename, image, mask, 
+                                                modality=modality, sli_idx=sli_idx)
+                        save_img_data(save_img_path_out+ds_type+"/", filename, image, mask, 
+                                                modality=modality, sli_idx=sli_idx)
                     
-                    save_nib_data(save_nii_path_out, filename, image, mask, 
-                                            modality=modality, sli_idx=sli_idx)
-                    save_img_data(save_img_path_out, filename, image, mask, 
-                                            modality=modality, sli_idx=sli_idx)
-                    
-# def load_itk(mhd_name):
-#     """
-#     Read a ".mhd" file using SimpleITK and teturn the image array
+def load_itk(mhd_name):
+    """
+    Read a ".mhd" file using SimpleITK and teturn the image array
 
-#     Args:
-#         mhd_name (str): The ".mhd" file path.
+    Args:
+        mhd_name (str): The ".mhd" file path.
 
-#     Returns:
-#         np.array: The 3D image in numpy array format.
-#     """
-#     itkimage = sitk.ReadImage(mhd_name)
-#     np_img = sitk.GetArrayFromImage(itkimage)
-#     return np_img
+    Returns:
+        np.array: The 3D image in numpy array format.
+    """
+    itkimage = sitk.ReadImage(mhd_name)
+    np_img = sitk.GetArrayFromImage(itkimage)
+    return np_img
 
 def read_npz(path):
     """
@@ -273,38 +316,175 @@ def read_npz(path):
     image, mask = data['imgs'], data['gts']
     return filename, image, mask
 
-def slice_np(image, mask, filename,
-              threshold:30, 
+def slice_np(image, mask, filename, ds_type,
               save_nii_path_out,
-              save_img_path_out):
+              save_img_path_out,
+              modality="1",
+              slice_dim=None,
+              split_mask=False):
     """
     Slice 3D image and mask and save file as nifty and png files.
 
     Args:
-        image (np.array): The image with shape of CHW
-        mask (np.array): The mask with shape of CHW, the same with image.
+    
+        image (np.array): The 3D image with shape of CHW.
+        
+        mask (np.array): The 3D mask with shape of CHW, the same with image.
+        
         filename (str): The file name (exlucive extention name).
-        threshold (int): The threshold of mask labels.
+        
+        ds_type (str): The dataset type. Choose from ["training", "validation", "testing"]
+        
         save_nii_path_out (str): The path for saving nifty files.
+        
         save_img_path_out (str): The path for saving png files.
         
+        modality (str, optional): The modality string. Defaults to "".
+        
+        slice_dim (int, optional): The slice dimension
+        
+        split_mask (bool): If true, then split the individual labels from the 
+                components sharing a same label but are not connected in the 
+                mask. Defaults to False.
+        
     Returns:
+    
         No returns, saving files to the paths.
     """
-    slices = image.shape[0]
+    if slice_dim is None:
+        slice_dim = np.argmin(image.shape)
+    else:
+        slice_dim = int(slice_dim)
+        
+    slices = image.shape[slice_dim]
     for slice_num in range(slices):
-        modality = ""
         sli_idx = str(slice_num).zfill(4)
-        if len(np.nonzero(mask[slice_num,:,:])[0]) > threshold:
+        # Slice the minimum side of the 3D image and mask.
+        if slice_dim == 0:
             img = image[slice_num,:,:]                            
             gt = mask[slice_num,:,:]
-            save_nib_data(save_nii_path_out, filename, img, gt, 
+        elif slice_dim == 1:
+            img = image[:,slice_num,:]
+            gt = mask[:,slice_num,:]
+        elif slice_dim == 2:
+            img = image[:,:,slice_num]
+            gt = mask[:,:,slice_num]
+        else:
+            print("Shape Error.")
+            break
+        # Clean the mask size lower than the threshold.
+        gt = clean_mask(gt)
+        # Split the labels with multiple components.
+        if split_mask:
+            gt = split_individual_labels(gt)
+            
+        if np.sum(img) * np.sum(gt) == 0:
+            continue
+        else:
+            save_nib_data(save_nii_path_out+ds_type+"/", filename, img, gt, 
                                             modality=modality, sli_idx=sli_idx)
-            save_img_data(save_img_path_out, filename, img, gt, 
+            save_img_data(save_img_path_out+ds_type+"/", filename, img, gt, 
                                             modality=modality, sli_idx=sli_idx)
 
+def clean_mask(mask, threshold=30):
+    """Clean the masks that pixel number is less than the threshold.
 
+    Args:
+        mask (np.array): The mask with shape of HW.
+        threshold (int, optional): The threshold of mask pixel number. Defaults to 20.
+    """
+    mask_labels = np.unique(mask)[(np.unique(mask).nonzero()[0])]
+    for label in mask_labels:
+        if np.sum(mask==label) < threshold:
+            mask[np.where(mask==label)] = 0
+    return mask
+    
+def save_from_np(data_list, ds_type, save_path_out, save_img_path_out):
+    for data in tqdm(data_list, desc=ds_type + " Dataset"):
+        filename, image, mask = read_npz(data)
+        slice_np(image=image, mask=mask, filename=filename, 
+                    ds_type=ds_type, save_nii_path_out=save_path_out,
+                    save_img_path_out=save_img_path_out)
 
+def save_from_nii(img_list, 
+                  mask_list, 
+                  ds_type, 
+                  save_path_out, 
+                  save_img_path_out, 
+                  name_key=None,
+                  slice_dim=None):
+    
+    for img_path, mask_path in tqdm(list(zip(img_list,mask_list)), desc=ds_type+" Dataset"):
+        image = read_nii_file(img_path)
+        mask = read_nii_file(mask_path)
+        if name_key is None:
+            filename = fname_from_path(img_path)[:-7]
+        else:
+            filename = "".join(fname_from_path(img_path).split(name_key))[:-7]
+        slice_np(image=image, mask=mask, 
+                    filename=filename, 
+                    ds_type=ds_type,
+                    save_nii_path_out=save_path_out,
+                    save_img_path_out=save_img_path_out,
+                    slice_dim=slice_dim)
 
-
-
+def save_from_mhd(img_list, 
+                  mask_list, 
+                  ds_type, 
+                  save_path_out, 
+                  save_img_path_out, 
+                  name_key=None,
+                  slice_dim=None):
+    for img_path, mask_path in tqdm(list(zip(img_list,mask_list)), desc=ds_type+" Dataset"):
+        image = load_itk(img_path)
+        mask = load_itk(mask_path)
+        if name_key is None:
+            filename = fname_from_path(img_path)[:-4]
+        else:
+            filename = "".join(fname_from_path(img_path).split(name_key))[:-4]
+        slice_np(image=image, mask=mask, 
+                    filename=filename, 
+                    ds_type=ds_type,
+                    save_nii_path_out=save_path_out,
+                    save_img_path_out=save_img_path_out,
+                    slice_dim=slice_dim)
+        
+def save_CHAOS(img_list, 
+                  mask_list, 
+                  ds_type, 
+                  save_path_out, 
+                  save_img_path_out,
+                  modality="1:"):
+    for img_path, mask_path in tqdm(list(zip(img_list,mask_list)), desc=ds_type+" Dataset"):
+        image = load_itk(img_path)[0,...]
+        mask = load_itk(mask_path)
+        filename = fname_from_path(img_path)[:-4]
+        
+        mask = clean_mask(mask)
+        if np.sum(image) * np.sum(mask) == 0:
+            continue
+        else:
+            save_nib_data(save_path_out+ds_type+"/", filename, image, mask, 
+                                            modality=modality)
+            save_img_data(save_img_path_out+ds_type+"/", filename, image, mask, 
+                                            modality=modality)
+            
+def save_QUBIQ(case_list, ds_type, save_path_out, save_img_path_out):
+    for case_path in tqdm(case_list, desc=ds_type+" Dataset"):
+        case_name = fname_from_path(case_path)
+        image = load_itk(case_path+"/image.nii.gz")
+        if len(image.shape) == 3:
+            image = image[0,...]
+        mask_list = glob(case_path+"/*_seg*.nii.gz")
+        for mask_path in mask_list:
+            mask = load_itk(mask_path)
+            if len(mask.shape) == 3:
+                mask = mask[0,...]
+            filename = case_name + "_" + "_".join(fname_from_path(mask_path).split("_seg"))[:-7]
+            mask = clean_mask(mask)
+            if np.sum(image) * np.sum(mask) == 0:
+                continue
+            else:
+                save_nib_data(save_path_out+ds_type+"/", filename, image, mask)
+                save_img_data(save_img_path_out+ds_type+"/", filename, image, mask)
+        

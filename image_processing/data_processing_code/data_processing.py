@@ -1,31 +1,34 @@
 import os
-import glob
 from ds_lib import *
 from processing_utile import include
 
-DATASETS_PATH = "R:/KNEEAI2023-A11834/Datasets/SAMRIDataSet"
+DATASETS_PATH = "R:\SAMRI_DATA-Q7684\SAMRIDataSet(Raw)"
 PRPCESSED_ALL_PATH = "C:/DataSets/SAMRI_datasets"
 
 dataset_lib = {
-    # "Brain_Tumor_Dataset_Figshare": process_BTDF,
-    # "MSD": process_MSD,
-    # "amos22": process_amos22,
-    # "MedSamLite": process_MSLite,
-    "MSK": process_MSK,
-    # "PROMISE": process_PROMISE,
-    # "ACDC":process_ACDC,
-    # "Brain-TR-GammaKnife-processed":process_Brain_TR_G,
-    # "CHAOS_Train_Sets":porcess_CHAOS,
-    # "Meningioma-SEG-CLASS":porcess_Meningioma,
-    # "NCI-ISBI": process_NCI_ISBI,
-    # "Picai": process_Picai,
+    "Brain_Tumor_Dataset_Figshare": process_BTDF,
+    "MSD": process_MSD,
+    "Npz_dataset": process_npz_DS,
+    "MSK_knee": process_MSK_knee,
+    "PROMISE": process_PROMISE,
+    "ACDC":process_ACDC,
+    "CHAOS":porcess_CHAOS,
+    "Picai": process_Picai,
+    "QUBIQ": process_QUBIQ,
+    "HipMRI": process_HipMRI,
+    "OAI_imorphics_dess_sag": process_OAI_imorphics_dess_sag, 
+    "OAI_imorphics_flash_cor": process_OAI_imorphics_flash_cor, 
+    "OAI_imorphics_tse_sag": process_OAI_imorphics_tse_sag,
+    "OAIAKOA" : process_OAIAKOA,
+    "ZIB_OAI" : process_ZIB_OAI,
+    "MSK_shoulder" : process_MSK_shoulder,
 }
 
 # list all the dataset folders under the DATASETS_PATH folder.
-ds_root = [ds for ds in glob.glob(DATASETS_PATH + "/*") if ds not in 
-                                            glob.glob(DATASETS_PATH+"/*.*")]
+ds_root = [ds for ds in glob(DATASETS_PATH + "/*") if ds not in 
+                                            glob(DATASETS_PATH+"/*.*")]
 
-
+# Process all the datasets in the dataset_lib list.
 ds_root_process = [ds for ds in ds_root if include(ds, dataset_lib.keys())]
 
 print("\n The following datasets will be processed:")
