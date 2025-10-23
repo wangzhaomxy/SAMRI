@@ -1,9 +1,27 @@
 import os
 from ds_lib import *
 from processing_utile import include
+import argparse
 
-DATASETS_PATH = "R:\SAMRI_DATA-Q7684\SAMRIDataSet(Raw)"
-PRPCESSED_ALL_PATH = "C:/DataSets/SAMRI_datasets"
+# ---- CLI ----
+_parser = argparse.ArgumentParser(description="SAMRI data processing constants from CLI")
+_parser.add_argument(
+    "--dataset-path","dataset_path",
+    dest="dataset_path",
+    default="R:/SAMRI_DATA-Q7684/SAMRIDataSet(Raw)",
+    help=f"Dataset directory.",
+)
+_parser.add_argument(
+    "--save-path","save_path",
+    dest="save_path",
+    default="C:/DataSets/SAMRI_datasets",
+    help=f"Embedding save directory.",
+)
+_args = _parser.parse_args()
+# ---- CLI End----
+
+ds_path = _args.dataset_path
+save_path = _args.save_path
 
 dataset_lib = {
     "Brain_Tumor_Dataset_Figshare": process_BTDF,
@@ -25,8 +43,8 @@ dataset_lib = {
 }
 
 # list all the dataset folders under the DATASETS_PATH folder.
-ds_root = [ds for ds in glob(DATASETS_PATH + "/*") if ds not in 
-                                            glob(DATASETS_PATH+"/*.*")]
+ds_root = [ds for ds in glob(ds_path + "/*") if ds not in 
+                                            glob(ds_path+"/*.*")]
 
 # Process all the datasets in the dataset_lib list.
 ds_root_process = [ds for ds in ds_root if include(ds, dataset_lib.keys())]
@@ -39,7 +57,7 @@ print("\n")
 for ds_root_path in ds_root_process:
     ds_name = os.path.basename(ds_root_path)
     print("Processing " + ds_name +" Dataset...")
-    dataset_lib[ds_name](ds_root_path, PRPCESSED_ALL_PATH)
+    dataset_lib[ds_name](ds_root_path, save_path)
 
 
 
