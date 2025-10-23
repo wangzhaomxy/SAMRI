@@ -174,9 +174,33 @@ This section covers **end‑to‑end training** of SAMRI’s decoder on precompu
 
 ---
 
-### 📂 1) Prepare Your Data
+### 📂 Prepare Your Data
 
-Organize datasets as study folders with images and masks. Patient-wise split the training/validation/testing samples. 
+**Download & Organize Raw MRI Data**
+Please download and structure the raw MRI datasets following the instructions provided in the RawData section.
+Ensure all files are correctly organized before running the preprocessing step.
+
+**Run the Preprocessing Script**
+Execute the following command to process and save the dataset:
+```bash
+python image_processing.data_processing_code.data_processing \
+  --dataset-path /path/to/your/target-dataset \
+  --save-path /path/to/your/target-save-directory
+```
+>⚠️ Note: The raw data may be periodically updated by the dataset authors.
+If error occur, please modify the corresponding scripts under
+`./image_processing/data_processing_code/ to maintain compatibility` folder.
+
+**Preparing Your Own Custom Data**
+To use your own MRI dataset, follow this recommended workflow:
+* Patient-wise split your dataset into training, validation, and testing sets.
+* Slice each 3D MRI volume into 2D slices.
+* Filter slices to keep only those with mask pixel count > 10.
+* Manually clean noisy or corrupted image–mask pairs (e.g., thin lines, artifacts).
+* Save and organize the cleaned data into a structured directory format
+(e.g., training/, validation/, testing/).
+
+Organize datasets as separate folders, and patient-wise split the training/validation/testing samples. store images and masks in the same folder.
 Examples:
 ```
 ./user_data/Datasets/SAMRI_train_test
@@ -200,17 +224,10 @@ Examples:
 > * For 3D NIfTI, training is typically on **2D slices**.
 > * The image and mask files should be organized in the same folder with different keys: **"\_img_\"** for images, and **"\_seg_\"** for masks, respectively. Other part of the name should be the same or in the same order after being sorted.
 
-Optional split files:
-```
-splits/
-  train.txt   # each line = relative path to an image
-  val.txt
-  test.txt
-```
 
 ---
 
-### ⚙️ 2) Precompute Image Embeddings
+### ⚙️ Precompute Image Embeddings
 Use SAM ViT‑B to compute and cache image embeddings (saves training time & memory).
 
 ```bash
@@ -226,7 +243,7 @@ python preprocess/precompute_embeddings.py   --data_dir /data/SAMRI_train_test  
 
 ---
 
-### 🎯 3) Train the Decoder
+### 🎯 Train the Decoder
 
 #### Single‑GPU
 ```bash
@@ -283,7 +300,7 @@ python train_decoder.py   --embedding_dir ./embeddings   --epochs 30   --batch_s
 
 ---
 
-### 🧪 4) Evaluate / Visualize (Optional)
+### 🧪 Evaluate / Visualize (Optional)
 After training, use the inference tools to inspect results:
 
 ```bash
