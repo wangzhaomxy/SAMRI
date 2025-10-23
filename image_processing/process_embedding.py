@@ -3,7 +3,7 @@
 Process and save image embeddings using SAM_vitb model.
 
 Usage example:
-python process_embedding.py \
+python preprocess/precompute_embeddings.py \
   --base-path ./user_data \
   --dataset-path ./user_data/Datasets/SAMRI_train_test/ \
   --img-sub-path train/ \
