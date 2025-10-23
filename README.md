@@ -125,11 +125,11 @@ python inference.py \
 **Example**
 ```bash
 python inference.py \
-  --input ./datasets/demoSample/example_img_1.nii.gz \
-  --output ./datasets/infer_output\
-  --checkpoint ./models/samri_vitb_bp.pth \
+  --input ./user_data/Datasets/demoSample/example_img_1.nii.gz \
+  --output ./user_data/Datasets/infer_output \
+  --checkpoint ./user_data/pretrained_ckpt/samri_vitb_bp.pth \
   --model-type samri \
-  --device mps \
+  --device mps \ # or "cuda"
   --box 115 130 178 179\
   --point 133 172
 ```
@@ -176,19 +176,29 @@ This section covers **end‑to‑end training** of SAMRI’s decoder on precompu
 
 ### 📂 1) Prepare Your Data
 
-Organize datasets as patient/study folders with images and masks. Examples:
+Organize datasets as study folders with images and masks. Patient-wise split the training/validation/testing samples. 
+Examples:
 ```
-/data/SAMRI_train_test/
+./user_data/Datasets/SAMRI_train_test
 ├── dataset_A/
-│   ├── images/         # .nii/.nii.gz or 2D .png/.jpg
-│   └── masks/          # matching file names (binary/label masks)
+│   ├── training/
+│   │   ├──example1*_img_*.nii.gz
+│   │   ├──example1*_seg_*.nii.gz    # matching file names (binary/label masks)
+│   │   └──...
+│   ├── validation/         # .nii.gz
+│   │   └──...
+│   └── testing/
+│   │   └──...          
 ├── dataset_B/
-│   ├── images/
-│   └── masks/
+│   ├── training/
+│   ├── validation/         # .nii.gz
+│   └── testing/   
 └── ...
 ```
 
-> Masks should align with images in shape and orientation. For 3D NIfTI, training is typically on **2D slices**.
+> * Masks should align with images in shape and orientation. 
+> * For 3D NIfTI, training is typically on **2D slices**.
+> * The image and mask files should be organized in the same folder with different keys: **"\_img_\"** for images, and **"\_seg_\"** for masks, respectively. Other part of the name should be the same or in the same order after being sorted.
 
 Optional split files:
 ```
