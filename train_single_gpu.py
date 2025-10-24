@@ -2,6 +2,16 @@
 """
 Train the mask decoder (single GPU)
 Freeze image encoder and prompt encoder.
+Example command:
+python train_single_gpu.py \
+  --model_type samri \
+  --batch_size 48 \
+  --data_path ./user_data \
+  --model_save_path ./user_data/Model_save \
+  --num-epochs 120 \
+  --device cuda \
+  --save-every 2 \
+  --prompts mixed \
 """
 
 # --- Standard library ---
