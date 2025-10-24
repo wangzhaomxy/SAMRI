@@ -223,7 +223,7 @@ Examples:
 > * Masks should align with images in shape and orientation. 
 > * For 3D NIfTI, training is typically on **2D slices**.
 > * The image and mask files should be organized in the same folder with different keys: **"\_img_\"** for images, and **"\_seg_\"** for masks, respectively. Other part of the name should be the same or in the same order after being sorted.
-
+> * The shape of the image and mask are both 1 x H x W.
 
 ---
 
@@ -231,57 +231,62 @@ Examples:
 Use SAM ViT‑B to compute and cache image embeddings (saves training time & memory).
 
 ```bash
-python preprocess/precompute_embeddings.py   --data_dir /data/SAMRI_train_test   --save_dir ./embeddings   --batch_size 16   --num_workers 8
+python preprocess/precompute_embeddings.py \
+  --base-path ./user_data \
+  --dataset-path ./user_data/Datasets/SAMRI_train_test/ \
+  --img-sub-path train/ \
+  --save-path ./user_data/Datasets/Embedding_train/ \
+  --checkpoint ./user_data/pretrained_ckpt/sam_vit_b_01ec64.pth \
+  --device cuda
 ```
 **Key args**
-- `--data_dir` : root folder with datasets
-- `--save_dir` : output folder for `.pt` or `.npy` embeddings
-- `--batch_size` : embedding mini‑batch size (per process if using DDP)
-- `--num_workers` : DataLoader workers (tune to avoid CPU/IO bottlenecks)
+- `--base-path` : Root folder of the user data
+- `--dataset-path` : Dataset directory.
+- `--img-sub-path` : Dataset subfolder, choose from "train", "validation", and "test".
+- `--save-path` : Embedding save directory.
+- `--checkpoint` : The path of the SAM Vitb checkpoint.
+- `--device` : Computation device, choose from "cuda", "cpu", and "mps".
 
-> Tip: If you see **OOM** or heavy swapping, lower `--batch_size` or `--num_workers` (e.g., 2–8).
+> Note: The embedding results are saved as "**.npz**" file with the keys of ["img", "mask", "ori_size"].
+> * img: embedding
+> * mask: mask
+> * ori_size: the original HW shape of the image and mask.
 
 ---
 
 ### 🎯 Train the Decoder
 
 #### Single‑GPU
+Training SAMRI can use commercial GPU. The following example command can be used in this situation. Some HPC provide command terminal for GPU. 
 ```bash
-python train_decoder.py   --embedding_dir ./embeddings   --epochs 30   --batch_size 16   --lr 1e-4   --save_dir ./checkpoints
+python train_single_gpu.py \
+  --model_type samri \
+  --batch_size 48 \
+  --data_path ./user_data \
+  --model_save_path ./user_data/Model_save \
+  --num-epochs 120 \
+  --device cuda \
+  --save-every 2 \
+  --prompts mixed \
 ```
 
 #### Multi‑GPU (same node, PyTorch DDP)
+Some HPC provide commnad terminal for multi GPU mode. The following command can be used in this situation.
 ```bash
-torchrun --nproc_per_node=8 train_decoder.py   --embedding_dir ./embeddings   --epochs 30   --batch_size 16   --lr 1e-4   --save_dir ./checkpoints
+python train_multi_gpus.py \
+  --model_type samri \
+  --batch_size 48 \
+  --data_path ./user_data \
+  --model_save_path ./user_data/Model_save \
+  --num-epochs 120 \
+  --save-every 2 \
+  --prompts mixed \
 ```
 
-#### SLURM (example for Bunya MI300X nodes)
-```bash
-# sbatch train_samri_ddp.sbatch
-#!/bin/bash
-#SBATCH -J samri_ddp
-#SBATCH -A <your_account>
-#SBATCH -p mi300x
-#SBATCH --nodes=1
-#SBATCH --gpus-per-node=8
-#SBATCH --ntasks-per-node=8
-#SBATCH --cpus-per-task=8
-#SBATCH --mem=0
-#SBATCH -t 24:00:00
-#SBATCH -o logs/%x_%j.out
-#SBATCH -e logs/%x_%j.err
+#### SLURM 
 
-module purge
-# load your conda and env
-source ~/.bashrc
-conda activate samri
 
-export OMP_NUM_THREADS=$SLURM_CPUS_PER_TASK
-export TORCH_NCCL_BLOCKING_WAIT=1  # easier debugging
-export NCCL_P2P_DISABLE=1          # sometimes helps on ROCm
 
-srun torchrun --nproc_per_node=$SLURM_GPUS_PER_NODE train_decoder.py   --embedding_dir ./embeddings   --epochs 30   --batch_size 16   --lr 1e-4   --save_dir ./checkpoints
-```
 
 **Common args (from `train_decoder.py`)**
 - `--embedding_dir` : path to precomputed embeddings
@@ -292,11 +297,6 @@ srun torchrun --nproc_per_node=$SLURM_GPUS_PER_NODE train_decoder.py   --embeddi
 - `--amp` : (flag) enable mixed precision fp16/bf16 if supported
 - `--seed` : seed for reproducibility
 - `--val_every` : validate every N steps/epochs (if supported)
-
-**Resuming**
-```bash
-python train_decoder.py   --embedding_dir ./embeddings   --epochs 30   --batch_size 16   --lr 1e-4   --save_dir ./checkpoints   --resume ./checkpoints/last.pth
-```
 
 ---
 
