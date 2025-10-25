@@ -26,7 +26,6 @@ setup(
         "pandas==2.2.0",
         # "einops", # will be installed with segment-anything. If not, uncomment this line.
         "h5py",
-        "SimpleITK==2.2.1.1",
     ],
     classifiers=[
         "Development Status :: 3 - Alpha",
