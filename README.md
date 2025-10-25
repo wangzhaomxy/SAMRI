@@ -282,21 +282,47 @@ python train_multi_gpus.py \
   --save-every 2 \
   --prompts mixed \
 ```
+>**Common args for training scripts:**
+>- `--model_type samri` : the training model type.
+>- `--batch_size` : per‑process batch size (effective = batch_size × world_size) Mi300X(192G)=1024, A/H100(80G)=512. Lower batch size if OOM occurs.
+>- `--data_path ./user_data` : The training embedding folder path.
+>- `--model_save_path ./user_data/Model_save` : where to write checkpoints (`.pth`)
+>- `--num-epochs` : number of training epochs. 
+>- `--device` : The model training GPU. Choose from "cuda" and "mps".
+>- `--save-every` : save checkpoints every x epoch.
+>- `--prompts mixed` : training prompts. Choose from "point", "bbox", and "mixed", where "mixed" means point+bbox prompt.
 
 #### SLURM 
+SLURM scrip is popular in HPC system. The script can be found at `./train_multi_gpus_mi300.sh`. Change the script to adapt your HPC.
 
+Examples:
+```bash
+#!/bin/bash --login
+#SBATCH --nodes=1
+#SBATCH --ntasks-per-node=1
+#SBATCH --cpus-per-task=64
+#SBATCH --mem=1T
+#SBATCH --job-name=SAMRI
+#SBATCH --time=7-00:00:00
+#SBATCH --partition=gpu_rocm
+#SBATCH --gres=gpu:mi300x:8
+#SBATCH --account=xxxxx   # Use your account if available.
+#SBATCH --qos=sdf
+#SBATCH -o /home/Documents/slurm-%j.output #The path to save output logs.
+#SBATCH -e /home/Documents/slurm-%j.error #The path to save processing logs.
+#SBATCH --mail-type=ALL
+#SBATCH --mail-user=your_email@email.com
 
+module load anaconda3
+source $EBROOTANACONDA3/etc/profile.d/conda.sh
+conda activate samri-mi300
 
+# Dynamically assign port from job ID to avoid collisions
+export MASTER_ADDR=localhost
+export MASTER_PORT=$((26000 + RANDOM % 1000))  # Pick a port between 26000 ~ 26999
 
-**Common args (from `train_decoder.py`)**
-- `--embedding_dir` : path to precomputed embeddings
-- `--epochs` : number of training epochs
-- `--batch_size` : per‑process batch size (effective = batch_size × world_size)
-- `--lr` : learning rate (e.g., 1e‑4)
-- `--save_dir` : where to write checkpoints (`.pth`) & logs
-- `--amp` : (flag) enable mixed precision fp16/bf16 if supported
-- `--seed` : seed for reproducibility
-- `--val_every` : validate every N steps/epochs (if supported)
+python train_multi_gpus.py
+```
 
 ---
 
