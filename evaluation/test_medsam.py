@@ -1,3 +1,17 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Single-GPU testing script for MedSAM mask decoder.
+Loads checkpoints from a specified path.
+Examples:
+    python evaluation.test_medsam.py \
+    --test-image-path /path/to/test/images/ \
+    --ckpt-path /path/to/checkpoint.pth \
+    --save-path /path/to/save/results/ \
+    --device cuda
+The results will be saved in the specified save path.
+"""
+
 import numpy as np
 import os
 join = os.path.join
@@ -10,6 +24,33 @@ from tqdm import tqdm
 from torch.utils.data import Dataset
 import nibabel as nib
 import glob, random
+import argparse
+
+cfg = SAMRIConfig()
+# setup global parameters and converted to CLI-driven.
+_parser = argparse.ArgumentParser(add_help=True)
+_parser.add_argument("--test-image-path", "--test_image_path",
+                     dest="test_image_path",
+                     type=str, 
+                     default=cfg.IMAGE_PATH,
+                     help="The root path of the images.")
+_parser.add_argument("--ckpt-path", "--ckpt_path",
+                     dest="ckpt_path",
+                     type=str, 
+                     default=cfg.MODEL_SAVE_PATH,
+                     help="The root path or path of the test checkpoint.")
+_parser.add_argument("--save-path", "--save_path",
+                     dest="save_path",
+                     type=str, 
+                     default=cfg.root_path + "/MedSAM_inference/",
+                     help="The root path to save evaluation results.")
+_parser.add_argument("--device",
+                     dest="device",
+                     type=str,
+                     default=cfg.DEVICE,
+                     help="Device to run the model on.")
+_args = _parser.parse_args()
+cfg.IMAGE_PATH = _args.test_image_path
 
 # From MedSAM Inference file
 #################
@@ -148,15 +189,14 @@ class MaskSplit():
         return masks, labels
     
 # Setup
-file_paths = TEST_IMAGE_PATH
-model_name = "MedSAM"
-save_path = "/MedSAM_inference/"
+file_paths = cfg.TEST_IMAGE_PATH
+save_path = _args.save_path
 make_dir(save_path)
 
 # From MedSAM Inference file
 #################
-device = "cuda"
-ckpt = "/model/medsam_vit_b.pth"
+device = _args.device
+ckpt = _args.ckpt_path
 medsam_model = sam_model_registry["vit_b"](checkpoint=ckpt)
 medsam_model = medsam_model.to(device)
 medsam_model.eval()
