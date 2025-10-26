@@ -2,6 +2,16 @@
 """
 Single-GPU validation script for SAMRI mask decoder.
 Freezes image encoder and prompt encoder.
+
+Examples:
+    python evaluation.val_in_batch.py \
+    --val-emb-path /path/to/val/embeddings/ \
+    --ckpt-path /path/to/checkpoint_directory/
+    --prompts mixed \
+    --device cuda \
+    --batch-size 64
+    
+The results will be saved in a CSV file under the checkpoint directory.
 """
 
 import os
@@ -14,19 +24,47 @@ from utils.dataloader import EmbDataset
 from torch.utils.data import DataLoader
 from utils.losses import DiceLoss
 from utils.utils import *
-from utils.prompt import *
 from model import SAMRI
 from segment_anything.utils.transforms import ResizeLongestSide
+import argparse
+
+cfg = SAMRIConfig()
+# setup global parameters and converted to CLI-driven.
+_parser = argparse.ArgumentParser(add_help=True)
+
+_parser.add_argument("--val-emb-path", "--val_emb_path",
+                     dest="val_emb_path",
+                     type=str, 
+                     default=cfg.root_path + "/Datasets/Embedding_train/",
+                     help="The root path of the images.")
+_parser.add_argument("--ckpt-path", "--ckpt_path",
+                     dest="ckpt_path",
+                     type=str, 
+                     default=cfg.MODEL_SAVE_PATH,
+                     help="The root path or path of the test checkpoint.")
+_parser.add_argument("--prompts", nargs="+", default=["mixed"], dest="prompts",
+                     choices=["point","bbox","mixed"],
+                     help = "Prompt types for training, choose from 'point', 'bbox', and 'mixed'. 'mixed' means both point and bbox prompts.")
+_parser.add_argument("--device",
+                     dest="device",
+                     type=str,
+                     default=cfg.DEVICE,
+                     help="Device to run the model on.")
+_parser.add_argument("--batch-size", "--batch_size",
+                     dest="batch_size",
+                     type=int,
+                     default=cfg.BATCH_SIZE,
+                     help="Batch size for validation.")
+_args = _parser.parse_args()
 
 # Define global arguments
-# model_sub_path = "bp_fullds_balance_up/"
-model_sub_path = "fullds_balance_up_new_loss/"
-file_name = "dice_loss_results_zero.csv"  # Example file name, adjust as needed
-prompt_mode = "box"  # Choose one from "box" and "bp"
-
-# Define the path to the zero shot validation embeddings
-data_path = "/scratch/project/samri/Embedding_val_zero/"
-VAL_EMBEDDING_PATH = [ds + "/" for ds in sorted(glob(data_path + "*"))]
+file_name = "eval_results.csv"  # Example file name, adjust as needed
+prompt_mode = _args.prompts()
+model_type = "samri"
+encoder_type = "vit_b"  # choose one from vit_b and vit_h.
+batch_size = _args.batch_size  # Adjust batch size as needed
+model_path = _args.ckpt_path
+val_emb_path = [ds + "/" for ds in sorted(glob(_args.val_emb_path + "*"))]
 
 def get_epoch_num(filename):
     match = filename.split('_')[-1].split('.')[0]
@@ -47,12 +85,7 @@ def get_epoch_list_from_df(df_path):
     else:
         return []
 
-# setup parameters
-model_type = "samri"
-encoder_type = ENCODER_TYPE[model_type]  # choose one from vit_b and vit_h.
-batch_size = 256  # Adjust batch size as needed
-model_path = MODEL_SAVE_PATH + model_sub_path
-val_emb_path = VAL_EMBEDDING_PATH
+# Global settings
 result_path = os.path.join(model_path, "validation_results")
 os.makedirs(result_path, exist_ok=True)
 result_save_path = os.path.join(result_path, file_name)
@@ -62,11 +95,8 @@ model_files = sorted([f for f in os.listdir(model_path) if
                                     get_epoch_list_from_df(result_save_path)])
 
 def main():
-    print("Device:", torch.cuda.get_device_name(0))
     print("Batch size:", batch_size)
     print("Model path:", model_path)
-
-    device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
     val_dataset = EmbDataset(val_emb_path, resize_mask=True, mask_size=256)
     val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, num_workers=8)
