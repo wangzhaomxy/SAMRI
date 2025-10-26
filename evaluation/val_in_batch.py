@@ -65,6 +65,7 @@ encoder_type = "vit_b"  # choose one from vit_b and vit_h.
 batch_size = _args.batch_size  # Adjust batch size as needed
 model_path = _args.ckpt_path
 val_emb_path = [ds + "/" for ds in sorted(glob(_args.val_emb_path + "*"))]
+device = _args.device
 
 def get_epoch_num(filename):
     match = filename.split('_')[-1].split('.')[0]
