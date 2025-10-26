@@ -16,8 +16,11 @@ By fine-tuning only the **lightweight mask decoder** on **precomputed MRI embedd
 
 ---
 
-![SAMRI Architecture](docs/fig_samri_architecture.png)  
+![SAMRI Architecture](README/training.png)  
 *Figure 1. Overview of SAMRI: frozen image encoder and prompt encoder, lightweight decoder fine-tuning.*
+
+![Datasets](README/Dataset.png) 
+*Figure 2. The Dataset components*
 
 ---
 
@@ -462,62 +465,88 @@ You can:
 
 ---
 
-### 📦 Expected Artifacts
-```
-checkpoints/
-  best.pth          # best validation metric
-  last.pth          # last epoch
-  logs.json         # training curves/metrics
-embeddings/
-  dataset_A/*.pt    # precomputed features
-  dataset_B/*.pt
-```
-If you want, you can pin typical hyper‑parameters per dataset in `configs/*.yaml` and pass `--config configs/amosmr.yaml` (if your script supports it).
-
-
-
----
-
 ## 🧠 Dataset Overview
 
 SAMRI is trained on a curated **1.1 million MRI image–mask pairs** from **36 public datasets** (47 segmentation tasks) spanning over **10 MRI sequences** (T1, T2, FLAIR, DESS, TSE, etc.).
 
 | Category | Example Datasets | Approx. Pairs |
 |-----------|------------------|---------------|
-| **Brain** | BraTS, ISLES, MSD_Hippocampus | 420 K |
+| **Brain** | BraTS, ISLES, | 420 K |
 | **Abdomen** | AMOSMR, HipMRI | 260 K |
-| **Knee** | MSK_T2, OAI, DESS | 210 K |
+| **Knee** | MSK_T2, OAI,  | 210 K |
 | **Thorax** | Heart, MSD_Heart | 130 K |
-| **Others** | Prostate, MSK_FLASH | 80 K |
+| **Others** | Prostate, MSD_kidney | 80 K |
 
 Detailed dataset breakdowns are provided in **Table S1 (Supplementary)** in the paper.
 
 ---
 
-## 📂 Repository Structure
+## 📁 Repository Structure
+
+The **SAMRI** repository is organized into modular components for preprocessing, training, evaluation, and utility functions.  
+Below is an overview of the folder hierarchy and their main purposes:
 
 ```
 SAMRI/
-├── configs/             # Dataset/task configurations (YAML)
-├── preprocess/          # Precompute embeddings and data utilities
-├── train_decoder.py     # Decoder fine-tuning script
-├── infer_results.py     # Inference and visualization pipeline
-├── utils/               # Metrics, plotting, and helper functions
-├── requirements.txt
-└── README.md
+├── evaluation/                         # Model evaluation and visualization scripts
+│   ├── MedSAM-main/                    # External MedSAM main code
+│   ├── result_visualize_and_evaluate.ipynb   # Visualization and comparative analysis notebook
+│   ├── test_medsam.py                  # Run MedSAM inference and save predictions
+│   ├── test_medsam_eval.py             # Evaluate MedSAM inference results (.npz files)
+│   ├── test_vis.py                     # Evaluate SAM/SAMRI models on test datasets
+│   ├── val_in_batch.py                 # Batch validation using precomputed embeddings
+│   └── utils.py                        # Shared helper functions for result_visualize_and_evaluate.ipynb
+│
+├── image_processing/                   # Data preprocessing and embedding generation
+│   ├── data_processing_code/           # Individual dataset preprocessing scripts
+│   └── process_embedding.py            # Generate image embeddings for SAMRI
+│
+├── segment_anything/                   # SAM model integration
+│   └── ...                             # (Meta-AI SAM model components)
+│
+├── user_data/                          # (Optional) Placeholder for user data or experiments
+│
+├── utils/                              # Core utilities shared across training/inference
+│   ├── dataloader.py                   # Dataset loading and management
+│   ├── losses.py                       # Custom loss functions (e.g., Dice + Focal)
+│   ├── utils.py                        # Configuration, device setup, and helper methods
+│   └──visual.py                        # Visualization utilities
+│
+├── infer_step_by_step.ipynb            # Interactive notebook for step-by-step inference
+├── inference.py                        # Command-line inference script
+├── model.py                            # SAMRI model definition
+├── sarmi_gui(BugWarning).py            # GUI version (experimental)
+│
+├── train_single_gpu.py                 # Training script for single-GPU setups
+├── train_multi_gpus.py                 # Training script for multi-GPU (DDP)
+├── train_multi_gpus_mi300.sh           # SLURM submission script for MI300X cluster
+│
+├── setup.py                            # Installation and environment setup
+├── LICENSE                             # License file
+└── README.md                           # Main documentation file
 ```
 
+---
 
+### 🧩 Key Modules Overview
+
+| Folder | Purpose |
+|---------|----------|
+| **evaluation/** | Evaluation, benchmarking, and visualization scripts for SAMRI, SAM, and MedSAM models. |
+| **image_processing/** | Preprocessing utilities and embedding generation for MRI datasets. |
+| **segment_anything/** | Contains SAM model definitions. |
+| **utils/** | Common helper functions, dataset loaders, and loss definitions. |
+| **user_data/** | Optional folder for user-specific experiments or data. |
+| **training scripts** | Standalone scripts for single- and multi-GPU model training. |
+
+
+---
 ## 📘 Citation
 
 If you use SAMRI in your research, please cite:
 
 <!-- ```bibtex
-@article{wang2025samri,
-  title={SAMRI: Segment Anything Model for MRI},
-  author={Wang, Zhao and Chandra, Shekhar and Dai, Wei and others},
-  journal={Nature Communications},
-  year={2025}
+@article{
 }
 ``` -->
 
