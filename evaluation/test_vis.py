@@ -1,65 +1,109 @@
+# -*- coding: utf-8 -*-
+"""
+Single-GPU testing script for SAMRI mask decoder.
+Loads checkpoints from a specified path or directory.
+
+Examples:
+  - Test a single checkpoint:
+      python test_vis.py \
+        --test-image-path /path/to/test/images/ \
+        --ckpt-path /path/to/checkpoint.pth \
+        --save-path /path/to/save/results/ \
+        --device cuda \
+        --model-type samri
+        
+  - Test all checkpoints in a directory:
+      python test_vis.py \
+        --test-image-path /path/to/test/images/ \
+        --ckpt-path /path/to/checkpoint_directory/
+        --save-path /path/to/save/results/ \
+        --device cuda \
+        --model-type samri
+"""
+
 from segment_anything import sam_model_registry
 from utils.visual import *
 from utils.utils import *
+from pathlib import Path
+import re, os
 import time
+import argparse
 
-# TEST_ZERO_PATH = root_path + "Datasets/Zero_shot_val/"
-# TEST_ZEROSHOT_PATH = [ds + "/validation/" for ds in sorted(glob(TEST_ZERO_PATH + "*"))]
-file_paths = TEST_IMAGE_PATH + TEST_ZEROSHOT_PATH
-# file_paths = TEST_ZEROSHOT_PATH + VAL_ZEROSHOT_PATH + TRAIM_ZEROSHOT_PATH
-# file_paths = TEST_ZEROSHOT_PATH
-ckpt_root_path = "/scratch/project/samri/Model_save/"
-# model_folder = "bp_fullds_balance_up/"
-model_folder = "fullds_balance_up_new_loss/"
-# save_path = "/scratch/project/samri/Eval_results/" + model_folder
-save_path = "/scratch/project/samri/Eval_results/" + "box_40/"
-make_dir(save_path)
+cfg = SAMRIConfig()
+# setup global parameters and converted to CLI-driven.
+_parser = argparse.ArgumentParser(add_help=True)
+_parser.add_argument("--test-image-path", "--test_image_path",
+                     dest="test_image_path",
+                     type=str, 
+                     default=cfg.IMAGE_PATH,
+                     help="The root path of the images.")
+_parser.add_argument("--ckpt-path", "--ckpt_path",
+                     dest="ckpt_path",
+                     type=str, 
+                     default="/scratch/project/samri/Model_save/fullds_balance_up_new_loss/",
+                     help="The root path or path of the test checkpoint.")
+_parser.add_argument("--save-path", "--save_path",
+                     dest="save_path",
+                     type=str, 
+                     default="/scratch/project/samri/Eval_results/",
+                     help="The root path to save evaluation results.")
+_parser.add_argument("--device",
+                     dest="device",
+                     type=str,
+                     default=cfg.DEVICE,
+                     help="Device to run the model on.")
+_parser.add_argument("--model-type", "--model_type",
+                     dest="model_type",
+                     default="samri",
+                     choices=list(cfg.ENCODER_TYPE.keys()),
+                     help="Model key used to derive encoder_type from ENCODER_TYPE.")
+_args = _parser.parse_args()
+cfg.IMAGE_PATH = _args.test_image_path
+ckpt_path = _args.ckpt_path
+save_path = _args.save_path
+os.makedirs(save_path, exist_ok=True)
 
-# save_path1 = "/scratch/project/samri/Inference_results/" + "SAMRI/"
-# make_dir(save_path1)
+def load_ckpt_list(ckpt_dir):
+    """
+    Given a checkpoint path:
+      - If ckpt_dir points to a single .pth file → return [absolute path].
+      - If ckpt_dir is a directory → return sorted list of all .pth files.
+    """
+    ckpt_path = Path(ckpt_dir)
 
-ckpt_list = [
-            #  ckpt_root_path + model_folder + "samri_vitb_box_1.pth",
-            #  ckpt_root_path + model_folder + "samri_vitb_box_2.pth",
-            #  ckpt_root_path + model_folder + "samri_vitb_box_3.pth",
-            #  ckpt_root_path + model_folder + "samri_vitb_box_4.pth",
-            #  ckpt_root_path + model_folder + "samri_vitb_box_5.pth",
-            #  ckpt_root_path + model_folder + "samri_vitb_box_6.pth",
-            #  ckpt_root_path + model_folder + "samri_vitb_box_7.pth",
-            #  ckpt_root_path + model_folder + "samri_vitb_box_8.pth",
-            #  ckpt_root_path + model_folder + "samri_vitb_box_9.pth",
-            #  ckpt_root_path + model_folder + "samri_vitb_box_10.pth",
-            #  ckpt_root_path + model_folder + "samri_vitb_box_20.pth",
-            #  ckpt_root_path + model_folder + "samri_vitb_box_30.pth",
-             ckpt_root_path + model_folder + "samri_vitb_box_40.pth",
-            #  ckpt_root_path + model_folder + "samri_vitb_box_50.pth",
-            #  ckpt_root_path + model_folder + "samri_vitb_box_60.pth",
-            #  ckpt_root_path + model_folder + "samri_vitb_box_70.pth",
-            #  ckpt_root_path + model_folder + "samri_vitb_box_80.pth",
-            #  ckpt_root_path + model_folder + "samri_vitb_box_90.pth",
-            #  ckpt_root_path + model_folder + "samri_vitb_box_100.pth",
-            #  ckpt_root_path + model_folder + "samri_vitb_box_110.pth",
-            #  ckpt_root_path + model_folder + "samri_vitb_box_120.pth",
-            #  ckpt_root_path + model_folder + "samri_vitb_box_130.pth",
-            #  ckpt_root_path + model_folder + "samri_vitb_box_140.pth",
-            #  ckpt_root_path + model_folder + "samri_vitb_box_150.pth",
-            #  ckpt_root_path + model_folder + "samri_vitb_box_160.pth",
-            #  ckpt_root_path + model_folder + "samri_vitb_box_170.pth",
-            #  ckpt_root_path + model_folder + "samri_vitb_box_177.pth",
-            #  ckpt_root_path + model_folder + "samri_vitb_box_190.pth",
-            #  ckpt_root_path + model_folder + "samri_vitb_box_200.pth",
-             ]
-# ckpt_list = ["/scratch/user/s4670484/Model_dir/sam_vit_b_01ec64.pth"]
-# ckpt_list = ["/scratch/user/s4670484/Model_dir/sam_vit_h_4b8939.pth"]
-# ckpt_list = ["/scratch/user/s4670484/Model_dir/samri_vitb_box.pth"]
-# ckpt_list = ["/scratch/user/s4670484/Model_dir/samri_vitb_bp.pth"]
+    # Case 1: single checkpoint file
+    if ckpt_path.is_file() and ckpt_path.suffix == ".pth":
+        return [str(ckpt_path.resolve())]
+
+    # Case 2: directory containing checkpoints
+    elif ckpt_path.is_dir():
+        ckpt_paths = list(ckpt_path.glob("samri_vitb_box_*.pth"))
+
+        # Extract numeric epoch from filenames
+        def get_epoch_number(path):
+            match = re.search(r"_(\d+)\.pth$", path.name)
+            return int(match.group(1)) if match else -1
+
+        # Sort numerically by epoch number
+        ckpt_list = [str(p.resolve()) for p in sorted(ckpt_paths, key=get_epoch_number)]
+        return ckpt_list
+
+    else:
+        raise FileNotFoundError(f"Checkpoint path not found: {ckpt_dir}")
+
+# Load test checkpoint paths
+ckpt_list = load_ckpt_list(ckpt_path)
+
+print(f"Found {len(ckpt_list)} checkpoint(s):")
+for ckpt in ckpt_list:
+    print(ckpt)
 
 for ckpt in ckpt_list:
     start = time.time()
-    model_type = 'vit_b'# Choose one from vit_b, vit_h, samri, and med_sam
-    encoder_tpye = ENCODER_TYPE[model_type] 
+    model_type = _args.model_type # Choose one from vit_b, vit_h, samri, and med_sam
+    encoder_tpye = cfg.ENCODER_TYPE[model_type] 
     checkpoint = ckpt
-    device = DEVICE
+    device = _args.device
     model_name = ckpt.split("/")[-1]
     print("Testing Check-point: " + ckpt)
 
@@ -69,13 +113,10 @@ for ckpt in ckpt_list:
     sam_model.eval()
     save_path_all = save_path + model_name[:-4]
 
-    save_test_record(file_paths=file_paths,
+    save_test_record(file_paths=cfg.TEST_IMAGE_PATH,
                      sam_model=sam_model, 
                      save_path=save_path_all)
     
-    # save_infer_results(file_paths=file_paths,
-    #                    sam_model=sam_model, 
-    #                    save_path=save_path1)
     end = time.time()
     print(f"Elapsed time: {end - start:.2f} seconds")
     print("Done!")
