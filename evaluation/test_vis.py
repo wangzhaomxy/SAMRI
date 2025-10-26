@@ -5,7 +5,7 @@ Loads checkpoints from a specified path or directory.
 
 Examples:
   - Test a single checkpoint:
-      python test_vis.py \
+      python evaluation.test_vis.py \
         --test-image-path /path/to/test/images/ \
         --ckpt-path /path/to/checkpoint.pth \
         --save-path /path/to/save/results/ \
@@ -13,7 +13,7 @@ Examples:
         --model-type samri
         
   - Test all checkpoints in a directory:
-      python test_vis.py \
+      python evaluation.test_vis.py \
         --test-image-path /path/to/test/images/ \
         --ckpt-path /path/to/checkpoint_directory/
         --save-path /path/to/save/results/ \
@@ -40,7 +40,7 @@ _parser.add_argument("--test-image-path", "--test_image_path",
 _parser.add_argument("--ckpt-path", "--ckpt_path",
                      dest="ckpt_path",
                      type=str, 
-                     default="/scratch/project/samri/Model_save/fullds_balance_up_new_loss/",
+                     default=cfg.MODEL_SAVE_PATH,
                      help="The root path or path of the test checkpoint.")
 _parser.add_argument("--save-path", "--save_path",
                      dest="save_path",
