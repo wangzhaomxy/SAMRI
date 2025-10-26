@@ -231,7 +231,7 @@ Examples:
 Use SAM ViT‑B to compute and cache image embeddings (saves training time & memory).
 
 ```bash
-python preprocess/precompute_embeddings.py \
+python preprocess.precompute_embeddings \
   --base-path ./user_data \
   --dataset-path ./user_data/Datasets/SAMRI_train_test/ \
   --img-sub-path train/ \
@@ -326,34 +326,131 @@ python train_multi_gpus.py
 
 ---
 
-### 🧪 Evaluate / Visualize (Optional)
-After training, use the inference tools to inspect results:
+### 🧠 Model Evaluation
 
-```bash
-# CLI visualization (PNG + NIfTI)
-python inference.py   --input /path/to/case001.nii.gz   --output ./Inference_results/case001   --checkpoint ./checkpoints/best.pth   --model-type samri   --box 30 40 200 220
-```
+This section describes how to validate, test, and visualize model performance across validation and test datasets.  
+SAMRI is evaluated using:
+- **Dice Similarity Coefficient (DSC)**  
+- **Hausdorff Distance (HD)**  
+- **Mean Surface Distance (MSD)**  
 
-Or run the notebook:
-```bash
-jupyter lab
-# open: ./infer_step_by_step.ipynb
-```
+It also provides dedicated evaluation scripts for **SAM**, **SAMRI**, and **MedSAM** models.
 
 ---
 
-### 📝 Reproducibility Checklist
-- Fix seeds: `--seed 42` (and set `torch.backends.cudnn.deterministic=True` if applicable)
-- Log environment: `pip freeze > logs/requirements.txt`
-- Save CLI args / config: auto‑dump to `save_dir/args.json`
-- Track git commit: write `git rev-parse HEAD` to logs
+#### **1️⃣ Validate the Model on Validation Datasets**
+
+This step evaluates model performance on **precomputed embeddings** rather than raw images.  
+It is efficient for internal validation because embeddings are already generated during preprocessing.
+
+**Script:** `./evaluation/val_in_batch.py`
+
+```bash
+python evaluation.val_in_batch.py \
+    --val-emb-path /path/to/val/embeddings/ \
+    --ckpt-path /path/to/checkpoint_directory/ \
+    --prompts mixed \
+    --device cuda \
+    --batch-size 64
+```
+
+**Notes:**
+- The script loads embeddings directly from `.npz` files and runs **batch evaluation**.
+- This avoids redundant image encoding and greatly speeds up the validation process.
+- Use this to measure **training progress** or perform **hyperparameter tuning**.
+- The results will be saved in a CSV file under the checkpoint directory.
+
+---
+
+#### **2️⃣ Test the Model on Test Datasets**
+
+This evaluates the model directly on the **test images** (not precomputed embeddings).  
+Two common use cases are supported:
+
+##### 🧩 Evaluate a Single Checkpoint
+Use a specific checkpoint file for testing:
+```bash
+  python evaluation.test_vis.py \
+    --test-image-path /path/to/test/images/ \
+    --ckpt-path /path/to/checkpoint.pth \
+    --save-path /path/to/save/results/ \
+    --device cuda \
+    --model-type samri
+```
+
+##### 📁 Evaluate Multiple Checkpoints under a Folder
+Automatically evaluate all `.pth` files in a directory:
+```bash
+  python evaluation.test_vis.py \
+    --test-image-path /path/to/test/images/ \
+    --ckpt-path /path/to/checkpoint_directory/
+    --save-path /path/to/save/results/ \
+    --device cuda \
+    --model-type samri
+```
+
+**Features:**
+- Supports both **SAM** and **SAMRI** models.
+- The script automatically detects single-file or multi-checkpoint folders.
+- Evaluates each checkpoint and saves detailed metrics and predictions in a python pickle binary file.
+
+> ⚠️ **Note:**  
+> **MedSAM** uses a distinct preprocessing and inference pipeline (see below).
+
+---
+
+#### **3️⃣ Other Models — MedSAM Evaluation**
+
+Two dedicated scripts are provided to ensure **MedSAM** compatibility.
+
+##### a. `test_medsam.py`
+Runs inference using the **original MedSAM architecture** (from its official repository)  
+with added dataset loading and result-saving features.
+
+```bash
+  python evaluation.test_medsam.py \
+  --test-image-path /path/to/test/images/ \
+  --ckpt-path /path/to/checkpoint.pth \
+  --save-path /path/to/save/results/ \
+  --device cuda
+```
+
+- Each case is saved as an `.npz` file containing both the **ground truth mask** and **predicted mask**.  
+- Useful for comparing outputs across architectures.
+
+##### b. `test_medsam_eval.py`
+Processes the `.npz` results produced above and computes evaluation metrics:
+```bash
+  python evaluation.test_medsam_eval.py \
+  --medsam-infer-path /path/to/medsam/inference/results/ \
+  --save-path /path/to/save/evaluation/results/
+```
+
+- Aggregates and reports **Dice**, **IoU**, and **boundary metrics**.
+- Produces results in the same standardized format as SAMRI evaluations.
+
+---
+
+#### **4️⃣ Visualize Testing Results**
+
+Use the provided Jupyter notebook to **visualize** and **compare** results interactively:
+
+**Notebook:** `/evaluation/result_visualize_and_evaluate.ipynb`
+
+Open it and set the directories where your `.npz` result files were saved:
+```python
+result_root = "/the/directory/of/the/evaluation/results/Eval_results/"
+```
+
+You can:
+- Compare performance between **SAM**, **SAMRI**, and **MedSAM**
+- Generate summary plots (Dice boxplots, etc.)
 
 ---
 
 ### 🧯 Troubleshooting
-- **CUDA/ROCm OOM**: lower `--batch_size`; reduce `num_workers`; enable `--amp`
-- **Slow data loading**: set `--num_workers 4..8`, `pin_memory=True` (if CUDA)
-- **DDP hangs**: check `MASTER_ADDR/PORT`; try `export NCCL_P2P_DISABLE=1` on ROCm
+- **CUDA/ROCm OOM**: lower `--batch_size`; reduce `num_workers`;
+- **Slow data loading**: set `--num_workers 8..12`(if CUDA)
 - **Validation mismatch**: confirm same preprocessing/normalization as training
 
 ---
@@ -377,20 +474,7 @@ embeddings/
 ```
 If you want, you can pin typical hyper‑parameters per dataset in `configs/*.yaml` and pass `--config configs/amosmr.yaml` (if your script supports it).
 
----
-## 📊 Evaluation
 
-SAMRI is evaluated using:
-- **Dice Similarity Coefficient (DSC)**  
-- **Hausdorff Distance (HD)**  
-- **Mean Surface Distance (MSD)**  
-
-We further group structures by **relative size**:  
-- *Small* (< 0.5%), *Medium* (0.5–3.5%), *Large* (> 3.5%)  
-and apply **Wilcoxon signed-rank tests** to assess significance.
-
-![Results](docs/fig_samri_results.png)  
-*Figure 2. Dice comparison between SAM ViT-B, MedSAM, and SAMRI across object-size bins.*
 
 ---
 
@@ -406,7 +490,7 @@ SAMRI is trained on a curated **1.1 million MRI image–mask pairs** from **36 p
 | **Thorax** | Heart, MSD_Heart | 130 K |
 | **Others** | Prostate, MSK_FLASH | 80 K |
 
-Detailed dataset breakdowns are provided in **Table S1 (Supplementary)**.
+Detailed dataset breakdowns are provided in **Table S1 (Supplementary)** in the paper.
 
 ---
 
@@ -423,19 +507,6 @@ SAMRI/
 └── README.md
 ```
 
----
-
-## 🧪 Results Summary
-
-| Model | Trainable Params | Training Time (8× MI300X) | Dice ↑ | HD ↓ | MSD ↓ |
-|--------|------------------|----------------------------|--------|------|------|
-| SAM ViT-B (zero-shot) | 0 % | — | Baseline | — | — |
-| MedSAM | 100 % | > 600 h | Moderate | — | — |
-| **SAMRI (Ours)** | **4 %** | **76 h** | **↑ Dice, ↓ HD, ↓ MSD** | | |
-
-SAMRI shows the largest gains on **small and medium objects**, consistent with qualitative boundary adherence improvements.
-
----
 
 ## 📘 Citation
 
