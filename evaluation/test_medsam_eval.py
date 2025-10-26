@@ -1,3 +1,16 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Evaluation script for MedSAM inference results.
+Calculates Dice Score, Hausdorff Distance, and Mean Surface Distance
+for each case in the MedSAM inference results.
+Examples:
+    python evaluation.test_medsam_eval.py \
+    --medsam-infer-path /path/to/medsam/inference/results/ \
+    --save-path /path/to/save/evaluation/results/
+The results will be saved in a pickle file under the specified save path.
+"""
+
 import numpy as np
 import os
 from glob import glob
@@ -6,6 +19,23 @@ from utils.losses import (dice_similarity,
                           sd_mean_surface_distance)
 import pickle
 from tqdm import tqdm
+import argparse
+from utils.utils import SAMRIConfig
+
+cfg = SAMRIConfig()
+# setup global parameters and converted to CLI-driven.
+_parser = argparse.ArgumentParser(add_help=True)
+_parser.add_argument("--medsam-infer-path", "--medsam_infer_path",
+                     dest="medsam_infer_path",
+                     type=str, 
+                     default=cfg.root_path + "MedSAM_inference/",
+                     help="The root path of the medsam inference result.")
+_parser.add_argument("--save-path", "--save_path",
+                     dest="save_path",
+                     type=str,
+                     default=cfg.root_path + "Eval_results/MedSAM/",
+                     help="The root path to save evaluation results.")
+_args = _parser.parse_args()
 
 def get_test_record_from_ds(test_dataset):
     """
@@ -103,7 +133,5 @@ def save_test_record(ds_path,  save_path):
         pickle.dump(final_record, f)
             
 if __name__ == "__main__":
-    data_path = "/scratch/project/samri/MedSAM_inference/"
-    save_path = "/home/s4670484/Desktop/Scratch/samri/samri/Eval_results/med_sam_rep/med_sam_rep.pkl"
-    save_test_record(data_path, save_path)
+    save_test_record(_args.medsam_infer_path, _args.save_path)
     print("Done!")
