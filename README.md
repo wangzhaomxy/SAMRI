@@ -34,13 +34,12 @@ The approach:
 This lightweight strategy allows SAMRI to train efficiently on a **single GPU** or **multi-GPU clusters** (e.g., H100 x 8), while maintaining robust accuracy across unseen datasets and imaging protocols.
 
 ---
-## 🛠️ Installation (SAMRI)
+## 🛠️ Installation
 
 This section helps you go from **zero to a runnable environment** for SAMRI. It includes optional prerequisites, a reproducible Conda setup, and a brief explanation of how dependency installation works.
 
 
-
-### 🧩 Step 0 — Prerequisites (Optional but recommended)
+### Prerequisites (Optional but recommended)
 SAMRI requires **Python ≥ 3.10** and **PyTorch ≥ 2.2** (CUDA or ROCm recommended).  
 Use a package manager like **Conda** to isolate dependencies per project.
 
@@ -48,12 +47,12 @@ Use a package manager like **Conda** to isolate dependencies per project.
 - Download [**Miniconda (lightweight)**:arrow_upper_right:](https://docs.conda.io/en/latest/miniconda.html)
 
 
-Verify Conda is available:
+Verify Conda is available in command line:
 ```bash
 conda --version
 ```
 
-### 🔁 Step 1 — Create and activate a fresh environment
+### Create and activate a fresh environment
 If you already have a base environment:
 
 ```bash
@@ -61,9 +60,9 @@ conda create -n samri python=3.10 -y
 conda activate samri
 ```
 
-### 🧪 Step 2 - Install PyTorch
+### Install PyTorch
 
-Please install the correct [PyTorch:arrow_upper_right:](https://pytorch.org) version according to your operating system, package manager, language, and compute platform.
+Please install the correct [PyTorch :arrow_upper_right:](https://pytorch.org) version according to your operating system, package manager, language, and compute platform.
 **Note:** This project has been verified on **PyTorch 2.2.0.**
 
 ### 🧰 Step 3 — Clone the Repository and install dependencies
