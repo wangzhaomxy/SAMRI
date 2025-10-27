@@ -514,7 +514,7 @@ SAMRI is trained on a curated **1.1 million MRI image–mask pairs** from **36 p
 
 Detailed dataset breakdowns are provided in **Table S1 (Supplementary)** in the paper.
 
-![Datasets](README/Dataset.png) 
+![Datasets](README/datasets.png) 
 *Figure 2. The Dataset components*
 
 
