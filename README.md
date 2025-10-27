@@ -179,6 +179,56 @@ This section covers **end‑to‑end training** of SAMRI’s decoder on precompu
 **Download & Organize Raw MRI Data**
 Download the raw MRI datasets and organize them according to the specifications outlined in the RawData section.
 Verify that all files are correctly structured and complete before initiating the preprocessing step.
+<details>
+<summary><b>🧠 Raw Datasets structure</b></summary>
+
+```bash
+📂 Datasets/
+├── ACDC/
+├── Brain_Tumor_Dataset_Figshare/
+├── Brain-TR-GammaKnife-processed/
+├── CC-Tumor-Heterogeneity/
+├── CHAOS/
+├── HipMRI/
+├── ISLES-2022/
+├── Meningioma-SEG-CLASS/
+├── MSD/
+├── MSK_knee/
+├── MSK_shoulder/
+├── NCI-ISBI/
+├── Npz_dataset/
+│   ├── AMOSMR/
+│   ├── BraTS_FLAIR/
+│   ├── BraTS_T1/
+│   ├── BraTS_T1CE/
+│   ├── CervicalCancer/
+│   ├── crossmoda/
+│   ├── Heart/
+│   ├── ISLES2022_ADC/
+│   ├── ISLES2022_DWI/
+│   ├── ProstateADC/
+│   ├── ProstateT2/
+│   ├── QIN-PROSTATE-Lesion/
+│   ├── QIN-PROSTATE-Prostate/
+│   ├── SpineMR/
+│   ├── totalseg_mr/
+│   ├── WMH_FLAIR/
+│   └── WMH_T1/
+├── OAI_imorphics_dess_sag/
+├── OAI_imorphics_flash_cor/
+├── OAI_imorphics_tse_sag/
+├── OAIAKOA/
+├── Picai/
+├── PROMISE/
+├── QIN-PROSTATE-Repeatability/
+├── QUBIQ/
+├── Spine/
+└── ZIB_OAI/
+
+Link is processing...
+```
+</details>
+
 
 **Run the Preprocessing Script**
 Run the following command to preprocess and save the datasets:
