@@ -36,7 +36,7 @@ This lightweight strategy allows SAMRI to train efficiently on a **single GPU** 
 This section helps you go from **zero to a runnable environment** for SAMRI. It includes optional prerequisites, a reproducible Conda setup, and a brief explanation of how dependency installation works.
 
 
-### Prerequisites (Optional but recommended)
+### 1️⃣ Prerequisites (Optional but recommended)
 SAMRI requires **Python ≥ 3.10** and **PyTorch ≥ 2.2** (CUDA or ROCm recommended).  
 Use a package manager like **Conda** to isolate dependencies per project.
 
@@ -49,7 +49,7 @@ Verify Conda is available in command line:
 conda --version
 ```
 
-### Create and activate a fresh environment
+### 2️⃣ Create and activate a fresh environment
 If you already have a base environment:
 
 ```bash
@@ -57,19 +57,19 @@ conda create -n samri python=3.10 -y
 conda activate samri
 ```
 
-### Install PyTorch
+### 3️⃣ Install PyTorch
 
 Please install the correct [PyTorch :arrow_upper_right:](https://pytorch.org) version according to your operating system, package manager, language, and compute platform.
 **Note:** This project has been verified on **PyTorch 2.2.0.**
 
-### Clone the Repository and install dependencies
+### 4️⃣ Clone the Repository and install dependencies
 ```bash
 git clone https://github.com/wangzhaomxy/SAMRI.git
 cd SAMRI
 pip install .
 ```
 
-### Verify Setup
+### 5️⃣ Verify Setup
 Run a quick import test in the command line:
 ```bash
 python -c "import torch, nibabel; print('SAMRI environment ready! Torch:', torch.__version__)"
@@ -88,7 +88,7 @@ This project ships two entry points for running SAMRI on your data:
 | **Notebook** | `infer_step_by_step.ipynb` | Interactive visualization for detailed inspection. |
 
 
-### Inference (CLI) — `inference.py`
+### 1️⃣ Inference (CLI) — `inference.py`
 
 Run SAM/SAMRI on a single NIfTI (`.nii/.nii.gz`) **or** standard image (`.png/.jpg/.tif`) and save the predicted mask.
 
@@ -138,7 +138,7 @@ python inference.py \
 > - The image input accepts dimensions in any of the following forms: H×W, H×W×1, H×W×3, or H×W×4.
 
 
-### Visualize step-by-step (Notebook) — `infer_step_by_step.ipynb`
+### 2️⃣ Visualize step-by-step (Notebook) — `infer_step_by_step.ipynb`
 
 Use the notebook to experiment with prompts and visualize each stage.
 
@@ -169,7 +169,7 @@ SAVE_PNG = True            # also write PNG next to the NIfTI
 ## 🧑‍🏫 Training the Model
 
 This section covers **end‑to‑end training** of SAMRI’s decoder on precomputed SAM embeddings. The workflow is lightweight:
-1) **Prepare data** → 2) **Precompute embeddings** → 3) **Train decoder** → 4) (Optional) **Evaluate/visualize**.
+1) **Prepare data** → 2) **Precompute embeddings** → 3) **Train decoder**.
 
 > SAMRI freezes SAM’s image encoder and fine‑tunes only the **mask decoder** using a Dice+Focal loss.
 
@@ -385,7 +385,7 @@ python train_multi_gpus.py
 
 ---
 
-## 🧠 Model Evaluation
+## 📊 Model Evaluation
 
 This section outlines the procedures for validating, testing, and visualizing model performance across the validation and test datasets.
 Models are evaluated using the following metrics:
