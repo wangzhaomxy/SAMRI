@@ -180,7 +180,7 @@ This section covers **end‑to‑end training** of SAMRI’s decoder on precompu
 Download the raw MRI datasets and organize them according to the specifications outlined in the RawData section.
 Verify that all files are correctly structured and complete before initiating the preprocessing step.
 <details>
-<summary><b>🧠 Raw Datasets structure</b></summary>
+<summary><b>🧠 Click and see the Raw Datasets structure</b></summary>
 
 ```bash
 📂 Datasets/
@@ -524,6 +524,24 @@ Detailed dataset breakdowns are provided in **Table S1 (Supplementary)** in the 
 
 The **SAMRI** repository is organized into modular components for preprocessing, training, evaluation, and utility functions.  
 Below is an overview of the folder hierarchy and their main purposes:
+```bash
+
+SAMRI/
+├── evaluation/           # Evaluation and visualization scripts
+├── image_processing/     # Data preprocessing & embedding generation
+├── segment_anything/     # SAM backbone integration
+├── utils/                # Dataloaders, losses, utilities
+├── inference.py          # CLI inference entry
+├── infer_step_by_step.ipynb
+├── train_single_gpu.py
+├── train_multi_gpus.py
+├── train_multi_gpus_mi300.sh
+├── model.py
+├── setup.py
+└── README.md
+```
+<details>
+<summary><b>Click and see the Repository Structure Details</b></summary>
 
 ```
 SAMRI/
@@ -565,13 +583,15 @@ SAMRI/
 └── README.md                           # Main documentation file
 ```
 
-
+</details>
 
 
 ---
 ## 📘 Citation
 
 If you use SAMRI in your research, please cite:
+
+content is on the way...
 
 <!-- ```bibtex
 @article{
@@ -613,3 +633,5 @@ ARC Future Fellow & Senior Lecturer
 School of Electrical Engineering and Computer Science (EECS)  
 The University of Queensland, Australia  
 📧 shekhar.chandra@uq.edu.au
+
+
