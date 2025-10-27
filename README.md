@@ -90,13 +90,13 @@ This project ships two entry points for running SAMRI on your data:
 The pretrained **SAMRI checkpoint** can be downloaded [**HERE** :arrow_upper_right:](https://espace.library.uq.edu.au/view/UQ:cadac84).
 | Model  | Checkpoint  | Description |
 |------|------|-------------|
-| **SAMRI(box)**| [samri_vitb_box.pth :arrow_upper_right:](https://espace.library.uq.edu.au/view/UQ:cadac84)| SAMRI checkpoint with box prompt (Easy to go)|
-| **SAMRI(box)**| [samri_vitb_box_zero.pth :arrow_upper_right:](https://espace.library.uq.edu.au/view/UQ:cadac84) | Zero-shot enhanced SAMRI checkpoint with box prompt (Easy to go)|
-| **SAMRI(box+point)**| [samri_vitb_bp.pth :arrow_upper_right:](https://espace.library.uq.edu.au/view/UQ:cadac84)| SAMRI checkpoint with box + point prompt (Robust higher accuracy)|
-| **SAMRI(box+point)**| [samri_vitb_bp_zero.pth :arrow_upper_right:](https://espace.library.uq.edu.au/view/UQ:cadac84)| Zero-shot enhanced SAMRI checkpoint with box + point prompt (Robust higher accuracy) |
-| **SAM Vitb**| [sam_vit_b_01ec64.pth :arrow_upper_right:](https://dl.fbaipublicfiles.com/segment_anything/sam_vit_b_01ec64.pth) | SAM vitb checkpoint from [**Link**](https://github.com/facebookresearch/segment-anything).|
-| **SAM Vith**| [sam_vit_h_4b8939.pth :arrow_upper_right:](https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth) | SAM vith checkpoint from [**Link**](https://github.com/facebookresearch/segment-anything).|
-| **MedSAM**| [medsam_vit_b.pth :arrow_upper_right:](https://drive.google.com/drive/folders/1ETWmi4AiniJeWOt6HAsYgTjYv_fkgzoN?usp=drive_link) | MedSAM checkpoint from [**Link**](https://github.com/bowang-lab/MedSAM).|
+| **SAMRI(box)**| [samri_vitb_box.pth](https://espace.library.uq.edu.au/view/UQ:cadac84)| SAMRI checkpoint with box prompt (Easy to go)|
+| **SAMRI(box)**| [samri_vitb_box_zero.pth](https://espace.library.uq.edu.au/view/UQ:cadac84) | Zero-shot enhanced SAMRI checkpoint with box prompt (Easy to go)|
+| **SAMRI(box+point)**| [samri_vitb_bp.pth](https://espace.library.uq.edu.au/view/UQ:cadac84)| SAMRI checkpoint with box + point prompt (Robust higher accuracy)|
+| **SAMRI(box+point)**| [samri_vitb_bp_zero.pth](https://espace.library.uq.edu.au/view/UQ:cadac84)| Zero-shot enhanced SAMRI checkpoint with box + point prompt (Robust higher accuracy) |
+| **SAM Vitb**| [sam_vit_b_01ec64.pth](https://dl.fbaipublicfiles.com/segment_anything/sam_vit_b_01ec64.pth) | SAM vitb checkpoint from [**Link**](https://github.com/facebookresearch/segment-anything).|
+| **SAM Vith**| [sam_vit_h_4b8939.pth](https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth) | SAM vith checkpoint from [**Link**](https://github.com/facebookresearch/segment-anything).|
+| **MedSAM**| [medsam_vit_b.pth](https://drive.google.com/drive/folders/1ETWmi4AiniJeWOt6HAsYgTjYv_fkgzoN?usp=drive_link) | MedSAM checkpoint from [**Link**](https://github.com/bowang-lab/MedSAM).|
 
 
 
