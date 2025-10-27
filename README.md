@@ -19,9 +19,6 @@ By fine-tuning only the **lightweight mask decoder** on **precomputed MRI embedd
 ![SAMRI Architecture](README/training.png)  
 *Figure 1. Overview of SAMRI: frozen image encoder and prompt encoder, lightweight decoder fine-tuning.*
 
-![Datasets](README/Dataset.png) 
-*Figure 2. The Dataset components*
-
 ---
 
 ## 🧭 Overview
@@ -43,8 +40,8 @@ This section helps you go from **zero to a runnable environment** for SAMRI. It 
 SAMRI requires **Python ≥ 3.10** and **PyTorch ≥ 2.2** (CUDA or ROCm recommended).  
 Use a package manager like **Conda** to isolate dependencies per project.
 
-- Download [**Anaconda**:arrow_upper_right:](https://www.anaconda.com/download)
-- Download [**Miniconda (lightweight)**:arrow_upper_right:](https://docs.conda.io/en/latest/miniconda.html)
+- Download [**Anaconda** :arrow_upper_right:](https://www.anaconda.com/download)
+- Download [**Miniconda (lightweight)** :arrow_upper_right:](https://docs.conda.io/en/latest/miniconda.html)
 
 
 Verify Conda is available in command line:
@@ -65,14 +62,14 @@ conda activate samri
 Please install the correct [PyTorch :arrow_upper_right:](https://pytorch.org) version according to your operating system, package manager, language, and compute platform.
 **Note:** This project has been verified on **PyTorch 2.2.0.**
 
-### 🧰 Step 3 — Clone the Repository and install dependencies
+### Clone the Repository and install dependencies
 ```bash
 git clone https://github.com/wangzhaomxy/SAMRI.git
 cd SAMRI
 pip install .
 ```
 
-### ✅ Step 4 — Verify Your Setup
+### Verify Setup
 Run a quick import test in the command line:
 ```bash
 python -c "import torch, nibabel; print('SAMRI environment ready! Torch:', torch.__version__)"
@@ -85,14 +82,13 @@ If it prints without errors, your environment is correctly configured.
 
 This project ships two entry points for running SAMRI on your data:
 
-- **CLI**: `inference.py` — fast, scriptable inference and saving of masks/PNGs
-- **Notebook**: `infer_step_by_step.ipynb` — interactive, cell-by-cell walkthrough
+| Mode | File | Description |
+|------|------|-------------|
+| **CLI** | `inference.py` | Fast segmentation from the command line. |
+| **Notebook** | `infer_step_by_step.ipynb` | Interactive visualization for detailed inspection. |
 
-Both files live in the **repo root**.
 
----
-
-### 1️⃣ Inference (CLI) — `inference.py`
+### Inference (CLI) — `inference.py`
 
 Run SAM/SAMRI on a single NIfTI (`.nii/.nii.gz`) **or** standard image (`.png/.jpg/.tif`) and save the predicted mask.
 
@@ -121,8 +117,8 @@ python inference.py \
 - `--no-png` (flag): if set, do **not** save PNG; only `.nii.gz` mask is written
 
 **Outputs**
-- `<name>_seg_.nii.gz` — predicted mask saved as NIfTI with shape `[1, H, W]`
-- `<name>_seg_.png` — (unless `--no-png`) grayscale binary mask PNG. 
+- `<case>_seg_.nii.gz` — predicted mask saved as NIfTI with shape `[1, H, W]`
+- `<case>_seg_.png` — (unless `--no-png`) grayscale binary mask PNG. 
 
 **Example**
 ```bash
@@ -135,11 +131,14 @@ python inference.py \
   --box 115 130 178 179\
   --point 133 172
 ```
+> ⚠️ **Note:**
+> - The input must be a 2D image. 
+> - It is automatically normalized to 8-bit and converted to RGB to align with SAM’s internal preprocessing. 
+> - The expected NIfTI file shape is (1, H, W) or (H, W), with (H, W, 1) also supported via automatic squeezing. 
+> - The image input accepts dimensions in any of the following forms: H×W, H×W×1, H×W×3, or H×W×4.
 
-> The input must be a 2D image. It is automatically normalized to 8-bit and converted to RGB to align with SAM’s internal preprocessing. The expected NIfTI file shape is (1, H, W) or (H, W), with (H, W, 1) also supported via automatic squeezing. The image input accepts dimensions in any of the following forms: H×W, H×W×1, H×W×3, or H×W×4.
----
 
-### 2️⃣ Visualize step-by-step (Notebook) — `infer_step_by_step.ipynb`
+### Visualize step-by-step (Notebook) — `infer_step_by_step.ipynb`
 
 Use the notebook to experiment with prompts and visualize each stage.
 
@@ -174,35 +173,32 @@ This section covers **end‑to‑end training** of SAMRI’s decoder on precompu
 
 > SAMRI freezes SAM’s image encoder and fine‑tunes only the **mask decoder** using a Dice+Focal loss.
 
----
 
-### 📂 Prepare Your Data
+### 1️⃣ Prepare Your Data
 
 **Download & Organize Raw MRI Data**
-Please download and structure the raw MRI datasets following the instructions provided in the RawData section.
-Ensure all files are correctly organized before running the preprocessing step.
+Download the raw MRI datasets and organize them according to the specifications outlined in the RawData section.
+Verify that all files are correctly structured and complete before initiating the preprocessing step.
 
 **Run the Preprocessing Script**
-Execute the following command to process and save the dataset:
+Run the following command to preprocess and save the datasets:
 ```bash
 python image_processing.data_processing_code.data_processing \
   --dataset-path /path/to/your/target-dataset \
   --save-path /path/to/your/target-save-directory
 ```
->⚠️ Note: The raw data may be periodically updated by the dataset authors.
-If error occur, please modify the corresponding scripts under
-`./image_processing/data_processing_code/ to maintain compatibility` folder.
+>⚠️ Note: The raw data may be periodically updated by the dataset authors. If error occur, please modify the corresponding scripts under `./image_processing/data_processing_code/` to maintain compatibility folder.
 
-**Preparing Your Own Custom Data**
-To use your own MRI dataset, follow this recommended workflow:
-* Patient-wise split your dataset into training, validation, and testing sets.
-* Slice each 3D MRI volume into 2D slices.
-* Filter slices to keep only those with mask pixel count > 10.
-* Manually clean noisy or corrupted image–mask pairs (e.g., thin lines, artifacts).
-* Save and organize the cleaned data into a structured directory format
-(e.g., training/, validation/, testing/).
+**Preparing Your Own Data**
+To apply SAMRI to your own MRI data, follow the recommended workflow below:
+* Patient-wise splitting: Divide the dataset into training, validation, and testing subsets.
+* Slice generation: Convert each 3D MRI volume into a series of 2D slices.
+* Quality filtering: Retain only slices with a mask pixel count greater than 10. (To avoid main noise.)
+* Noise removal: Manually inspect and remove noisy or corrupted image–mask pairs (e.g., thin lines or artifacts).
+* Data organization: Save the cleaned data in a well-structured directory format (e.g., training/, validation/, testing/).
 
-Organize datasets as separate folders, and patient-wise split the training/validation/testing samples. store images and masks in the same folder.
+Organize datasets into separate folders with patient-wise splits for training, validation, and testing.
+Place each image and its corresponding mask within the same directory.
 Examples:
 ```
 ./user_data/Datasets/SAMRI_train_test
@@ -227,10 +223,9 @@ Examples:
 > * The image and mask files should be organized in the same folder with different keys: **"\_img_\"** for images, and **"\_seg_\"** for masks, respectively. Other part of the name should be the same or in the same order after being sorted.
 > * The shape of the image and mask are both 1 x H x W.
 
----
 
-### ⚙️ Precompute Image Embeddings
-Use SAM ViT‑B to compute and cache image embeddings (saves training time & memory).
+### 2️⃣ Precompute Image Embeddings
+Use the SAM ViT-B model to compute and cache image embeddings, thereby reducing training time and memory consumption.
 
 ```bash
 python preprocess.precompute_embeddings \
@@ -249,17 +244,17 @@ python preprocess.precompute_embeddings \
 - `--checkpoint` : The path of the SAM Vitb checkpoint.
 - `--device` : Computation device, choose from "cuda", "cpu", and "mps".
 
-> Note: The embedding results are saved as "**.npz**" file with the keys of ["img", "mask", "ori_size"].
-> * img: embedding
-> * mask: mask
-> * ori_size: the original HW shape of the image and mask.
+> The computed embeddings are saved in a **.npz** file containing the following keys:
+> * **img**: the image embedding
+> * **mask**: the corresponding segmentation mask
+> * **ori_size**: the original height and width of the image and mask.
 
----
 
-### 🎯 Train the Decoder
+### 3️⃣ Train the Decoder
 
 #### Single‑GPU
-Training SAMRI can use commercial GPU. The following example command can be used in this situation. Some HPC provide command terminal for GPU. 
+SAMRI can be trained on commercial GPUs. The following example command illustrates this setup.
+Some HPC systems also provide interactive GPU terminals for direct command-line execution.
 ```bash
 python train_single_gpu.py \
   --model_type samri \
@@ -273,7 +268,7 @@ python train_single_gpu.py \
 ```
 
 #### Multi‑GPU (same node, PyTorch DDP)
-Some HPC provide commnad terminal for multi GPU mode. The following command can be used in this situation.
+Some HPC systems provide command-line access for multi-GPU training. The following command can be used in such cases and can also be included in a SLURM script for batch execution.
 ```bash
 python train_multi_gpus.py \
   --model_type samri \
@@ -295,7 +290,7 @@ python train_multi_gpus.py \
 >- `--prompts mixed` : training prompts. Choose from "point", "bbox", and "mixed", where "mixed" means point+bbox prompt.
 
 #### SLURM 
-SLURM scrip is popular in HPC system. The script can be found at `./train_multi_gpus_mi300.sh`. Change the script to adapt your HPC.
+SLURM scripts are commonly used for job submission in HPC environments. The provided example can be found at `./train_multi_gpus_mi300.sh`. Modify the configuration as needed to suit your specific HPC setup.
 
 Examples:
 ```bash
@@ -326,21 +321,32 @@ export MASTER_PORT=$((26000 + RANDOM % 1000))  # Pick a port between 26000 ~ 269
 python train_multi_gpus.py
 ```
 
+
+#### 🧯 Troubleshooting
+- **CUDA/ROCm OOM**: lower `--batch_size`; reduce `num_workers`;
+- **Slow data loading**: set `--num_workers 8..12`
+- **Validation mismatch**: confirm same preprocessing/normalization as training
+
+
+#### 🔎 Notes on Backends
+- **PyTorch/CUDA**: install a build matching your CUDA version
+- **ROCm (AMD MI300X/MI210)**: use ROCm PyTorch wheels; NCCL flags above may help
+- **Apple Silicon (MPS)**: training is possible, but performance is limited compared to CUDA/ROCm
+
 ---
 
-### 🧠 Model Evaluation
+## 🧠 Model Evaluation
 
-This section describes how to validate, test, and visualize model performance across validation and test datasets.  
-SAMRI is evaluated using:
+This section outlines the procedures for validating, testing, and visualizing model performance across the validation and test datasets.
+Models are evaluated using the following metrics:
 - **Dice Similarity Coefficient (DSC)**  
 - **Hausdorff Distance (HD)**  
 - **Mean Surface Distance (MSD)**  
 
-It also provides dedicated evaluation scripts for **SAM**, **SAMRI**, and **MedSAM** models.
+Dedicated evaluation scripts are also provided for **SAM**, **SAMRI**, and **MedSAM** models.
 
----
 
-#### **1️⃣ Validate the Model on Validation Datasets**
+### **1️⃣ Validate the Model on Validation Datasets**
 
 This step evaluates model performance on **precomputed embeddings** rather than raw images.  
 It is efficient for internal validation because embeddings are already generated during preprocessing.
@@ -356,20 +362,19 @@ python evaluation.val_in_batch.py \
     --batch-size 64
 ```
 
-**Notes:**
-- The script loads embeddings directly from `.npz` files and runs **batch evaluation**.
-- This avoids redundant image encoding and greatly speeds up the validation process.
-- Use this to measure **training progress** or perform **hyperparameter tuning**.
-- The results will be saved in a CSV file under the checkpoint directory.
+> ⚠️**Notes:**
+> - The script loads embeddings directly from `.npz` files and runs **batch evaluation**.
+> - This avoids redundant image encoding and greatly speeds up the validation process.
+> - Use this to measure **training progress** or perform **hyperparameter tuning**.
+> - The results will be saved in a CSV file under the checkpoint directory.
 
----
 
-#### **2️⃣ Test the Model on Test Datasets**
+### **2️⃣ Test the Model on Test Datasets**
 
 This evaluates the model directly on the **test images** (not precomputed embeddings).  
 Two common use cases are supported:
 
-##### 🧩 Evaluate a Single Checkpoint
+#### 🧩 Evaluate a Single Checkpoint
 Use a specific checkpoint file for testing:
 ```bash
   python evaluation.test_vis.py \
@@ -380,7 +385,7 @@ Use a specific checkpoint file for testing:
     --model-type samri
 ```
 
-##### 📁 Evaluate Multiple Checkpoints under a Folder
+#### 📁 Evaluate Multiple Checkpoints under a Folder
 Automatically evaluate all `.pth` files in a directory:
 ```bash
   python evaluation.test_vis.py \
@@ -396,16 +401,13 @@ Automatically evaluate all `.pth` files in a directory:
 - The script automatically detects single-file or multi-checkpoint folders.
 - Evaluates each checkpoint and saves detailed metrics and predictions in a python pickle binary file.
 
-> ⚠️ **Note:**  
-> **MedSAM** uses a distinct preprocessing and inference pipeline (see below).
+> ⚠️ **Note: MedSAM** uses a distinct preprocessing and inference pipeline (see below).
 
----
-
-#### **3️⃣ Other Models — MedSAM Evaluation**
+### **3️⃣ Other Models — MedSAM Evaluation**
 
 Two dedicated scripts are provided to ensure **MedSAM** compatibility.
 
-##### a. `test_medsam.py`
+#### a. `test_medsam.py`
 Runs inference using the **original MedSAM architecture** (from its official repository)  
 with added dataset loading and result-saving features.
 
@@ -420,7 +422,7 @@ with added dataset loading and result-saving features.
 - Each case is saved as an `.npz` file containing both the **ground truth mask** and **predicted mask**.  
 - Useful for comparing outputs across architectures.
 
-##### b. `test_medsam_eval.py`
+#### b. `test_medsam_eval.py`
 Processes the `.npz` results produced above and computes evaluation metrics:
 ```bash
   python evaluation.test_medsam_eval.py \
@@ -431,9 +433,7 @@ Processes the `.npz` results produced above and computes evaluation metrics:
 - Aggregates and reports **Dice**, **IoU**, and **boundary metrics**.
 - Produces results in the same standardized format as SAMRI evaluations.
 
----
-
-#### **4️⃣ Visualize Testing Results**
+### **4️⃣ Visualize Testing Results**
 
 Use the provided Jupyter notebook to **visualize** and **compare** results interactively:
 
@@ -450,33 +450,23 @@ You can:
 
 ---
 
-### 🧯 Troubleshooting
-- **CUDA/ROCm OOM**: lower `--batch_size`; reduce `num_workers`;
-- **Slow data loading**: set `--num_workers 8..12`(if CUDA)
-- **Validation mismatch**: confirm same preprocessing/normalization as training
-
----
-
-### 🔎 Notes on Backends
-- **PyTorch/CUDA**: install a build matching your CUDA version
-- **ROCm (AMD MI300X/MI210)**: use ROCm PyTorch wheels; NCCL flags above may help
-- **Apple Silicon (MPS)**: training is possible, but performance is limited compared to CUDA/ROCm
-
----
-
 ## 🧠 Dataset Overview
 
 SAMRI is trained on a curated **1.1 million MRI image–mask pairs** from **36 public datasets** (47 segmentation tasks) spanning over **10 MRI sequences** (T1, T2, FLAIR, DESS, TSE, etc.).
 
 | Category | Example Datasets | Approx. Pairs |
 |-----------|------------------|---------------|
-| **Brain** | BraTS, ISLES, | 420 K |
-| **Abdomen** | AMOSMR, HipMRI | 260 K |
-| **Knee** | MSK_T2, OAI,  | 210 K |
-| **Thorax** | Heart, MSD_Heart | 130 K |
-| **Others** | Prostate, MSD_kidney | 80 K |
+| **Brain** | BraTS, ISLES, | 440 K |
+| **Knee** | MSK_T2, OAI,  | 286 K |
+| **Abdomen** | AMOSMR, HipMRI | 176 K |
+| **Total Body** | Totalseg MR | 143 K |
+| **Others** | Prostate, MSD_kidney | 55 K |
 
 Detailed dataset breakdowns are provided in **Table S1 (Supplementary)** in the paper.
+
+![Datasets](README/Dataset.png) 
+*Figure 2. The Dataset components*
+
 
 ---
 
@@ -525,18 +515,7 @@ SAMRI/
 └── README.md                           # Main documentation file
 ```
 
----
 
-### 🧩 Key Modules Overview
-
-| Folder | Purpose |
-|---------|----------|
-| **evaluation/** | Evaluation, benchmarking, and visualization scripts for SAMRI, SAM, and MedSAM models. |
-| **image_processing/** | Preprocessing utilities and embedding generation for MRI datasets. |
-| **segment_anything/** | Contains SAM model definitions. |
-| **utils/** | Common helper functions, dataset loaders, and loss definitions. |
-| **user_data/** | Optional folder for user-specific experiments or data. |
-| **training scripts** | Standalone scripts for single- and multi-GPU model training. |
 
 
 ---
