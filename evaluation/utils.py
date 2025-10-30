@@ -273,13 +273,13 @@ def show_results(result_list, prompt="b", eval="dice", x="model", plot_style="bo
         fig= plt.figure(figsize=(20, 12))
         if plot_style == "box":
             sns.boxplot(
-                    x="labels", y="b_dice", data=result,
+                    x="labels", y=eval_name, data=result,
                     hue="Model", palette="Set3", showfliers=False, width=0.5, whis=0.5,
                     order=label_order
                 )
         elif plot_style == "violin":
             sns.violinplot(
-                    x="labels", y="b_dice", data=result,
+                    x="labels", y=eval_name, data=result,
                     hue="Model", palette="Set3", width=0.5, inner=None,
                     order=label_order
                 )
