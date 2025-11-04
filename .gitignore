@@ -13,4 +13,4 @@ build/
 *.egg-info/
 
 # Ignore model checkpoints
-user_data/pretrained_ckpt/*.pth
+*.pth
