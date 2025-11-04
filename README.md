@@ -269,7 +269,7 @@ Verify that all files are correctly structured and complete before initiating th
 ├── Spine/
 └── ZIB_OAI/
 
-Link is processing...
+Link is preparing...
 ```
 </details>
 
@@ -634,12 +634,17 @@ SAMRI/
 
 If you use SAMRI in your research, please cite:
 
-content is on the way...
-
-<!-- ```bibtex
-@article{
+```bibtex
+@misc{wang2025samrisegmentmodelmri,
+      title={SAMRI: Segment Anything Model for MRI}, 
+      author={Zhao Wang and Wei Dai and Thuy Thanh Dao and Steffen Bollmann and Hongfu Sun and Craig Engstrom and Shekhar S. Chandra},
+      year={2025},
+      eprint={2510.26635},
+      archivePrefix={arXiv},
+      primaryClass={eess.IV},
+      url={https://arxiv.org/abs/2510.26635}, 
 }
-``` -->
+```
 
 ---
 
