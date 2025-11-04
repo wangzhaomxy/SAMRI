@@ -90,15 +90,15 @@ This project ships two entry points for running SAMRI on your data:
 The pretrained **SAMRI checkpoint** can be downloaded [**HERE** :arrow_upper_right:](https://espace.library.uq.edu.au/view/UQ:cadac84).
 | Model  | Checkpoint  | Description |
 |------|------|-------------|
-| **SAMRI(box)**| [samri_vitb_box.pth](https://espace.library.uq.edu.au/view/UQ:cadac84)| SAMRI checkpoint with box prompt (Easy to go)|
-| **SAMRI(box)**| [samri_vitb_box_zero.pth](https://espace.library.uq.edu.au/view/UQ:cadac84) | Zero-shot enhanced SAMRI checkpoint with box prompt (Easy to go)|
-| **SAMRI(box+point)**| [samri_vitb_bp.pth](https://espace.library.uq.edu.au/view/UQ:cadac84)| SAMRI checkpoint with box + point prompt (Robust higher accuracy)|
-| **SAMRI(box+point)**| [samri_vitb_bp_zero.pth](https://espace.library.uq.edu.au/view/UQ:cadac84)| Zero-shot enhanced SAMRI checkpoint with box + point prompt (Robust higher accuracy) |
-| **SAM Vitb**| [sam_vit_b_01ec64.pth](https://dl.fbaipublicfiles.com/segment_anything/sam_vit_b_01ec64.pth) | SAM vitb checkpoint from [**Link**](https://github.com/facebookresearch/segment-anything).|
-| **SAM Vith**| [sam_vit_h_4b8939.pth](https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth) | SAM vith checkpoint from [**Link**](https://github.com/facebookresearch/segment-anything).|
-| **MedSAM**| [medsam_vit_b.pth](https://drive.google.com/drive/folders/1ETWmi4AiniJeWOt6HAsYgTjYv_fkgzoN?usp=drive_link) | MedSAM checkpoint from [**Link**](https://github.com/bowang-lab/MedSAM).|
+| **SAMRI(box)**| samri_vitb_box.pth| SAMRI checkpoint with box prompt (Easy to go)|
+| **SAMRI(box)**| samri_vitb_box_zero.pth | Zero-shot enhanced SAMRI checkpoint with box prompt (Easy to go)|
+| **SAMRI(box+point)**| samri_vitb_bp.pth| SAMRI checkpoint with box + point prompt (Robust higher accuracy)|
+| **SAMRI(box+point)**| samri_vitb_bp_zero.pth| Zero-shot enhanced SAMRI checkpoint with box + point prompt (Robust higher accuracy) |
+| **SAM Vitb**| [sam_vit_b_01ec64.pth](https://dl.fbaipublicfiles.com/segment_anything/sam_vit_b_01ec64.pth) | SAM vitb checkpoint from [**GitHub**](https://github.com/facebookresearch/segment-anything).|
+| **SAM Vith**| [sam_vit_h_4b8939.pth](https://dl.fbaipublicfiles.com/segment_anything/sam_vit_h_4b8939.pth) | SAM vith checkpoint from [**GitHub**](https://github.com/facebookresearch/segment-anything).|
+| **MedSAM**| [medsam_vit_b.pth](https://drive.google.com/drive/folders/1ETWmi4AiniJeWOt6HAsYgTjYv_fkgzoN?usp=drive_link) | MedSAM checkpoint from [**GitHub**](https://github.com/bowang-lab/MedSAM).|
 
-
+Once the checkpoints are downloaded, place them in the **/user_data/pretrained_ckpt/** directory.
 
 ### 1️⃣ Inference (CLI) — `inference.py`
 
@@ -107,16 +107,32 @@ Run SAM/SAMRI on a single NIfTI (`.nii/.nii.gz`) **or** standard image (`.png/.j
 **Basic usage**
 ```bash
 python inference.py \
-  --input ./data/sample_case01.nii.gz \
-  --output ./Inference_results/ \
-  --checkpoint ./models/samri_vitb_bp.pth \
+  --input ./user_data/Datasets/demoSample/example_img_1.nii.gz \
+  --output ./user_data/Datasets/infer_output \
+  --checkpoint ./user_data/pretrained_ckpt/samri_vitb_bp.pth \
   --model-type samri \
-  --device cuda \    # Alter with "mps" for apple silicon
+  --device cuda \
   --box X1 Y1 X2 Y2\
   --point X Y \
-  --no-png False
-
+  --no-png True
 ```
+<details>
+
+<summary><b>🧠 For Apple silicon</b></summary>
+
+```bash
+python inference.py \
+  --input ./user_data/Datasets/demoSample/example_img_1.nii.gz \
+  --output ./user_data/Datasets/infer_output \
+  --checkpoint ./user_data/pretrained_ckpt/samri_vitb_bp.pth \
+  --model-type samri \
+  --device mps \
+  --box X1 Y1 X2 Y2\
+  --point X Y \
+  --no-png True
+```
+</details>
+<br>
 
 **CLI arguments (from `inference.py`)**
 - `--input, -i` (required): path to `.nii/.nii.gz` **or** `.png/.jpg/.tif`
@@ -126,7 +142,7 @@ python inference.py \
 - `--device` (default: `cuda`): e.g., `cuda`, `cpu` (or `mps` on Apple Silicon if available)
 - `--box X1 Y1 X2 Y2` (required): bounding box prompt (pixels)
 - `--point X Y` (optional): foreground point prompt (pixels)
-- `--no-png` (flag): if set, do **not** save PNG; only `.nii.gz` mask is written
+- `--no-png` (flag): if set, do **not** save PNG; only `.nii.gz` mask is written. If you want save PNG, delete this line.
 
 **Outputs**
 - `<case>_seg_.nii.gz` — predicted mask saved as NIfTI with shape `[1, H, W]`
@@ -139,10 +155,26 @@ python inference.py \
   --output ./user_data/Datasets/infer_output \
   --checkpoint ./user_data/pretrained_ckpt/samri_vitb_bp.pth \
   --model-type samri \
-  --device mps \ # or "cuda"
+  --device cuda \
   --box 115 130 178 179\
   --point 133 172
 ```
+<details>
+<summary><b>🧠 For Apple silicon</b></summary>
+
+```bash
+python inference.py \
+  --input ./user_data/Datasets/demoSample/example_img_1.nii.gz \
+  --output ./user_data/Datasets/infer_output \
+  --checkpoint ./user_data/pretrained_ckpt/samri_vitb_bp.pth \
+  --model-type samri \
+  --device mps \
+  --box 115 130 178 179\
+  --point 133 172
+```
+</details>
+<br>
+
 > ⚠️ **Note:**
 > - The input must be a 2D image. 
 > - It is automatically normalized to 8-bit and converted to RGB to align with SAM’s internal preprocessing. 
