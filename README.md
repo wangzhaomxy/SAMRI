@@ -115,7 +115,7 @@ python inference.py \
   --device cuda \
   --box X1 Y1 X2 Y2\
   --point X Y \
-  --no-png True
+  --no-png
 ```
 <details>
 
@@ -130,7 +130,7 @@ python inference.py \
   --device mps \
   --box X1 Y1 X2 Y2\
   --point X Y \
-  --no-png True
+  --no-png
 ```
 </details>
 <br>
