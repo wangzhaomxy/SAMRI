@@ -1,13 +1,15 @@
 ############################################################
 # MRI Viewer + SAMRI inference integration (slice-level)
-# - Multi-view MRI with Brush/Box/Point/Hand tools
+# - Multi-view MRI with Paint/Erase/Box/Point/Hand tools
 # - SAMRI checkpoint loading (load_sam_model + SamPredictor)
-# - Generate Mask button (per-slice SAM inference)
+# - Generate Mask button with multi-mask selection
+# - Candidate panel with score + thumbnail for each mask
 ############################################################
 
 import os
 import math
 import time
+from io import BytesIO  # <-- NEW
 
 import numpy as np
 import SimpleITK as sitk
@@ -22,6 +24,7 @@ from ipywidgets import (
     VBox, HBox, Button, ColorPicker, IntSlider,
     ToggleButtons, Checkbox, Label, Text, Dropdown
 )
+from ipywidgets import Image as WImage    # <-- NEW
 from ipyfilechooser import FileChooser
 
 ############################################################
@@ -69,6 +72,9 @@ sam_device = None
 # Embedding cache: avoid re-running set_image if slice unchanged
 last_sam_image_view = None
 last_sam_image_slice_idx = None
+
+# Multi-mask candidates
+sam_candidates = None   # dict: {view, slice_idx, masks, scores}
 
 # Zoom & pan state
 zoom_slider_value_default = 100
@@ -137,16 +143,11 @@ load_model_button = Button(
     button_style=''
 )
 
+# Tool selector: Paint / Erase / Box / Point / Hand
 tool_selector = ToggleButtons(
-    options=['Brush', 'Box', 'Point', 'Hand'],
-    value='Brush',
+    options=['Hand', 'Paint', 'Erase', 'Box', 'Point'],
+    value='Hand',
     description='Tool:'
-)
-
-mode_selector = ToggleButtons(
-    options=['Paint', 'Erase'],
-    value='Paint',
-    description='Mode:'
 )
 
 brush_size_slider = IntSlider(
@@ -219,11 +220,14 @@ save_mask_button = Button(
     button_style='success'
 )
 
-# NEW: Generate Mask button (SAMRI inference)
+# Generate Mask button (SAMRI inference)
 generate_mask_button = Button(
     description='Generate Mask',
     button_style='info'
 )
+
+# Tiny panel to show candidate thumbnails + scores  <-- NEW
+candidate_thumbs_box = HBox([])
 
 # View buttons
 axial_view_button = Button(description="Axial")
@@ -239,6 +243,9 @@ canvas_size_slider = IntSlider(
     step=64,
     description='Canvas size:'
 )
+
+canvas_size_minus_button = Button(description='Size -')
+canvas_size_plus_button  = Button(description='Size +')
 
 # Save mask controls
 save_dir_chooser = FileChooser(
@@ -678,11 +685,16 @@ def canvas_to_image_xy(view_name, cx, cy):
 
 
 ############################################################
-# Painting (uses voxel coords; unchanged)
+# Painting (uses voxel coords)
 ############################################################
 
 def paint_circle(cx, cy):
     if mask3d is None:
+        return
+
+    tool = tool_selector.value
+
+    if tool not in ("Paint", "Erase"):
         return
 
     if current_view == "axial":
@@ -699,9 +711,9 @@ def paint_circle(cx, cy):
         yy,xx = np.ogrid[y0:y1, x0:x1]
         region = (yy-vy)**2 + (xx-vx)**2 <= r_vox*r_vox
 
-        if mode_selector.value=="Paint":
+        if tool == "Paint":
             mask3d[z,y0:y1,x0:x1][region]=1
-        else:
+        elif tool == "Erase":
             mask3d[z,y0:y1,x0:x1][region]=0
 
     elif current_view == "coronal":
@@ -718,9 +730,9 @@ def paint_circle(cx, cy):
         zz,xx = np.ogrid[z0:z1, x0:x1]
         region = (zz-vz)**2 + (xx-vx)**2 <= r_vox*r_vox
 
-        if mode_selector.value=="Paint":
+        if tool == "Paint":
             mask3d[z0:z1,y,x0:x1][region]=1
-        else:
+        elif tool == "Erase":
             mask3d[z0:z1,y,x0:x1][region]=0
 
     elif current_view == "sagittal":
@@ -737,9 +749,9 @@ def paint_circle(cx, cy):
         zz,yy=np.ogrid[z0:z1, y0:y1]
         region = (zz-vz)**2 + (yy-vy)**2 <= r_vox*r_vox
 
-        if mode_selector.value=="Paint":
+        if tool == "Paint":
             mask3d[z0:z1,y0:y1,x][region]=1
-        else:
+        elif tool == "Erase":
             mask3d[z0:z1,y0:y1,x][region]=0
 
     redraw()
@@ -807,17 +819,15 @@ def on_mouse_down(x,y):
 
     tool = tool_selector.value
 
-    if current_view=="mip" and tool in ("Brush", "Box", "Point"):
+    if current_view=="mip" and tool in ("Paint", "Erase", "Box", "Point"):
         return
 
-    if tool=="Brush":
+    if tool in ("Paint", "Erase"):
         drawing=True
         last_canvas_x, last_canvas_y = x,y
         paint_circle(x,y)
 
     elif tool=="Box":
-        if current_view == "mip":
-            return
         slice_idx = get_current_slice()
         ix0, iy0 = canvas_to_image_xy(current_view, x, y)
         if ix0 is None:
@@ -832,8 +842,6 @@ def on_mouse_down(x,y):
         _draw_ui(current_view, slice_idx)
 
     elif tool=="Point":
-        if current_view == "mip":
-            return
         slice_idx=get_current_slice()
         ix, iy = canvas_to_image_xy(current_view, x, y)
         if ix is None:
@@ -858,7 +866,7 @@ def on_mouse_move(x,y):
 
     tool = tool_selector.value
 
-    if tool=="Brush" and drawing and current_view != "mip":
+    if tool in ("Paint", "Erase") and drawing and current_view != "mip":
         paint_line(last_canvas_x, last_canvas_y, x, y)
         last_canvas_x, last_canvas_y = x,y
 
@@ -894,7 +902,7 @@ def on_mouse_up(x,y):
 
     tool=tool_selector.value
 
-    if tool=="Brush":
+    if tool in ("Paint", "Erase"):
         drawing=False
 
     elif tool=="Box" and box_drawing:
@@ -932,6 +940,7 @@ def load_from_path(_):
     global sag_center_y, sag_center_z
     global mip_angle
     global last_sam_image_view, last_sam_image_slice_idx
+    global sam_candidates
 
     path = fc.selected
     if not path:
@@ -984,9 +993,11 @@ def load_from_path(_):
     drawing=False; box_drawing=False
     current_view="axial"
 
-    # reset embedding cache
+    # reset SAM embedding + candidates
     last_sam_image_view = None
     last_sam_image_slice_idx = None
+    sam_candidates = None
+    candidate_thumbs_box.children = []   # <-- clear panel
 
     stem, ext = split_name_and_ext(path)
     last_save_dir = os.path.dirname(path)
@@ -1012,6 +1023,7 @@ load_path_button.on_click(load_from_path)
 def load_model(_):
     global current_model_path, sam_model, sam_predictor, sam_device
     global last_sam_image_view, last_sam_image_slice_idx
+    global sam_candidates
 
     path = fc_model.selected
     if not path:
@@ -1043,9 +1055,11 @@ def load_model(_):
     sam_predictor = predictor
     sam_device = device
 
-    # Reset embedding cache
+    # Reset embedding cache & candidates
     last_sam_image_view = None
     last_sam_image_slice_idx = None
+    sam_candidates = None
+    candidate_thumbs_box.children = []   # <-- clear panel
 
     log_status(f"SAMRI model loaded from '{path}' on device '{device}'.")
 
@@ -1058,20 +1072,25 @@ load_model_button.on_click(load_model)
 ############################################################
 
 def clear_prompts(_):
-    global box_prompts, point_prompts, box_drawing
+    global box_prompts, point_prompts, box_drawing, sam_candidates
     if volume3d is None:
         return
-    box_prompts=[]; point_prompts=[]; box_drawing=False
+    box_prompts = []
+    point_prompts = []
+    box_drawing = False
+    sam_candidates = None
+    candidate_thumbs_box.children = []
     _draw_ui(current_view, get_current_slice())
-    log_status("Cleared prompts.")
-
-clear_prompt_button.on_click(clear_prompts)
+    log_status("Cleared prompts and candidate masks.")
 
 
 def clear_mask(_):
+    global sam_candidates
     if volume3d is None:
         return
     init_mask()
+    sam_candidates = None
+    candidate_thumbs_box.children = []
     redraw()
     log_status("Mask cleared.")
 
@@ -1120,7 +1139,7 @@ save_mask_button.on_click(save_mask)
 
 
 ############################################################
-# SAMRI slice pre-processing & Generate Mask
+# SAMRI slice pre-processing & multi-mask Generate Mask
 ############################################################
 
 def get_current_slice_2d():
@@ -1148,8 +1167,138 @@ def make_sam_input_from_slice(slice2d):
     return img_rgb
 
 
+def write_mask2d_to_volume(view_name, slice_idx, mask2d):
+    """Write a 2D mask into mask3d for given view/slice. Return True if ok."""
+    if view_name == "axial":
+        if mask2d.shape != (dim_y, dim_x):
+            return False
+        mask3d[slice_idx, :, :] = mask2d.astype(np.uint8)
+        return True
+    elif view_name == "coronal":
+        if mask2d.shape != (dim_z, dim_x):
+            return False
+        mask3d[:, slice_idx, :] = mask2d.astype(np.uint8)
+        return True
+    elif view_name == "sagittal":
+        if mask2d.shape != (dim_z, dim_y):
+            return False
+        mask3d[:, :, slice_idx] = mask2d.astype(np.uint8)
+        return True
+    return False
+
+
+def apply_candidate_mask(idx):
+    """Apply selected candidate mask to the current view/slice."""
+    global sam_candidates
+
+    if sam_candidates is None:
+        log_status("No candidate masks available.")
+        return
+
+    view = sam_candidates['view']
+    sl   = sam_candidates['slice_idx']
+    masks = sam_candidates['masks']
+    scores = sam_candidates['scores']
+
+    if idx < 0 or idx >= masks.shape[0]:
+        log_status("Invalid candidate index.")
+        return
+
+    # Ensure we are still on the same view/slice
+    if current_view != view or get_current_slice() != sl:
+        log_status("Candidate masks belong to a different slice/view. Regenerate on this slice to update.")
+        return
+
+    mask2d = (masks[idx] > 0).astype(np.uint8)
+
+    ok = write_mask2d_to_volume(view, sl, mask2d)
+    if not ok:
+        log_status(f"Mask shape mismatch for view={view}. Got {mask2d.shape}.")
+        return
+
+    redraw()
+    log_status(f"Applied candidate mask {idx} (score={scores[idx]:.3f}) on {view} slice {sl}.")
+
+
+
+# ---------- NEW: thumbnail utilities for candidate masks ----------
+
+def make_mask_thumbnail(slice2d, mask2d, score, idx, thumb_size=64):
+    """
+    Create a small RGB thumbnail of the slice + mask overlay.
+    Returns a VBox(Image, Button) where the button is clickable to apply mask idx.
+    """
+    # base grayscale
+    img8 = (slice2d * 255.0).clip(0, 255).astype(np.uint8)
+    base = Image.fromarray(img8).convert("RGB")
+
+    # mask to overlay
+    mask_arr = (mask2d > 0).astype(np.uint8)
+    mask_img = Image.fromarray(mask_arr * 255).convert("L")
+
+    # resize both to thumbnail size
+    base = base.resize((thumb_size, thumb_size), Image.BILINEAR)
+    mask_img = mask_img.resize((thumb_size, thumb_size), Image.NEAREST)
+
+    base_np = np.array(base)
+    mask_np = np.array(mask_img) > 0
+
+    # overlay color = current overlay_color_hex
+    r, g, b = hex_to_rgb(overlay_color_hex)
+    overlay = base_np.copy()
+    overlay[mask_np, 0] = r
+    overlay[mask_np, 1] = g
+    overlay[mask_np, 2] = b
+
+    thumb = Image.fromarray(overlay.astype(np.uint8))
+
+    # encode thumbnail to PNG bytes
+    bio = BytesIO()
+    thumb.save(bio, format='PNG')
+    png_bytes = bio.getvalue()
+
+    img_widget = WImage(
+        value=png_bytes,
+        format='png',
+        width=thumb_size,
+        height=thumb_size
+    )
+
+    # button that applies this candidate when clicked
+    btn = Button(
+        description=f"{idx}: {score:.3f}",
+        layout={'width': f'{thumb_size + 20}px'}
+    )
+
+    def _on_click(_b, i=idx):
+        apply_candidate_mask(i)
+
+    btn.on_click(_on_click)
+
+    return VBox([img_widget, btn])
+
+
+
+def update_candidate_thumbnails(slice2d, masks, scores):
+    """Update the tiny panel with thumbnails for each candidate mask."""
+    if masks is None or masks.ndim != 3:
+        candidate_thumbs_box.children = []
+        return
+
+    K = masks.shape[0]
+    thumbs = []
+    for i in range(K):
+        thumbs.append(
+            make_mask_thumbnail(slice2d, masks[i], float(scores[i]), i)
+        )
+    candidate_thumbs_box.children = thumbs
+
+
+# -----------------------------------------------------------------
+
+
 def on_generate_mask(_):
-    global mask3d, last_sam_image_view, last_sam_image_slice_idx
+    global mask3d, last_sam_image_view, last_sam_image_slice_idx, sam_candidates
 
     if volume3d is None:
         log_status("No MRI loaded. Please load an image first.")
@@ -1220,41 +1369,44 @@ def on_generate_mask(_):
         log_status("No prompts on this slice. Please draw a box or point first.")
         return
 
-    # 4) Run SAMRI predictor
+    # 4) Run SAMRI predictor with multimask_output=True
     try:
         masks, scores, logits = sam_predictor.predict(
             point_coords=point_coords,
             point_labels=point_labels,
             box=box_array,
-            multimask_output=False
+            multimask_output=True
         )
     except Exception as e:
         log_status(f"SAMRI predict failed: {e}")
         return
 
-    # masks: (1, H, W)
-    mask2d = (masks[0] > 0).astype(np.uint8)
+    if masks.ndim != 3:
+        log_status(f"Unexpected masks shape: {masks.shape}")
+        return
 
-    # 5) Write back into the 3D mask volume at the right orientation
-    if current_view == "axial":
-        if mask2d.shape != (dim_y, dim_x):
-            log_status(f"Mask shape mismatch (axial): got {mask2d.shape}, expected {(dim_y, dim_x)}")
-            return
-        mask3d[axial_index, :, :] = mask2d
-    elif current_view == "coronal":
-        if mask2d.shape != (dim_z, dim_x):
-            log_status(f"Mask shape mismatch (coronal): got {mask2d.shape}, expected {(dim_z, dim_x)}")
-            return
-        mask3d[:, coronal_index, :] = mask2d
-    elif current_view == "sagittal":
-        if mask2d.shape != (dim_z, dim_y):
-            log_status(f"Mask shape mismatch (sagittal): got {mask2d.shape}, expected {(dim_z, dim_y)}")
-            return
-        mask3d[:, :, sagittal_index] = mask2d
+    # Store candidates
+    sam_candidates = {
+        'view': current_view,
+        'slice_idx': slice_idx,
+        'masks': masks,   # (K, H, W)
+        'scores': scores  # (K,)
+    }
 
-    # 6) Redraw with overlay logic (zoom, canvas size already handled)
-    redraw()
-    log_status(f"Generated SAMRI mask on {current_view} slice {slice_idx}.")
+    # Update UI selector
+    K = masks.shape[0]
+    options = [(f"{i}: score={scores[i]:.3f}", int(i)) for i in range(K)]
+    best_idx = int(np.argmax(scores))
+
+    # NEW: update thumbnail panel
+    update_candidate_thumbnails(slice2d, masks, scores)
+
+    # Apply best candidate immediately
+    apply_candidate_mask(best_idx)
+
+    log_status(f"Generated {K} candidate masks on {current_view} slice {slice_idx}. "
+               f"Best idx={best_idx} (score={scores[best_idx]:.3f}). Use 'Mask' dropdown to switch.")
+
 
 generate_mask_button.on_click(on_generate_mask)
 
@@ -1355,28 +1507,51 @@ zoom_in_button.on_click(zoom_in)
 
 
 ############################################################
+# Canvas size +/- buttons
+############################################################
+
+def canvas_size_minus(_):
+    canvas_size_slider.value = max(canvas_size_slider.min,
+                                   canvas_size_slider.value - canvas_size_slider.step)
+
+def canvas_size_plus(_):
+    canvas_size_slider.value = min(canvas_size_slider.max,
+                                   canvas_size_slider.value + canvas_size_slider.step)
+
+canvas_size_minus_button.on_click(canvas_size_minus)
+canvas_size_plus_button.on_click(canvas_size_plus)
+
+
+############################################################
 # Layout
 ############################################################
 
 controls_tools = HBox([
-    tool_selector, mode_selector, brush_size_slider,
-    color_picker, show_mask_checkbox
+    tool_selector,
+    brush_size_slider,
+    color_picker,
+    show_mask_checkbox
 ])
 
-controls_prompts = HBox([clear_prompt_button, clear_mask_button])
+# Put clear mask + generate + candidates on same row
+controls_prompts = HBox([
+    clear_prompt_button,
+    clear_mask_button,
+    generate_mask_button
+])
 
 controls_slices   = HBox([
     axial_slider,
     coronal_slider,
-    sagittal_slider,
-    zoom_slider,
-    zoom_out_button,
-    zoom_in_button
+    sagittal_slider
 ])
 
 controls_view     = HBox([axial_view_button, coronal_view_button, sagittal_view_button, mip_view_button])
 
-controls_actions  = HBox([generate_mask_button, save_mask_button])
+controls_actions  = HBox([save_mask_button])
+
+# Tiny panel to show candidate mask thumbnails
+candidate_thumbs_box = HBox([])
 
 save_controls = VBox([
     save_dir_chooser,
@@ -1386,13 +1561,23 @@ save_controls = VBox([
 file_choosers_row = HBox([fc, fc_model])
 load_buttons_row = HBox([load_path_button, load_model_button])
 
+canvas_size_controls = HBox([
+    canvas_size_slider,
+    canvas_size_minus_button,
+    canvas_size_plus_button,
+    zoom_slider,
+    zoom_out_button,
+    zoom_in_button
+])
+
 ui = VBox([
     status_label,
     file_choosers_row,
     load_buttons_row,
     controls_tools,
-    canvas_size_slider,
+    canvas_size_controls,
     controls_prompts,
+    candidate_thumbs_box,   # <-- tiny panel with previews
     controls_slices,
     controls_view,
     VBox([
