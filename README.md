@@ -1,10 +1,27 @@
 # 🧠 SAMRI: Segment Anything Model for MRI
 
+<p align="center">
+
+  <strong>
+    <a href="#-highlights">Highlights</a> |
+    <a href="#-overview">Overview</a> |
+    <a href="#️-installation">Installation</a> |
+    <a href="#-quick-start-inference--visualization-only">Quick Start</a> |
+    <a href="#-training-the-model">Training</a> |
+    <a href="#-model-evaluation">Evaluation</a> |
+    <a href="#-dataset-overview">Datasets</a> |
+    <a href="#-repository-structure">Structure</a> |
+    <a href="#-citation">Citation</a> |
+    <a href="#-contact">Contact</a>
+  </strong>
+
+</p>
 **SAMRI** is an MRI-specialized adaptation of [Meta AI’s Segment Anything Model (SAM)](https://segment-anything.com/), designed for accurate and efficient segmentation across diverse MRI datasets.  
 By fine-tuning only the **lightweight mask decoder** on **precomputed MRI embeddings**, SAMRI achieves state-of-the-art Dice and boundary accuracy while drastically reducing computational cost.
 Paper can be found [HERE](https://arxiv.org/abs/2510.26635).
 
 ---
+
 
 ## 🌟 Highlights
 
@@ -210,6 +227,44 @@ SAVE_PNG = True            # also write PNG next to the NIfTI
 5. Display publication-friendly overlays/contours inside the notebook
 
 > The notebook uses the same image preparation and I/O utilities as the CLI, ensuring identical masks for matching inputs and prompts.
+
+### **3️⃣ Run the Notebook-Based GUI (`GUI_jupyter.ipynb`) — Easiest Method**
+
+This is the simplest approach and requires no command-line arguments.
+
+#### **Steps**
+
+1. Open a terminal and ensure you are **inside the SAMRI folder**:
+   ```bash
+   cd /path/to/SAMRI
+   ```
+
+2. Start Jupyter Notebook:
+   ```bash
+   jupyter notebook
+   ```
+
+3. In the browser window:
+   - Navigate to the SAMRI folder (if needed)
+   - Click **`GUI_jupyter.ipynb`**
+
+4. **Run all cells**  
+   This will launch the complete SAMRI GUI, including:
+   - Multi-view MRI display  
+   - Paint / Erase / Box / Point tools  
+   - SAMRI checkpoint loader  
+   - Multi-candidate mask selector  
+   - Thumbnail previews + score panel  
+
+No additional parameters are needed.
+
+---
+
+### ⚠️ Notes
+
+- Ensure the **dependency** is installed in a right way.
+- Use **Jupyter Notebook**, not JupyterLab (unless compatible renderers/extensions are installed).
+
 ---
 ## 🧑‍🏫 Training the Model
 
