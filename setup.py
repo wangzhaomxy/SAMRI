@@ -26,6 +26,11 @@ setup(
         "pandas==2.2.0",
         # "einops", # will be installed with segment-anything. If not, uncomment this line.
         "h5py",
+        "ipycanvas==0.14.2",
+        "ipywidgets==8.1.8",
+        "ipyfilechooser==0.6.0",
+        "jupyterlab==4.5.0",
+        "notebook==7.5.0",
     ],
     classifiers=[
         "Development Status :: 3 - Alpha",
