@@ -2,14 +2,13 @@
 # MRI Viewer + SAMRI inference integration (slice-level)
 # - Multi-view MRI with Paint/Erase/Box/Point/Hand tools
 # - SAMRI checkpoint loading (load_sam_model + SamPredictor)
-# - Generate Mask button with multi-mask selection
-# - Candidate panel with score + thumbnail for each mask
+# - Generate Mask button with multi-mask selection via thumbnails
 ############################################################
 
 import os
 import math
 import time
-from io import BytesIO  # <-- NEW
+from io import BytesIO
 
 import numpy as np
 import SimpleITK as sitk
@@ -22,9 +21,9 @@ from segment_anything import SamPredictor
 from ipycanvas import MultiCanvas
 from ipywidgets import (
     VBox, HBox, Button, ColorPicker, IntSlider,
-    ToggleButtons, Checkbox, Label, Text, Dropdown
+    ToggleButtons, Checkbox, Label, Text, Dropdown,
+    Image as WImage, HTML
 )
-from ipywidgets import Image as WImage    # <-- NEW
 from ipyfilechooser import FileChooser
 
 ############################################################
@@ -103,8 +102,9 @@ main_canv.layout.height = f"{VIEW_SIZE}px"
 ############################################################
 
 status_label = Label(
-    value="Choose an MRI file → Load Image → View appears. Then load SAMRI model."
+    value="Choose an MRI file → image loads automatically → view appears. Then choose a SAMRI checkpoint → model loads automatically."
 )
+
 
 # --- File chooser for MRI ---
 fc = FileChooser(
@@ -133,17 +133,7 @@ fc_model.filter_pattern = [
     "*.pt", "*.pth", "*.ckpt", "*.onnx", "*.bin", "*.safetensors"
 ]
 
-load_path_button = Button(
-    description='Load Image',
-    button_style=''
-)
-
-load_model_button = Button(
-    description='Load model',
-    button_style=''
-)
-
-# Tool selector: Paint / Erase / Box / Point / Hand
+# Tool selector: Hand / Paint / Erase / Box / Point
 tool_selector = ToggleButtons(
     options=['Hand', 'Paint', 'Erase', 'Box', 'Point'],
     value='Hand',
@@ -194,6 +184,18 @@ sagittal_slider = IntSlider(
     disabled=True
 )
 
+# --- Add +/- buttons for slice sliders ---
+
+axial_minus_btn = Button(description="-", layout={'width': '40px'})
+axial_plus_btn  = Button(description="+", layout={'width': '40px'})
+
+coronal_minus_btn = Button(description="-", layout={'width': '40px'})
+coronal_plus_btn  = Button(description="+", layout={'width': '40px'})
+
+sagittal_minus_btn = Button(description="-", layout={'width': '40px'})
+sagittal_plus_btn  = Button(description="+", layout={'width': '40px'})
+
+
 zoom_slider = IntSlider(
     value=zoom_slider_value_default,
     min=0,
@@ -226,7 +228,7 @@ generate_mask_button = Button(
     button_style='info'
 )
 
-# Tiny panel to show candidate thumbnails + scores  <-- NEW
+# Tiny panel to show candidate mask thumbnails
 candidate_thumbs_box = HBox([])
 
 # View buttons
@@ -262,10 +264,23 @@ save_filename_text = Text(
 )
 
 save_format_dropdown = Dropdown(
-    options=['.nii.gz', '.mhd', '.mha', '.nrrd', '.dcm'],
+    options=['.nii.gz', '.mhd', '.mha', '.nrrd', '.dcm', '.png'],
     value='.nii.gz',
     description='Format:'
 )
+
+############################################################
+# Load status labels for MRI & model
+############################################################
+
+def _status_html(kind: str, loaded: bool, name: str = "") -> str:
+    color = "green" if loaded else "red"
+    state = "loaded" if loaded else "unloaded"
+    extra = f" ({name})" if (loaded and name) else ""
+    return f"<span style='color:{color}; font-weight:bold;'>{kind}: {state}{extra}</span>"
+
+mri_load_label   = HTML(value=_status_html("MR Imaging",   loaded=False))
+model_load_label = HTML(value=_status_html("SAMRI", loaded=False))
 
 
 ############################################################
@@ -313,7 +328,7 @@ def split_name_and_ext(path):
     base = os.path.basename(path)
     if base.lower().endswith('.nii.gz'):
         return base[:-7], '.nii.gz'
-    for ext in ['.nii', '.mhd', '.mha', '.nrrd', '.dcm', '.gz']:
+    for ext in ['.nii', '.mhd', '.mha', '.nrrd', '.dcm', '.gz', '.png']:
         if base.lower().endswith(ext):
             return base[:-len(ext)], ext
     return base, ''
@@ -926,10 +941,10 @@ main_canv.on_mouse_up(on_mouse_up)
 
 
 ############################################################
-# Load MRI button
+# Load MRI (now auto-triggered from file chooser)
 ############################################################
 
-def load_from_path(_):
+def load_from_path(_chooser):
     global volume3d, mask3d
     global dim_z, dim_y, dim_x
     global axial_index, coronal_index, sagittal_index
@@ -951,22 +966,27 @@ def load_from_path(_):
     if not os.path.isfile(path):
         log_status(f"File not found: {path}")
         return
+    fname = os.path.basename(path)   # <-- only the file name
 
     try:
         img_local = sitk.ReadImage(path)
     except Exception as e:
+        mri_load_label.value = _status_html("MRI", loaded=False)
         log_status(f"SimpleITK read failed: {e}")
         return
 
     try:
         vol = prepare_volume(img_local)
     except Exception as e:
+        mri_load_label.value = _status_html("MRI", loaded=False)
         log_status(f"Normalization failed: {e}")
         return
 
     volume3d = vol
     image_sitk = img_local
     current_image_path = path
+    fname = os.path.basename(path)
+    mri_load_label.value = _status_html("MRI", loaded=True, name=fname)
 
     dim_z, dim_y, dim_x = volume3d.shape
     init_mask()
@@ -997,7 +1017,7 @@ def load_from_path(_):
     last_sam_image_view = None
     last_sam_image_slice_idx = None
     sam_candidates = None
-    candidate_thumbs_box.children = []   # <-- clear panel
+    candidate_thumbs_box.children = []
 
     stem, ext = split_name_and_ext(path)
     last_save_dir = os.path.dirname(path)
@@ -1010,17 +1030,17 @@ def load_from_path(_):
     save_dir_chooser.reset()
 
     redraw()
-    log_status(f"Loaded MRI: {path} (Z={dim_z},Y={dim_y},X={dim_x}). View: Axial.")
+    log_status(f"Loaded MRI: {fname} (Z={dim_z},Y={dim_y},X={dim_x}). View: Axial.")
 
-
-load_path_button.on_click(load_from_path)
+# Auto-load MRI when user chooses a file
+fc.register_callback(load_from_path)
 
 
 ############################################################
-# Load SAMRI model button (finalised)
+# Load SAMRI model (now auto-triggered from file chooser)
 ############################################################
 
-def load_model(_):
+def load_model(_chooser):
     global current_model_path, sam_model, sam_predictor, sam_device
     global last_sam_image_view, last_sam_image_slice_idx
     global sam_candidates
@@ -1034,6 +1054,7 @@ def load_model(_):
     if not os.path.isfile(path):
         log_status(f"Model file not found: {path}")
         return
+    fname = os.path.basename(path)   # <-- only the file name
 
     # Device selection: CUDA → MPS → CPU
     if torch.cuda.is_available():
@@ -1047,8 +1068,10 @@ def load_model(_):
         model = load_sam_model(checkpoint=path, model_type="samri", device=device)
         predictor = SamPredictor(model)
     except Exception as e:
+        model_load_label.value = _status_html("SAMRI", loaded=False)
         log_status(f"Failed to load SAMRI model: {e}")
         return
+
 
     current_model_path = path
     sam_model = model
@@ -1059,12 +1082,14 @@ def load_model(_):
     last_sam_image_view = None
     last_sam_image_slice_idx = None
     sam_candidates = None
-    candidate_thumbs_box.children = []   # <-- clear panel
+    candidate_thumbs_box.children = []
+    fname = os.path.basename(path)
+    model_load_label.value = _status_html("SAMRI", loaded=True, name=fname)
 
-    log_status(f"SAMRI model loaded from '{path}' on device '{device}'.")
+    log_status(f"SAMRI model loaded: {fname} on device '{device}'.")
 
-
-load_model_button.on_click(load_model)
+# Auto-load model when user chooses a checkpoint
+fc_model.register_callback(load_model)
 
 
 ############################################################
@@ -1082,6 +1107,8 @@ def clear_prompts(_):
     candidate_thumbs_box.children = []
     _draw_ui(current_view, get_current_slice())
     log_status("Cleared prompts and candidate masks.")
+
+clear_prompt_button.on_click(clear_prompts)
 
 
 def clear_mask(_):
@@ -1118,17 +1145,40 @@ def save_mask(_):
 
     # Post-processing for file format:
     #  - ensure binary 0/1 and uint8
-    #  - copy spatial metadata from source image
     mask_arr = (mask3d > 0).astype(np.uint8)
-    mask_img = sitk.GetImageFromArray(mask_arr)
-    if image_sitk is not None:
-        mask_img.CopyInformation(image_sitk)
 
-    try:
-        sitk.WriteImage(mask_img, save_path)
-    except Exception as e:
-        log_status(f"Failed to save mask: {e}")
-        return
+    if ext == '.png':
+        # Save ONLY the current view's slice as a 2D PNG
+        if current_view == "axial":
+            mask2d = mask_arr[axial_index]
+        elif current_view == "coronal":
+            mask2d = mask_arr[:, coronal_index, :]
+        elif current_view == "sagittal":
+            mask2d = mask_arr[:, :, sagittal_index]
+        else:
+            # fallback: axial mid-slice
+            mask2d = mask_arr[axial_index]
+
+        img2d = (mask2d * 255).astype(np.uint8)
+
+        try:
+            from PIL import Image  # already imported at top
+            Image.fromarray(img2d).save(save_path)
+        except Exception as e:
+            log_status(f"Failed to save PNG mask: {e}")
+            return
+    else:
+        # 3D medical formats via SimpleITK, with spatial metadata
+        mask_img = sitk.GetImageFromArray(mask_arr)
+        if image_sitk is not None:
+            mask_img.CopyInformation(image_sitk)
+
+        try:
+            sitk.WriteImage(mask_img, save_path)
+        except Exception as e:
+            log_status(f"Failed to save mask: {e}")
+            return
+
 
     last_save_dir = dir_path
     save_dir_chooser.default_path = last_save_dir
@@ -1220,9 +1270,6 @@ def apply_candidate_mask(idx):
     log_status(f"Applied candidate mask {idx} (score={scores[idx]:.3f}) on {view} slice {sl}.")
 
 
-
-# ---------- NEW: thumbnail utilities for candidate masks ----------
-
 def make_mask_thumbnail(slice2d, mask2d, score, idx, thumb_size=64):
     """
     Create a small RGB thumbnail of the slice + mask overlay.
@@ -1278,7 +1325,6 @@ def make_mask_thumbnail(slice2d, mask2d, score, idx, thumb_size=64):
     return VBox([img_widget, btn])
 
 
-
 def update_candidate_thumbnails(slice2d, masks, scores):
     """Update the tiny panel with thumbnails for each candidate mask."""
     if masks is None or masks.ndim != 3:
@@ -1292,9 +1338,6 @@ def update_candidate_thumbnails(slice2d, masks, scores):
             make_mask_thumbnail(slice2d, masks[i], float(scores[i]), i)
         )
     candidate_thumbs_box.children = thumbs
-
-
-# -----------------------------------------------------------------
 
 
 def on_generate_mask(_):
@@ -1393,19 +1436,20 @@ def on_generate_mask(_):
         'scores': scores  # (K,)
     }
 
-    # Update UI selector
-    K = masks.shape[0]
-    options = [(f"{i}: score={scores[i]:.3f}", int(i)) for i in range(K)]
-    best_idx = int(np.argmax(scores))
-
-    # NEW: update thumbnail panel
+    # update thumbnails panel
     update_candidate_thumbnails(slice2d, masks, scores)
 
-    # Apply best candidate immediately
+    # pick best candidate and apply immediately
+    K = masks.shape[0]
+    best_idx = int(np.argmax(scores))
+
     apply_candidate_mask(best_idx)
 
-    log_status(f"Generated {K} candidate masks on {current_view} slice {slice_idx}. "
-               f"Best idx={best_idx} (score={scores[best_idx]:.3f}). Use 'Mask' dropdown to switch.")
+    log_status(
+        f"Generated {K} candidate masks on {current_view} slice {slice_idx}. "
+        f"Best idx={best_idx} (score={scores[best_idx]:.3f}). "
+        f"Click thumbnails to switch masks."
+    )
 
 
 generate_mask_button.on_click(on_generate_mask)
@@ -1462,6 +1506,51 @@ def on_sag_change(change):
 axial_slider.observe(on_axial_change, names='value')
 coronal_slider.observe(on_coronal_change, names='value')
 sagittal_slider.observe(on_sag_change, names='value')
+
+# Axial +/- logic
+def axial_minus(_):
+    if axial_slider.disabled: 
+        return
+    axial_slider.value = max(axial_slider.min, axial_slider.value - 1)
+
+def axial_plus(_):
+    if axial_slider.disabled:
+        return
+    axial_slider.value = min(axial_slider.max, axial_slider.value + 1)
+
+axial_minus_btn.on_click(axial_minus)
+axial_plus_btn.on_click(axial_plus)
+
+
+# Coronal +/- logic
+def coronal_minus(_):
+    if coronal_slider.disabled:
+        return
+    coronal_slider.value = max(coronal_slider.min, coronal_slider.value - 1)
+
+def coronal_plus(_):
+    if coronal_slider.disabled:
+        return
+    coronal_slider.value = min(coronal_slider.max, coronal_slider.value + 1)
+
+coronal_minus_btn.on_click(coronal_minus)
+coronal_plus_btn.on_click(coronal_plus)
+
+
+# Sagittal +/- logic
+def sagittal_minus(_):
+    if sagittal_slider.disabled:
+        return
+    sagittal_slider.value = max(sagittal_slider.min, sagittal_slider.value - 1)
+
+def sagittal_plus(_):
+    if sagittal_slider.disabled:
+        return
+    sagittal_slider.value = min(sagittal_slider.max, sagittal_slider.value + 1)
+
+sagittal_minus_btn.on_click(sagittal_minus)
+sagittal_plus_btn.on_click(sagittal_plus)
+
 
 def on_color_change(_):
     if volume3d is not None:
@@ -1533,33 +1622,33 @@ controls_tools = HBox([
     show_mask_checkbox
 ])
 
-# Put clear mask + generate + candidates on same row
+# Put clear mask + generate + thumbnails on same logical section
 controls_prompts = HBox([
     clear_prompt_button,
     clear_mask_button,
     generate_mask_button
 ])
 
-controls_slices   = HBox([
-    axial_slider,
-    coronal_slider,
-    sagittal_slider
+controls_slices = HBox([
+    HBox([axial_minus_btn, axial_slider, axial_plus_btn]),
+    HBox([coronal_minus_btn, coronal_slider, coronal_plus_btn]),
+    HBox([sagittal_minus_btn, sagittal_slider, sagittal_plus_btn])
 ])
 
 controls_view     = HBox([axial_view_button, coronal_view_button, sagittal_view_button, mip_view_button])
 
 controls_actions  = HBox([save_mask_button])
 
-# Tiny panel to show candidate mask thumbnails
-candidate_thumbs_box = HBox([])
-
 save_controls = VBox([
     save_dir_chooser,
     HBox([save_filename_text, save_format_dropdown])
 ])
 
-file_choosers_row = HBox([fc, fc_model])
-load_buttons_row = HBox([load_path_button, load_model_button])
+file_choosers_row = HBox([
+    VBox([fc, mri_load_label]),
+    VBox([fc_model, model_load_label])
+])
+
 
 canvas_size_controls = HBox([
     canvas_size_slider,
@@ -1573,11 +1662,10 @@ canvas_size_controls = HBox([
 ui = VBox([
     status_label,
     file_choosers_row,
-    load_buttons_row,
     controls_tools,
     canvas_size_controls,
     controls_prompts,
-    candidate_thumbs_box,   # <-- tiny panel with previews
+    candidate_thumbs_box,   # tiny panel with thumbnails
     controls_slices,
     controls_view,
     VBox([
