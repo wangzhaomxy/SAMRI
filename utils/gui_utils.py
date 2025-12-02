@@ -1,6 +1,8 @@
 ############################################################
-# MRI Viewer with Mask Editing, Zoom/Pan, 3D MIP rotate,
-# Canvas display size, Save Options and SAMRI model chooser
+# MRI Viewer + SAMRI inference integration (slice-level)
+# - Multi-view MRI with Brush/Box/Point/Hand tools
+# - SAMRI checkpoint loading (load_sam_model + SamPredictor)
+# - Generate Mask button (per-slice SAM inference)
 ############################################################
 
 import os
@@ -10,6 +12,10 @@ import time
 import numpy as np
 import SimpleITK as sitk
 from PIL import Image
+
+import torch
+from inference import load_sam_model
+from segment_anything import SamPredictor
 
 from ipycanvas import MultiCanvas
 from ipywidgets import (
@@ -41,18 +47,28 @@ last_canvas_y = None
 
 box_drawing = False
 
+# Prompts
+# boxes: {view, slice, x0,y0,x1,y1 (canvas), ix0,iy0,ix1,iy1 (image coords)}
+# points: {view, slice, x,y (canvas), ix,iy (image coords)}
 box_prompts = []
 point_prompts = []
 
 overlay_color_hex = "#ff0000"
 
-# For preserving metadata and save defaults
-image_sitk = None          # last loaded SimpleITK image
-current_image_path = None  # path of last loaded image
-last_save_dir = None       # last folder used to save mask
+# MRI / mask I/O meta
+image_sitk = None
+current_image_path = None
+last_save_dir = None
 
-# Placeholder for model path (SAMRI checkpoint)
+# SAMRI model state
 current_model_path = None
+sam_model = None
+sam_predictor = None
+sam_device = None
+
+# Embedding cache: avoid re-running set_image if slice unchanged
+last_sam_image_view = None
+last_sam_image_slice_idx = None
 
 # Zoom & pan state
 zoom_slider_value_default = 100
@@ -71,19 +87,20 @@ main_bg = main_canv[0]
 main_ol = main_canv[1]
 main_ui = main_canv[2]
 
-# Initial display size matches internal resolution
+# Display size (CSS)
 main_canv.layout.width = f"{VIEW_SIZE}px"
 main_canv.layout.height = f"{VIEW_SIZE}px"
+
 
 ############################################################
 # Widgets
 ############################################################
 
 status_label = Label(
-    value="Choose an MRI file → Load Image → View appears. Default view: Axial mid-slice."
+    value="Choose an MRI file → Load Image → View appears. Then load SAMRI model."
 )
 
-# --- File chooser for loading MRI ---
+# --- File chooser for MRI ---
 fc = FileChooser(
     os.getcwd(),
     select_default=True,
@@ -110,7 +127,6 @@ fc_model.filter_pattern = [
     "*.pt", "*.pth", "*.ckpt", "*.onnx", "*.bin", "*.safetensors"
 ]
 
-# renamed: Load Image
 load_path_button = Button(
     description='Load Image',
     button_style=''
@@ -133,7 +149,6 @@ mode_selector = ToggleButtons(
     description='Mode:'
 )
 
-# default brush size = 1
 brush_size_slider = IntSlider(
     value=1,
     min=1,
@@ -178,7 +193,6 @@ sagittal_slider = IntSlider(
     disabled=True
 )
 
-# Zoom slider 0–400%, default 100%
 zoom_slider = IntSlider(
     value=zoom_slider_value_default,
     min=0,
@@ -187,7 +201,6 @@ zoom_slider = IntSlider(
     description='Zoom (%):'
 )
 
-# Zoom - / +
 zoom_out_button = Button(description='Zoom -')
 zoom_in_button  = Button(description='Zoom +')
 
@@ -206,13 +219,19 @@ save_mask_button = Button(
     button_style='success'
 )
 
-# View switching buttons
+# NEW: Generate Mask button (SAMRI inference)
+generate_mask_button = Button(
+    description='Generate Mask',
+    button_style='info'
+)
+
+# View buttons
 axial_view_button = Button(description="Axial")
 coronal_view_button = Button(description="Coronal")
 sagittal_view_button = Button(description="Sagittal")
 mip_view_button = Button(description="3D MIP")
 
-# --- Canvas display size control (CSS only) ---
+# Canvas display size slider (CSS only)
 canvas_size_slider = IntSlider(
     value=VIEW_SIZE,
     min=128,
@@ -221,7 +240,7 @@ canvas_size_slider = IntSlider(
     description='Canvas size:'
 )
 
-# --- Save mask controls ---
+# Save mask controls
 save_dir_chooser = FileChooser(
     os.getcwd(),
     select_default=True,
@@ -246,7 +265,7 @@ save_format_dropdown = Dropdown(
 # Helper functions
 ############################################################
 
-def log_status(msg):
+def log_status(msg: str):
     status_label.value = msg
 
 def hex_to_rgb(hex_color):
@@ -276,14 +295,12 @@ def prepare_volume(img_sitk_local):
     arr = np.clip(arr, 0, 1)
     return arr
 
-
 def init_mask():
     global mask3d
     if volume3d is None:
         mask3d = None
     else:
         mask3d = np.zeros_like(volume3d, dtype=np.uint8)
-
 
 def split_name_and_ext(path):
     base = os.path.basename(path)
@@ -297,9 +314,8 @@ def split_name_and_ext(path):
 
 def get_view_window(view_name):
     """
-    For zoom >= 1: compute crop window in slice coordinates (left, top, w_view, h_view).
-    For zoom < 1: return full slice and reset centers to mid; shrinking & padding handled
-    in drawing & painting functions.
+    For zoom >= 1: crop window in slice coords.
+    For zoom < 1: full slice, shrinking handled later.
     """
     global axial_center_x, axial_center_y
     global cor_center_x, cor_center_z
@@ -322,7 +338,7 @@ def get_view_window(view_name):
     if w == 0 or h == 0:
         return 0.0, 0.0, float(w), float(h)
 
-    # For zoom <= 1: use full slice (no cropping), center reset.
+    # zoom <=1: full slice
     if zf <= 1.0:
         if view_name == "axial":
             axial_center_x, axial_center_y = w / 2.0, h / 2.0
@@ -332,10 +348,8 @@ def get_view_window(view_name):
             sag_center_y, sag_center_z = w / 2.0, h / 2.0
         return 0.0, 0.0, float(w), float(h)
 
-    # For zoom > 1: crop window smaller than full slice
     width_view = w / zf
     height_view = h / zf
-
     width_view = min(width_view, w)
     height_view = min(height_view, h)
 
@@ -365,7 +379,7 @@ def get_view_window(view_name):
 
 
 ############################################################
-# Drawing slices (zoom < 1 uses shrink+pad)
+# Drawing slices (zoom < 1 shrinks & pads with black)
 ############################################################
 
 def _draw_ui(view_name, slice_idx):
@@ -393,9 +407,9 @@ def _draw_ui(view_name, slice_idx):
 
 def _draw_slice_zoomed(slice2d, mask_slice, view_name, slice_idx):
     """
-    Common helper for axial/coronal/sagittal:
-    - If zoom <= 1: shrink full slice to VIEW_SIZE * zoom, center with black padding.
-    - If zoom > 1: use cropping window from get_view_window, fill whole canvas.
+    Common helper:
+      - zoom <=1: shrink whole slice, center it, pad with black
+      - zoom >1: crop via get_view_window, fill canvas
     """
     main_bg.clear()
     main_ol.clear()
@@ -413,9 +427,8 @@ def _draw_slice_zoomed(slice2d, mask_slice, view_name, slice_idx):
         if img_size <= 0:
             return
 
-        # Base black background
         rgba = np.zeros((VIEW_SIZE, VIEW_SIZE, 4), dtype=np.uint8)
-        rgba[..., 3] = 255  # opaque black background
+        rgba[..., 3] = 255  # opaque black
 
         img8 = (slice2d * 255).astype(np.uint8)
         img = Image.fromarray(img8).resize((img_size, img_size), Image.BILINEAR)
@@ -431,18 +444,16 @@ def _draw_slice_zoomed(slice2d, mask_slice, view_name, slice_idx):
                 (img_size, img_size), Image.NEAREST
             )
             mask_np = np.array(mask_img) > 0
-
             overlay = np.zeros((VIEW_SIZE, VIEW_SIZE, 4), dtype=np.uint8)
             r, g, b = hex_to_rgb(overlay_color_hex)
             overlay[offset:offset+img_size, offset:offset+img_size, 0][mask_np] = r
             overlay[offset:offset+img_size, offset:offset+img_size, 1][mask_np] = g
             overlay[offset:offset+img_size, offset:offset+img_size, 2][mask_np] = b
             overlay[offset:offset+img_size, offset:offset+img_size, 3][mask_np] = 120
-
             main_ol.put_image_data(overlay, 0, 0)
 
     else:
-        # zoom > 1: crop & fill canvas
+        # crop
         if view_name == "axial":
             h, w = dim_y, dim_x
         elif view_name == "coronal":
@@ -488,8 +499,8 @@ def draw_axial():
     if volume3d is None:
         main_bg.clear(); main_ol.clear(); main_ui.clear()
         return
-    slice2d = volume3d[axial_index]  # (Y, X)
-    mask_slice = mask3d[axial_index] if (mask3d is not None) else None
+    slice2d = volume3d[axial_index]
+    mask_slice = mask3d[axial_index] if mask3d is not None else None
     _draw_slice_zoomed(slice2d, mask_slice, "axial", axial_index)
 
 
@@ -497,8 +508,8 @@ def draw_coronal():
     if volume3d is None:
         main_bg.clear(); main_ol.clear(); main_ui.clear()
         return
-    slice2d = volume3d[:, coronal_index, :]  # (Z, X)
-    mask_slice = mask3d[:, coronal_index, :] if (mask3d is not None) else None
+    slice2d = volume3d[:, coronal_index, :]
+    mask_slice = mask3d[:, coronal_index, :] if mask3d is not None else None
     _draw_slice_zoomed(slice2d, mask_slice, "coronal", coronal_index)
 
 
@@ -506,8 +517,8 @@ def draw_sagittal():
     if volume3d is None:
         main_bg.clear(); main_ol.clear(); main_ui.clear()
         return
-    slice2d = volume3d[:, :, sagittal_index]  # (Z, Y)
-    mask_slice = mask3d[:, :, sagittal_index] if (mask3d is not None) else None
+    slice2d = volume3d[:, :, sagittal_index]
+    mask_slice = mask3d[:, :, sagittal_index] if mask3d is not None else None
     _draw_slice_zoomed(slice2d, mask_slice, "sagittal", sagittal_index)
 
 
@@ -518,7 +529,7 @@ def draw_mip():
 
     global mip_angle
 
-    mip = volume3d.max(axis=0)  # (Y, X)
+    mip = volume3d.max(axis=0)
     img8 = (mip * 255).astype(np.uint8)
     img = Image.fromarray(img8)
 
@@ -532,7 +543,7 @@ def draw_mip():
     main_bg.put_image_data(rgba, 0, 0)
 
     if show_mask_checkbox.value and mask3d is not None:
-        mip_mask = (mask3d > 0).max(axis=0)  # (Y, X)
+        mip_mask = (mask3d > 0).max(axis=0)
         mask_img = Image.fromarray((mip_mask * 255).astype(np.uint8))
         mask_img = mask_img.rotate(mip_angle, resample=Image.NEAREST, expand=False)
         mask_img = mask_img.resize((VIEW_SIZE, VIEW_SIZE), Image.NEAREST)
@@ -559,7 +570,7 @@ def redraw():
 
 
 ############################################################
-# Painting (zoom-aware, with black border when zoom < 1)
+# Canvas→image coordinate helpers (original resolution)
 ############################################################
 
 def canvas_to_voxel_axial(cx, cy):
@@ -606,7 +617,7 @@ def canvas_to_voxel_coronal(cx, cy):
         v = (cy - offset) / img_size
         vx = int(np.clip(round(u * (dim_x - 1)), 0, dim_x - 1))
         vz = int(np.clip(round(v * (dim_z - 1)), 0, dim_z - 1))
-        return vz, vx  # (z, x)
+        return vz, vx
     else:
         left, top, width_view, height_view = get_view_window("coronal")
         vx = left + (cx / VIEW_SIZE) * width_view
@@ -633,7 +644,7 @@ def canvas_to_voxel_sagittal(cx, cy):
         v = (cy - offset) / img_size
         vy = int(np.clip(round(u * (dim_y - 1)), 0, dim_y - 1))
         vz = int(np.clip(round(v * (dim_z - 1)), 0, dim_z - 1))
-        return vz, vy  # (z, y)
+        return vz, vy
     else:
         left, top, width_view, height_view = get_view_window("sagittal")
         vy = left + (cx / VIEW_SIZE) * width_view
@@ -642,6 +653,33 @@ def canvas_to_voxel_sagittal(cx, cy):
         vz = int(np.clip(round(vz), 0, dim_z - 1))
         return vz, vy
 
+
+def canvas_to_image_xy(view_name, cx, cy):
+    """
+    Map canvas coords to (ix, iy) in the *original* 2D slice:
+      axial:    slice shape (Y, X)  → (ix=X, iy=Y)
+      coronal:  slice shape (Z, X)  → (ix=X, iy=Z)
+      sagittal: slice shape (Z, Y)  → (ix=Y, iy=Z)
+    """
+    if view_name == "axial":
+        vx, vy = canvas_to_voxel_axial(cx, cy)
+        if vx is None: return None, None
+        return vx, vy
+    elif view_name == "coronal":
+        vz, vx = canvas_to_voxel_coronal(cx, cy)
+        if vz is None: return None, None
+        return vx, vz
+    elif view_name == "sagittal":
+        vz, vy = canvas_to_voxel_sagittal(cx, cy)
+        if vz is None: return None, None
+        return vy, vz
+    else:
+        return None, None
+
+
+############################################################
+# Painting (uses voxel coords; unchanged)
+############################################################
 
 def paint_circle(cx, cy):
     if mask3d is None:
@@ -714,7 +752,7 @@ def paint_line(x0,y0,x1,y1):
 
 
 ############################################################
-# Panning for Hand tool (disabled when zoom <= 1)
+# Hand tool (pan / rotate MIP)
 ############################################################
 
 def pan_view(view_name, dx_canvas, dy_canvas):
@@ -722,12 +760,10 @@ def pan_view(view_name, dx_canvas, dy_canvas):
     global cor_center_x, cor_center_z
     global sag_center_y, sag_center_z
 
-    # No pan when zoom <= 1 (full slice in view)
     if zoom_slider.value <= 100:
         return
 
     left, top, width_view, height_view = get_view_window(view_name)
-
     if width_view <= 0 or height_view <= 0:
         return
 
@@ -754,6 +790,15 @@ def pan_view(view_name, dx_canvas, dy_canvas):
 # Mouse events
 ############################################################
 
+def get_current_slice():
+    if current_view == "axial":
+        return axial_index
+    if current_view == "coronal":
+        return coronal_index
+    if current_view == "sagittal":
+        return sagittal_index
+    return axial_index
+
 def on_mouse_down(x,y):
     global drawing, last_canvas_x, last_canvas_y, box_drawing
 
@@ -774,10 +819,14 @@ def on_mouse_down(x,y):
         if current_view == "mip":
             return
         slice_idx = get_current_slice()
+        ix0, iy0 = canvas_to_image_xy(current_view, x, y)
+        if ix0 is None:
+            return
         box_prompts.append({
             'view': current_view,
             'slice': slice_idx,
-            'x0':x, 'y0':y, 'x1':x, 'y1':y
+            'x0':x, 'y0':y, 'x1':x, 'y1':y,        # canvas coords
+            'ix0':ix0, 'iy0':iy0, 'ix1':ix0, 'iy1':iy0  # image coords
         })
         box_drawing=True
         _draw_ui(current_view, slice_idx)
@@ -786,10 +835,14 @@ def on_mouse_down(x,y):
         if current_view == "mip":
             return
         slice_idx=get_current_slice()
+        ix, iy = canvas_to_image_xy(current_view, x, y)
+        if ix is None:
+            return
         point_prompts.append({
             'view':current_view,
             'slice':slice_idx,
-            'x':x,'y':y
+            'x':x,'y':y,      # canvas
+            'ix':ix,'iy':iy   # image
         })
         _draw_ui(current_view, slice_idx)
 
@@ -813,6 +866,10 @@ def on_mouse_move(x,y):
         if box_prompts:
             box_prompts[-1]['x1']=x
             box_prompts[-1]['y1']=y
+            ix1, iy1 = canvas_to_image_xy(current_view, x, y)
+            if ix1 is not None:
+                box_prompts[-1]['ix1'] = ix1
+                box_prompts[-1]['iy1'] = iy1
             _draw_ui(current_view, get_current_slice())
 
     elif tool=="Hand" and drawing:
@@ -841,9 +898,13 @@ def on_mouse_up(x,y):
         drawing=False
 
     elif tool=="Box" and box_drawing:
-        if current_view != "mip":
+        if current_view != "mip" and box_prompts:
             box_prompts[-1]['x1']=x
             box_prompts[-1]['y1']=y
+            ix1, iy1 = canvas_to_image_xy(current_view, x, y)
+            if ix1 is not None:
+                box_prompts[-1]['ix1'] = ix1
+                box_prompts[-1]['iy1'] = iy1
             _draw_ui(current_view, get_current_slice())
         box_drawing=False
 
@@ -870,6 +931,7 @@ def load_from_path(_):
     global cor_center_x, cor_center_z
     global sag_center_y, sag_center_z
     global mip_angle
+    global last_sam_image_view, last_sam_image_slice_idx
 
     path = fc.selected
     if not path:
@@ -922,6 +984,10 @@ def load_from_path(_):
     drawing=False; box_drawing=False
     current_view="axial"
 
+    # reset embedding cache
+    last_sam_image_view = None
+    last_sam_image_slice_idx = None
+
     stem, ext = split_name_and_ext(path)
     last_save_dir = os.path.dirname(path)
     save_filename_text.value = stem
@@ -940,11 +1006,13 @@ load_path_button.on_click(load_from_path)
 
 
 ############################################################
-# Load model button (placeholder)
+# Load SAMRI model button (finalised)
 ############################################################
 
 def load_model(_):
-    global current_model_path
+    global current_model_path, sam_model, sam_predictor, sam_device
+    global last_sam_image_view, last_sam_image_slice_idx
+
     path = fc_model.selected
     if not path:
         log_status("Please choose a SAMRI checkpoint file first.")
@@ -955,8 +1023,32 @@ def load_model(_):
         log_status(f"Model file not found: {path}")
         return
 
+    # Device selection: CUDA → MPS → CPU
+    if torch.cuda.is_available():
+        device = "cuda"
+    elif hasattr(torch.backends, "mps") and torch.backends.mps.is_available():
+        device = "mps"
+    else:
+        device = "cpu"
+
+    try:
+        model = load_sam_model(checkpoint=path, model_type="samri", device=device)
+        predictor = SamPredictor(model)
+    except Exception as e:
+        log_status(f"Failed to load SAMRI model: {e}")
+        return
+
     current_model_path = path
-    log_status(f"[Placeholder] SAMRI checkpoint selected: {path}. Model loading not implemented yet.")
+    sam_model = model
+    sam_predictor = predictor
+    sam_device = device
+
+    # Reset embedding cache
+    last_sam_image_view = None
+    last_sam_image_slice_idx = None
+
+    log_status(f"SAMRI model loaded from '{path}' on device '{device}'.")
+
 
 load_model_button.on_click(load_model)
 
@@ -967,7 +1059,8 @@ load_model_button.on_click(load_model)
 
 def clear_prompts(_):
     global box_prompts, point_prompts, box_drawing
-    if volume3d is None: return
+    if volume3d is None:
+        return
     box_prompts=[]; point_prompts=[]; box_drawing=False
     _draw_ui(current_view, get_current_slice())
     log_status("Cleared prompts.")
@@ -976,7 +1069,8 @@ clear_prompt_button.on_click(clear_prompts)
 
 
 def clear_mask(_):
-    if volume3d is None: return
+    if volume3d is None:
+        return
     init_mask()
     redraw()
     log_status("Mask cleared.")
@@ -1003,7 +1097,11 @@ def save_mask(_):
     filename = stem + ext
     save_path = os.path.join(dir_path, filename)
 
-    mask_img = sitk.GetImageFromArray(mask3d.astype(np.uint8))
+    # Post-processing for file format:
+    #  - ensure binary 0/1 and uint8
+    #  - copy spatial metadata from source image
+    mask_arr = (mask3d > 0).astype(np.uint8)
+    mask_img = sitk.GetImageFromArray(mask_arr)
     if image_sitk is not None:
         mask_img.CopyInformation(image_sitk)
 
@@ -1016,10 +1114,149 @@ def save_mask(_):
     last_save_dir = dir_path
     save_dir_chooser.default_path = last_save_dir
     save_dir_chooser.reset()
-
     log_status(f"Mask saved to {save_path}")
 
 save_mask_button.on_click(save_mask)
+
+
+############################################################
+# SAMRI slice pre-processing & Generate Mask
+############################################################
+
+def get_current_slice_2d():
+    """Return current 2D slice as float32 (0–1) in its native orientation."""
+    if current_view == "axial":
+        return volume3d[axial_index]          # (Y, X)
+    elif current_view == "coronal":
+        return volume3d[:, coronal_index, :]  # (Z, X)
+    elif current_view == "sagittal":
+        return volume3d[:, :, sagittal_index] # (Z, Y)
+    else:
+        # For MIP, just reuse axial slice if needed (but we don't run SAM on MIP)
+        return volume3d[axial_index]
+
+
+def make_sam_input_from_slice(slice2d):
+    """
+    Follow inference-style preprocessing:
+      - slice2d in [0,1] float
+      - normalize to 0–255, uint8
+      - expand to 3-channel RGB
+    """
+    img8 = (slice2d * 255.0).clip(0, 255).astype(np.uint8)
+    img_rgb = np.stack([img8, img8, img8], axis=-1)  # (H, W, 3)
+    return img_rgb
+
+
+def on_generate_mask(_):
+    global mask3d, last_sam_image_view, last_sam_image_slice_idx
+
+    if volume3d is None:
+        log_status("No MRI loaded. Please load an image first.")
+        return
+    if sam_predictor is None:
+        log_status("No SAMRI model loaded. Please load a checkpoint first.")
+        return
+
+    if current_view == "mip":
+        log_status("Generate Mask works on Axial/Coronal/Sagittal slices, not MIP.")
+        return
+
+    slice_idx = get_current_slice()
+
+    # 1) Prepare 2D slice image for SAM (uint8, H×W×3)
+    slice2d = get_current_slice_2d()
+    img_rgb = make_sam_input_from_slice(slice2d)
+
+    # 2) Run predictor.set_image only if slice/view changed
+    if not (last_sam_image_view == current_view and last_sam_image_slice_idx == slice_idx):
+        try:
+            sam_predictor.set_image(img_rgb)
+        except Exception as e:
+            log_status(f"SAMRI set_image failed: {e}")
+            return
+        last_sam_image_view = current_view
+        last_sam_image_slice_idx = slice_idx
+
+    H, W = img_rgb.shape[:2]
+
+    # 3) Collect prompts for current view & slice (in original image coords)
+    boxes_here = [b for b in box_prompts
+                  if b['view'] == current_view and b['slice'] == slice_idx]
+    points_here = [p for p in point_prompts
+                   if p['view'] == current_view and p['slice'] == slice_idx]
+
+    box_array = None
+    if boxes_here:
+        # Use the last box for now
+        b = boxes_here[-1]
+        x0 = float(b['ix0'])
+        y0 = float(b['iy0'])
+        x1 = float(b['ix1'])
+        y1 = float(b['iy1'])
+        x_min = max(0.0, min(x0, x1))
+        y_min = max(0.0, min(y0, y1))
+        x_max = min(float(W - 1), max(x0, x1))
+        y_max = min(float(H - 1), max(y0, y1))
+        box_array = np.array([[x_min, y_min, x_max, y_max]], dtype=np.float32)
+
+    point_coords = None
+    point_labels = None
+    if points_here:
+        # All points treated as positive for now (label=1)
+        coords = []
+        labels = []
+        for p in points_here:
+            ix = float(p['ix'])
+            iy = float(p['iy'])
+            if 0 <= ix < W and 0 <= iy < H:
+                coords.append([ix, iy])
+                labels.append(1)
+        if coords:
+            point_coords = np.array(coords, dtype=np.float32)
+            point_labels = np.array(labels, dtype=np.int32)
+
+    if box_array is None and point_coords is None:
+        log_status("No prompts on this slice. Please draw a box or point first.")
+        return
+
+    # 4) Run SAMRI predictor
+    try:
+        masks, scores, logits = sam_predictor.predict(
+            point_coords=point_coords,
+            point_labels=point_labels,
+            box=box_array,
+            multimask_output=False
+        )
+    except Exception as e:
+        log_status(f"SAMRI predict failed: {e}")
+        return
+
+    # masks: (1, H, W)
+    mask2d = (masks[0] > 0).astype(np.uint8)
+
+    # 5) Write back into the 3D mask volume at the right orientation
+    if current_view == "axial":
+        if mask2d.shape != (dim_y, dim_x):
+            log_status(f"Mask shape mismatch (axial): got {mask2d.shape}, expected {(dim_y, dim_x)}")
+            return
+        mask3d[axial_index, :, :] = mask2d
+    elif current_view == "coronal":
+        if mask2d.shape != (dim_z, dim_x):
+            log_status(f"Mask shape mismatch (coronal): got {mask2d.shape}, expected {(dim_z, dim_x)}")
+            return
+        mask3d[:, coronal_index, :] = mask2d
+    elif current_view == "sagittal":
+        if mask2d.shape != (dim_z, dim_y):
+            log_status(f"Mask shape mismatch (sagittal): got {mask2d.shape}, expected {(dim_z, dim_y)}")
+            return
+        mask3d[:, :, sagittal_index] = mask2d
+
+    # 6) Redraw with overlay logic (zoom, canvas size already handled)
+    redraw()
+    log_status(f"Generated SAMRI mask on {current_view} slice {slice_idx}.")
+
+generate_mask_button.on_click(on_generate_mask)
 
 
 ############################################################
@@ -1049,17 +1286,8 @@ mip_view_button.on_click(set_mip)
 
 
 ############################################################
-# Sliders & other observers
+# Sliders & observers
 ############################################################
-
-def get_current_slice():
-    if current_view == "axial":
-        return axial_index
-    if current_view == "coronal":
-        return coronal_index
-    if current_view == "sagittal":
-        return sagittal_index
-    return axial_index
 
 def on_axial_change(change):
     global axial_index
@@ -1113,7 +1341,7 @@ canvas_size_slider.observe(on_canvas_size_change, names='value')
 
 
 ############################################################
-# Zoom + / Zoom - buttons
+# Zoom +/- buttons
 ############################################################
 
 def zoom_out(_):
@@ -1135,10 +1363,8 @@ controls_tools = HBox([
     color_picker, show_mask_checkbox
 ])
 
-# Clear mask next to Clear prompts
 controls_prompts = HBox([clear_prompt_button, clear_mask_button])
 
-# Slice sliders + zoom slider + +/- buttons
 controls_slices   = HBox([
     axial_slider,
     coronal_slider,
@@ -1148,10 +1374,9 @@ controls_slices   = HBox([
     zoom_in_button
 ])
 
-# View buttons BETWEEN sliders and canvas
 controls_view     = HBox([axial_view_button, coronal_view_button, sagittal_view_button, mip_view_button])
 
-controls_actions  = HBox([save_mask_button])
+controls_actions  = HBox([generate_mask_button, save_mask_button])
 
 save_controls = VBox([
     save_dir_chooser,
@@ -1166,10 +1391,10 @@ ui = VBox([
     file_choosers_row,
     load_buttons_row,
     controls_tools,
-    canvas_size_slider,   # canvas display size widget
+    canvas_size_slider,
     controls_prompts,
-    controls_slices,      # sliders + zoom
-    controls_view,        # view buttons
+    controls_slices,
+    controls_view,
     VBox([
         Label("Current view"),
         main_canv
