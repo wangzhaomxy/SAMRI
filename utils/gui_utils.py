@@ -7,7 +7,6 @@
 
 import os
 import math
-import time
 from io import BytesIO
 
 import numpy as np
@@ -133,6 +132,21 @@ fc_model.filter_pattern = [
     "*.pt", "*.pth", "*.ckpt", "*.onnx", "*.bin", "*.safetensors"
 ]
 
+# --- File chooser for MASK (load previously saved mask) ---
+fc_mask = FileChooser(
+    os.getcwd(),
+    select_default=True,
+    show_only_dirs=False
+)
+fc_mask.title = "<b>Choose mask file</b>"
+# Use the main 3D medical formats that save_mask() already supports
+fc_mask.filter_pattern = [
+    "*.nii", "*.nii.gz",
+    "*.mhd", "*.mha",
+    "*.nrrd",
+    "*.dcm"
+]
+
 # Tool selector: Hand / Paint / Erase / Box / Point
 tool_selector = ToggleButtons(
     options=['Hand', 'Paint', 'Erase', 'Box', 'Point'],
@@ -201,7 +215,7 @@ zoom_slider = IntSlider(
     min=0,
     max=400,
     step=10,
-    description='Zoom (%):'
+    description='Image Zoom (%):'
 )
 
 zoom_out_button = Button(description='Zoom -')
@@ -270,7 +284,7 @@ save_format_dropdown = Dropdown(
 )
 
 ############################################################
-# Load status labels for MRI & model
+# Load status labels for MRI, model & mask
 ############################################################
 
 def _status_html(kind: str, loaded: bool, name: str = "") -> str:
@@ -279,8 +293,9 @@ def _status_html(kind: str, loaded: bool, name: str = "") -> str:
     extra = f" ({name})" if (loaded and name) else ""
     return f"<span style='color:{color}; font-weight:bold;'>{kind}: {state}{extra}</span>"
 
-mri_load_label   = HTML(value=_status_html("MR Imaging",   loaded=False))
+mri_load_label   = HTML(value=_status_html("MRI",   loaded=False))
 model_load_label = HTML(value=_status_html("SAMRI", loaded=False))
+mask_load_label  = HTML(value=_status_html("Mask",  loaded=False))
 
 
 ############################################################
@@ -964,7 +979,7 @@ def load_from_path(_chooser):
 
     path = os.path.abspath(path)
     if not os.path.isfile(path):
-        log_status(f"File not found: {path}")
+        log_status(f"File not found: {os.path.basename(path)}")
         return
     fname = os.path.basename(path)   # <-- only the file name
 
@@ -985,7 +1000,6 @@ def load_from_path(_chooser):
     volume3d = vol
     image_sitk = img_local
     current_image_path = path
-    fname = os.path.basename(path)
     mri_load_label.value = _status_html("MRI", loaded=True, name=fname)
 
     dim_z, dim_y, dim_x = volume3d.shape
@@ -1052,7 +1066,7 @@ def load_model(_chooser):
 
     path = os.path.abspath(path)
     if not os.path.isfile(path):
-        log_status(f"Model file not found: {path}")
+        log_status(f"Model file not found: {os.path.basename(path)}")
         return
     fname = os.path.basename(path)   # <-- only the file name
 
@@ -1083,13 +1097,99 @@ def load_model(_chooser):
     last_sam_image_slice_idx = None
     sam_candidates = None
     candidate_thumbs_box.children = []
-    fname = os.path.basename(path)
     model_load_label.value = _status_html("SAMRI", loaded=True, name=fname)
 
     log_status(f"SAMRI model loaded: {fname} on device '{device}'.")
 
 # Auto-load model when user chooses a checkpoint
 fc_model.register_callback(load_model)
+
+
+############################################################
+# Load MASK (auto-triggered from mask file chooser)
+############################################################
+
+def load_mask(_chooser):
+    """
+    Load a previously saved 3D mask file.
+    - Requires an MRI to be loaded (so we know target shape).
+    - Checks that mask shape matches volume3d.shape.
+    - Converts to binary uint8 (0/1).
+    """
+    global mask3d, last_save_dir
+
+    if volume3d is None:
+        mask_load_label.value = _status_html("Mask", loaded=False)
+        log_status("Please load an MRI before loading a mask.")
+        return
+
+    path = fc_mask.selected
+    if not path:
+        mask_load_label.value = _status_html("Mask", loaded=False)
+        log_status("Please choose a mask file first.")
+        return
+
+    path = os.path.abspath(path)
+    if not os.path.isfile(path):
+        mask_load_label.value = _status_html("Mask", loaded=False)
+        log_status(f"Mask file not found: {os.path.basename(path)}")
+        return
+
+    fname = os.path.basename(path)
+
+    try:
+        mask_img = sitk.ReadImage(path)
+        mask_arr = sitk.GetArrayFromImage(mask_img)
+    except Exception as e:
+        mask_load_label.value = _status_html("Mask", loaded=False)
+        log_status(f"Failed to read mask file: {e}")
+        return
+
+    # Normalise dimensions similar to prepare_volume
+    if mask_arr.ndim == 2:
+        # A 2D mask cannot represent full 3D volume here
+        mask_load_label.value = _status_html("Mask", loaded=False)
+        log_status(
+            f"Loaded mask is 2D with shape {mask_arr.shape}. Expected 3D mask "
+            f"with shape {volume3d.shape} (Z, Y, X)."
+        )
+        return
+    elif mask_arr.ndim == 3:
+        pass
+    elif mask_arr.ndim == 4:
+        mask_arr = mask_arr[0]
+    else:
+        mask_load_label.value = _status_html("Mask", loaded=False)
+        log_status(f"Unsupported mask dimensions: {mask_arr.shape}")
+        return
+
+    if mask_arr.shape != volume3d.shape:
+        mask_load_label.value = _status_html("Mask", loaded=False)
+        log_status(
+            f"Mask shape {mask_arr.shape} does not match MRI shape {volume3d.shape} (Z, Y, X)."
+        )
+        return
+
+    # Convert to binary uint8 mask: >0 → 1, else 0
+    mask_arr = (mask_arr > 0).astype(np.uint8)
+    mask3d = mask_arr
+
+    # Update save directory and file name hints to the location of this mask
+    stem, ext = split_name_and_ext(path)
+    last_save_dir = os.path.dirname(path)
+    save_dir_chooser.default_path = last_save_dir
+    save_dir_chooser.reset()
+    if stem:
+        save_filename_text.value = stem
+    if ext in save_format_dropdown.options:
+        save_format_dropdown.value = ext
+
+    mask_load_label.value = _status_html("Mask", loaded=True, name=fname)
+    redraw()
+    log_status(f"Mask loaded from {fname} and applied to volume.")
+
+# Auto-load mask when user chooses a mask file
+fc_mask.register_callback(load_mask)
 
 
 ############################################################
@@ -1162,7 +1262,6 @@ def save_mask(_):
         img2d = (mask2d * 255).astype(np.uint8)
 
         try:
-            from PIL import Image  # already imported at top
             Image.fromarray(img2d).save(save_path)
         except Exception as e:
             log_status(f"Failed to save PNG mask: {e}")
@@ -1646,7 +1745,8 @@ save_controls = VBox([
 
 file_choosers_row = HBox([
     VBox([fc, mri_load_label]),
-    VBox([fc_model, model_load_label])
+    VBox([fc_model, model_load_label]),
+    VBox([fc_mask, mask_load_label])
 ])
 
 
