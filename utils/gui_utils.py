@@ -3,6 +3,7 @@
 # - Multi-view MRI with Paint/Erase/Box/Point/Hand tools
 # - SAMRI checkpoint loading (load_sam_model + SamPredictor)
 # - Generate Mask button with multi-mask selection via thumbnails
+# - Multi-label mask support with per-label colors
 ############################################################
 
 import os
@@ -19,7 +20,7 @@ from segment_anything import SamPredictor
 
 from ipycanvas import MultiCanvas
 from ipywidgets import (
-    VBox, HBox, Button, ColorPicker, IntSlider,
+    VBox, HBox, Button, ColorPicker, IntSlider, IntText, BoundedIntText,
     ToggleButtons, Checkbox, Label, Text, Dropdown,
     Image as WImage, HTML
 )
@@ -32,7 +33,7 @@ from ipyfilechooser import FileChooser
 VIEW_SIZE = 256  # internal canvas resolution (fixed)
 
 volume3d = None      # float32 (Z, Y, X)
-mask3d = None        # uint8  (Z, Y, X)
+mask3d = None        # uint8  (Z, Y, X), multi-label (0=background)
 
 dim_z = dim_y = dim_x = 0
 
@@ -54,7 +55,14 @@ box_drawing = False
 box_prompts = []
 point_prompts = []
 
-overlay_color_hex = "#ff0000"
+# Multi-label color config
+DEFAULT_LABEL_PALETTE = [
+    "#ff0000", "#00ff00", "#0000ff", "#ffff00",
+    "#ff00ff", "#00ffff", "#ffa500", "#800080",
+    "#008000", "#000080"
+]
+label_colors = {1: DEFAULT_LABEL_PALETTE[0]}  # label_id -> hex
+current_label = 1  # which label we are painting / focusing
 
 # MRI / mask I/O meta
 image_sitk = None
@@ -72,7 +80,8 @@ last_sam_image_view = None
 last_sam_image_slice_idx = None
 
 # Multi-mask candidates
-sam_candidates = None   # dict: {view, slice_idx, masks, scores}
+# plus label_id & color_hex for each generation
+sam_candidates = None   # dict: {view, slice_idx, masks, scores, label_id, color_hex}
 
 # Zoom & pan state
 zoom_slider_value_default = 100
@@ -101,9 +110,9 @@ main_canv.layout.height = f"{VIEW_SIZE}px"
 ############################################################
 
 status_label = Label(
-    value="Choose an MRI file → image loads automatically → view appears. Then choose a SAMRI checkpoint → model loads automatically."
+    value="Choose an MRI file → image loads automatically → view appears. "
+          "Then choose a SAMRI checkpoint → model loads automatically."
 )
-
 
 # --- File chooser for MRI ---
 fc = FileChooser(
@@ -139,7 +148,6 @@ fc_mask = FileChooser(
     show_only_dirs=False
 )
 fc_mask.title = "<b>Choose mask file</b>"
-# Use the main 3D medical formats that save_mask() already supports
 fc_mask.filter_pattern = [
     "*.nii", "*.nii.gz",
     "*.mhd", "*.mha",
@@ -154,7 +162,8 @@ tool_selector = ToggleButtons(
     description='Tool:'
 )
 
-brush_size_slider = IntSlider(
+# Brush size as a numeric box with arrows (no slider/check)
+brush_size_slider = BoundedIntText(
     value=1,
     min=1,
     max=40,
@@ -162,15 +171,48 @@ brush_size_slider = IntSlider(
     description='Brush size:'
 )
 
-color_picker = ColorPicker(
-    concise=False,
-    description='Mask color:',
-    value=overlay_color_hex
+# Multi-label UI
+
+# Dropdown: choose from existing labels
+current_label_dropdown = Dropdown(
+    options=[1],      # filled/updated dynamically
+    value=1,
+    description='Label:'
 )
 
-show_mask_checkbox = Checkbox(
-    value=True,
-    description='Show mask overlay'
+# Editable label ID for painting / creating new labels
+current_label_input = IntText(
+    value=current_label,
+    description='Label ID:'
+)
+
+# Button: add a new label (next available ID)
+add_label_button = Button(
+    description='Add new label',
+    button_style='info'
+)
+
+# Button: delete current label
+delete_label_button = Button(
+    description='Delete',
+    button_style='warning'
+)
+
+label_color_picker = ColorPicker(
+    concise=False,
+    description='Label color:',
+    value=label_colors[current_label]
+)
+
+# Mask view modes
+mask_view_dropdown = Dropdown(
+    options=[
+        ('Show current mask', 'current'),
+        ('Show all masks', 'all'),
+        ('Hide masks', 'none')
+    ],
+    value='all',
+    description='Mask view:'
 )
 
 axial_slider = IntSlider(
@@ -199,7 +241,6 @@ sagittal_slider = IntSlider(
 )
 
 # --- Add +/- buttons for slice sliders ---
-
 axial_minus_btn = Button(description="-", layout={'width': '40px'})
 axial_plus_btn  = Button(description="+", layout={'width': '40px'})
 
@@ -209,13 +250,12 @@ coronal_plus_btn  = Button(description="+", layout={'width': '40px'})
 sagittal_minus_btn = Button(description="-", layout={'width': '40px'})
 sagittal_plus_btn  = Button(description="+", layout={'width': '40px'})
 
-
 zoom_slider = IntSlider(
     value=zoom_slider_value_default,
     min=0,
     max=400,
     step=10,
-    description='Image Zoom (%):'
+    description='Zoom (%):'
 )
 
 zoom_out_button = Button(description='Zoom -')
@@ -223,7 +263,7 @@ zoom_in_button  = Button(description='Zoom +')
 
 clear_prompt_button = Button(
     description='Clear prompts',
-    button_style=''
+    button_style='danger'   # red button
 )
 
 clear_mask_button = Button(
@@ -309,6 +349,47 @@ def hex_to_rgb(hex_color):
     hex_color = hex_color.lstrip('#')
     return tuple(int(hex_color[i:i+2], 16) for i in (0, 2, 4))
 
+def get_label_color(label: int) -> str:
+    """
+    Get or assign a color for a label > 0.
+    Background (0) is not colored, but we return black if requested.
+    """
+    if label <= 0:
+        return "#000000"
+    if label not in label_colors:
+        idx = (len(label_colors)) % len(DEFAULT_LABEL_PALETTE)
+        label_colors[label] = DEFAULT_LABEL_PALETTE[idx]
+    return label_colors[label]
+
+def update_label_dropdown_from_mask():
+    """
+    Inspect mask3d and ensure label dropdown, input, and color picker reflect
+    the labels present (excluding background 0).
+    """
+    global current_label
+
+    labels = set()
+    if mask3d is not None:
+        labels.update(np.unique(mask3d).tolist())
+    labels.discard(0)  # ignore background
+
+    if not labels:
+        labels = {1}
+
+    # Ensure colors assigned
+    for lab in sorted(labels):
+        get_label_color(int(lab))
+
+    options = sorted(label_colors.keys())
+    current_label_dropdown.options = options
+
+    if current_label not in options:
+        current_label = options[0]
+
+    current_label_dropdown.value = current_label
+    current_label_input.value = current_label
+    label_color_picker.value = get_label_color(current_label)
+
 def get_zoom_factor():
     z = zoom_slider.value / 100.0
     return max(z, 0.01)
@@ -347,7 +428,6 @@ def split_name_and_ext(path):
         if base.lower().endswith(ext):
             return base[:-len(ext)], ext
     return base, ''
-
 
 def get_view_window(view_name):
     """
@@ -442,6 +522,102 @@ def _draw_ui(view_name, slice_idx):
             main_ui.fill()
 
 
+def _draw_mask_overlay_zoom_le1(mask_slice, img_size, offset):
+    """
+    Draw mask overlay for zoom <= 1.0 (shrunken to img_size with offset).
+    """
+    if mask_slice is None or mask3d is None:
+        return np.zeros((VIEW_SIZE, VIEW_SIZE, 4), dtype=np.uint8)
+
+    mode = mask_view_dropdown.value
+    overlay = np.zeros((VIEW_SIZE, VIEW_SIZE, 4), dtype=np.uint8)
+
+    if mode == 'none':
+        return overlay
+
+    mask_int = mask_slice.astype(np.int32)
+
+    if mode == 'current':
+        lab = current_label
+        if lab <= 0:
+            return overlay
+        binary = (mask_int == lab).astype(np.uint8) * 255
+        mask_img = Image.fromarray(binary).resize((img_size, img_size), Image.NEAREST)
+        mask_np = np.array(mask_img) > 0
+        r, g, b = hex_to_rgb(get_label_color(lab))
+        sub = overlay[offset:offset+img_size, offset:offset+img_size]
+        sub[mask_np, 0] = r
+        sub[mask_np, 1] = g
+        sub[mask_np, 2] = b
+        sub[mask_np, 3] = 120
+        overlay[offset:offset+img_size, offset:offset+img_size] = sub
+
+    elif mode == 'all':
+        labels = np.unique(mask_int)
+        labels = labels[labels > 0]
+        if labels.size == 0:
+            return overlay
+        for lab in labels:
+            binary = (mask_int == lab).astype(np.uint8) * 255
+            mask_img = Image.fromarray(binary).resize((img_size, img_size), Image.NEAREST)
+            mask_np = np.array(mask_img) > 0
+            r, g, b = hex_to_rgb(get_label_color(int(lab)))
+            sub = overlay[offset:offset+img_size, offset:offset+img_size]
+            sub[mask_np, 0] = r
+            sub[mask_np, 1] = g
+            sub[mask_np, 2] = b
+            sub[mask_np, 3] = 120
+            overlay[offset:offset+img_size, offset:offset+img_size] = sub
+
+    return overlay
+
+
+def _draw_mask_overlay_zoom_gt1(mask_slice, view_name, y0, y1, x0, x1):
+    """
+    Draw mask overlay for zoom > 1.0 (cropped region).
+    """
+    if mask_slice is None or mask3d is None:
+        return np.zeros((VIEW_SIZE, VIEW_SIZE, 4), dtype=np.uint8)
+
+    mode = mask_view_dropdown.value
+    overlay = np.zeros((VIEW_SIZE, VIEW_SIZE, 4), dtype=np.uint8)
+
+    if mode == 'none':
+        return overlay
+
+    sub = mask_slice[y0:y1, x0:x1].astype(np.int32)
+
+    if mode == 'current':
+        lab = current_label
+        if lab <= 0:
+            return overlay
+        binary = (sub == lab).astype(np.uint8) * 255
+        mask_img = Image.fromarray(binary).resize((VIEW_SIZE, VIEW_SIZE), Image.NEAREST)
+        mask_np = np.array(mask_img) > 0
+        r, g, b = hex_to_rgb(get_label_color(lab))
+        overlay[mask_np, 0] = r
+        overlay[mask_np, 1] = g
+        overlay[mask_np, 2] = b
+        overlay[mask_np, 3] = 120
+
+    elif mode == 'all':
+        labels = np.unique(sub)
+        labels = labels[labels > 0]
+        if labels.size == 0:
+            return overlay
+        for lab in labels:
+            binary = (sub == lab).astype(np.uint8) * 255
+            mask_img = Image.fromarray(binary).resize((VIEW_SIZE, VIEW_SIZE), Image.NEAREST)
+            mask_np = np.array(mask_img) > 0
+            r, g, b = hex_to_rgb(get_label_color(int(lab)))
+            overlay[mask_np, 0] = r
+            overlay[mask_np, 1] = g
+            overlay[mask_np, 2] = b
+            overlay[mask_np, 3] = 120
+
+    return overlay
+
+
 def _draw_slice_zoomed(slice2d, mask_slice, view_name, slice_idx):
     """
     Common helper:
@@ -476,17 +652,8 @@ def _draw_slice_zoomed(slice2d, mask_slice, view_name, slice_idx):
 
         main_bg.put_image_data(rgba, 0, 0)
 
-        if show_mask_checkbox.value and mask3d is not None and mask_slice is not None:
-            mask_img = Image.fromarray((mask_slice * 255).astype(np.uint8)).resize(
-                (img_size, img_size), Image.NEAREST
-            )
-            mask_np = np.array(mask_img) > 0
-            overlay = np.zeros((VIEW_SIZE, VIEW_SIZE, 4), dtype=np.uint8)
-            r, g, b = hex_to_rgb(overlay_color_hex)
-            overlay[offset:offset+img_size, offset:offset+img_size, 0][mask_np] = r
-            overlay[offset:offset+img_size, offset:offset+img_size, 1][mask_np] = g
-            overlay[offset:offset+img_size, offset:offset+img_size, 2][mask_np] = b
-            overlay[offset:offset+img_size, offset:offset+img_size, 3][mask_np] = 120
+        if mask3d is not None and mask_slice is not None:
+            overlay = _draw_mask_overlay_zoom_le1(mask_slice, img_size, offset)
             main_ol.put_image_data(overlay, 0, 0)
 
     else:
@@ -515,18 +682,8 @@ def _draw_slice_zoomed(slice2d, mask_slice, view_name, slice_idx):
         rgba[..., 3] = 255
         main_bg.put_image_data(rgba, 0, 0)
 
-        if show_mask_checkbox.value and mask3d is not None and mask_slice is not None:
-            sub_mask = mask_slice[y0:y1, x0:x1]
-            mask_img = Image.fromarray((sub_mask * 255).astype(np.uint8)).resize(
-                (VIEW_SIZE, VIEW_SIZE), Image.NEAREST
-            )
-            mask_np = np.array(mask_img) > 0
-            overlay = np.zeros((VIEW_SIZE, VIEW_SIZE, 4), dtype=np.uint8)
-            r, g, b = hex_to_rgb(overlay_color_hex)
-            overlay[mask_np, 0] = r
-            overlay[mask_np, 1] = g
-            overlay[mask_np, 2] = b
-            overlay[mask_np, 3] = 120
+        if mask3d is not None and mask_slice is not None:
+            overlay = _draw_mask_overlay_zoom_gt1(mask_slice, view_name, y0, y1, x0, x1)
             main_ol.put_image_data(overlay, 0, 0)
 
     _draw_ui(view_name, slice_idx)
@@ -579,20 +736,55 @@ def draw_mip():
     rgba[..., 3] = 255
     main_bg.put_image_data(rgba, 0, 0)
 
-    if show_mask_checkbox.value and mask3d is not None:
-        mip_mask = (mask3d > 0).max(axis=0)
-        mask_img = Image.fromarray((mip_mask * 255).astype(np.uint8))
-        mask_img = mask_img.rotate(mip_angle, resample=Image.NEAREST, expand=False)
-        mask_img = mask_img.resize((VIEW_SIZE, VIEW_SIZE), Image.NEAREST)
-        mask_np = np.array(mask_img) > 0
+    if mask3d is not None:
+        mode = mask_view_dropdown.value
+        if mode == 'none':
+            main_ol.clear()
+            return
 
-        overlay = np.zeros((VIEW_SIZE, VIEW_SIZE, 4), dtype=np.uint8)
-        r, g, b = hex_to_rgb(overlay_color_hex)
-        overlay[mask_np, 0] = r
-        overlay[mask_np, 1] = g
-        overlay[mask_np, 2] = b
-        overlay[mask_np, 3] = 120
-        main_ol.put_image_data(overlay, 0, 0)
+        if mode == 'current':
+            lab = current_label
+            if lab <= 0:
+                main_ol.clear()
+                return
+            mip_mask = (mask3d == lab).max(axis=0).astype(np.uint8) * 255
+            mask_img = Image.fromarray(mip_mask)
+            mask_img = mask_img.rotate(mip_angle, resample=Image.NEAREST, expand=False)
+            mask_img = mask_img.resize((VIEW_SIZE, VIEW_SIZE), Image.NEAREST)
+            mask_np = np.array(mask_img) > 0
+
+            overlay = np.zeros((VIEW_SIZE, VIEW_SIZE, 4), dtype=np.uint8)
+            r, g, b = hex_to_rgb(get_label_color(lab))
+            overlay[mask_np, 0] = r
+            overlay[mask_np, 1] = g
+            overlay[mask_np, 2] = b
+            overlay[mask_np, 3] = 120
+            main_ol.put_image_data(overlay, 0, 0)
+
+        elif mode == 'all':
+            mip_labels = mask3d.max(axis=0).astype(np.int32)
+            labels = np.unique(mip_labels)
+            labels = labels[labels > 0]
+            if labels.size == 0:
+                main_ol.clear()
+                return
+
+            # Resize label map to VIEW_SIZE
+            mip_img = Image.fromarray(mip_labels.astype(np.uint8))
+            mip_img = mip_img.rotate(mip_angle, resample=Image.NEAREST, expand=False)
+            mip_img = mip_img.resize((VIEW_SIZE, VIEW_SIZE), Image.NEAREST)
+            mip_resized = np.array(mip_img, dtype=np.int32)
+
+            overlay = np.zeros((VIEW_SIZE, VIEW_SIZE, 4), dtype=np.uint8)
+            for lab in labels:
+                mask_np = (mip_resized == lab)
+                r, g, b = hex_to_rgb(get_label_color(int(lab)))
+                overlay[mask_np, 0] = r
+                overlay[mask_np, 1] = g
+                overlay[mask_np, 2] = b
+                overlay[mask_np, 3] = 120
+
+            main_ol.put_image_data(overlay, 0, 0)
 
 
 def redraw():
@@ -715,7 +907,7 @@ def canvas_to_image_xy(view_name, cx, cy):
 
 
 ############################################################
-# Painting (uses voxel coords)
+# Painting (uses voxel coords) — multi-label
 ############################################################
 
 def paint_circle(cx, cy):
@@ -742,7 +934,7 @@ def paint_circle(cx, cy):
         region = (yy-vy)**2 + (xx-vx)**2 <= r_vox*r_vox
 
         if tool == "Paint":
-            mask3d[z,y0:y1,x0:x1][region]=1
+            mask3d[z,y0:y1,x0:x1][region]=current_label
         elif tool == "Erase":
             mask3d[z,y0:y1,x0:x1][region]=0
 
@@ -761,7 +953,7 @@ def paint_circle(cx, cy):
         region = (zz-vz)**2 + (xx-vx)**2 <= r_vox*r_vox
 
         if tool == "Paint":
-            mask3d[z0:z1,y,x0:x1][region]=1
+            mask3d[z0:z1,y,x0:x1][region]=current_label
         elif tool == "Erase":
             mask3d[z0:z1,y,x0:x1][region]=0
 
@@ -780,7 +972,7 @@ def paint_circle(cx, cy):
         region = (zz-vz)**2 + (yy-vy)**2 <= r_vox*r_vox
 
         if tool == "Paint":
-            mask3d[z0:z1,y0:y1,x][region]=1
+            mask3d[z0:z1,y0:y1,x][region]=current_label
         elif tool == "Erase":
             mask3d[z0:z1,y0:y1,x][region]=0
 
@@ -956,7 +1148,7 @@ main_canv.on_mouse_up(on_mouse_up)
 
 
 ############################################################
-# Load MRI (now auto-triggered from file chooser)
+# Load MRI (auto-triggered from file chooser)
 ############################################################
 
 def load_from_path(_chooser):
@@ -981,7 +1173,7 @@ def load_from_path(_chooser):
     if not os.path.isfile(path):
         log_status(f"File not found: {os.path.basename(path)}")
         return
-    fname = os.path.basename(path)   # <-- only the file name
+    fname = os.path.basename(path)
 
     try:
         img_local = sitk.ReadImage(path)
@@ -1004,6 +1196,7 @@ def load_from_path(_chooser):
 
     dim_z, dim_y, dim_x = volume3d.shape
     init_mask()
+    update_label_dropdown_from_mask()
 
     axial_index = dim_z // 2
     coronal_index = dim_y // 2
@@ -1051,7 +1244,7 @@ fc.register_callback(load_from_path)
 
 
 ############################################################
-# Load SAMRI model (now auto-triggered from file chooser)
+# Load SAMRI model (auto-triggered from file chooser)
 ############################################################
 
 def load_model(_chooser):
@@ -1068,7 +1261,7 @@ def load_model(_chooser):
     if not os.path.isfile(path):
         log_status(f"Model file not found: {os.path.basename(path)}")
         return
-    fname = os.path.basename(path)   # <-- only the file name
+    fname = os.path.basename(path)
 
     # Device selection: CUDA → MPS → CPU
     if torch.cuda.is_available():
@@ -1085,7 +1278,6 @@ def load_model(_chooser):
         model_load_label.value = _status_html("SAMRI", loaded=False)
         log_status(f"Failed to load SAMRI model: {e}")
         return
-
 
     current_model_path = path
     sam_model = model
@@ -1114,7 +1306,7 @@ def load_mask(_chooser):
     Load a previously saved 3D mask file.
     - Requires an MRI to be loaded (so we know target shape).
     - Checks that mask shape matches volume3d.shape.
-    - Converts to binary uint8 (0/1).
+    - Keeps original label values (no binarization).
     """
     global mask3d, last_save_dir
 
@@ -1145,9 +1337,7 @@ def load_mask(_chooser):
         log_status(f"Failed to read mask file: {e}")
         return
 
-    # Normalise dimensions similar to prepare_volume
     if mask_arr.ndim == 2:
-        # A 2D mask cannot represent full 3D volume here
         mask_load_label.value = _status_html("Mask", loaded=False)
         log_status(
             f"Loaded mask is 2D with shape {mask_arr.shape}. Expected 3D mask "
@@ -1170,9 +1360,10 @@ def load_mask(_chooser):
         )
         return
 
-    # Convert to binary uint8 mask: >0 → 1, else 0
-    mask_arr = (mask_arr > 0).astype(np.uint8)
-    mask3d = mask_arr
+    mask3d = mask_arr.astype(np.uint8)
+
+    # Update label/color UI based on labels present
+    update_label_dropdown_from_mask()
 
     # Update save directory and file name hints to the location of this mask
     stem, ext = split_name_and_ext(path)
@@ -1216,6 +1407,7 @@ def clear_mask(_):
     if volume3d is None:
         return
     init_mask()
+    update_label_dropdown_from_mask()
     sam_candidates = None
     candidate_thumbs_box.children = []
     redraw()
@@ -1243,12 +1435,11 @@ def save_mask(_):
     filename = stem + ext
     save_path = os.path.join(dir_path, filename)
 
-    # Post-processing for file format:
-    #  - ensure binary 0/1 and uint8
-    mask_arr = (mask3d > 0).astype(np.uint8)
+    # Keep label values as-is (uint8)
+    mask_arr = mask3d.astype(np.uint8)
 
     if ext == '.png':
-        # Save ONLY the current view's slice as a 2D PNG
+        # Save ONLY the current view's slice as a 2D PNG, labels as gray-levels
         if current_view == "axial":
             mask2d = mask_arr[axial_index]
         elif current_view == "coronal":
@@ -1259,7 +1450,7 @@ def save_mask(_):
             # fallback: axial mid-slice
             mask2d = mask_arr[axial_index]
 
-        img2d = (mask2d * 255).astype(np.uint8)
+        img2d = mask2d.astype(np.uint8)
 
         try:
             Image.fromarray(img2d).save(save_path)
@@ -1277,7 +1468,6 @@ def save_mask(_):
         except Exception as e:
             log_status(f"Failed to save mask: {e}")
             return
-
 
     last_save_dir = dir_path
     save_dir_chooser.default_path = last_save_dir
@@ -1300,7 +1490,6 @@ def get_current_slice_2d():
     elif current_view == "sagittal":
         return volume3d[:, :, sagittal_index] # (Z, Y)
     else:
-        # For MIP, just reuse axial slice if needed (but we don't run SAM on MIP)
         return volume3d[axial_index]
 
 
@@ -1316,38 +1505,59 @@ def make_sam_input_from_slice(slice2d):
     return img_rgb
 
 
-def write_mask2d_to_volume(view_name, slice_idx, mask2d):
-    """Write a 2D mask into mask3d for given view/slice. Return True if ok."""
+def write_label_mask2d_to_volume(view_name, slice_idx, binary_mask2d, label_id):
+    """
+    Overwrite the slice for a given label:
+      - clear existing voxels with label_id on that slice,
+      - set label_id wherever binary_mask2d == 1.
+    """
+    if label_id < 0 or mask3d is None:
+        return False
+
     if view_name == "axial":
-        if mask2d.shape != (dim_y, dim_x):
+        if binary_mask2d.shape != (dim_y, dim_x):
             return False
-        mask3d[slice_idx, :, :] = mask2d.astype(np.uint8)
+        # clear existing label on this slice
+        slice_view = mask3d[slice_idx, :, :]
+        slice_view[slice_view == label_id] = 0
+        slice_view[binary_mask2d > 0] = label_id
+        mask3d[slice_idx, :, :] = slice_view
         return True
+
     elif view_name == "coronal":
-        if mask2d.shape != (dim_z, dim_x):
+        if binary_mask2d.shape != (dim_z, dim_x):
             return False
-        mask3d[:, slice_idx, :] = mask2d.astype(np.uint8)
+        slice_view = mask3d[:, slice_idx, :]
+        slice_view[slice_view == label_id] = 0
+        slice_view[binary_mask2d > 0] = label_id
+        mask3d[:, slice_idx, :] = slice_view
         return True
+
     elif view_name == "sagittal":
-        if mask2d.shape != (dim_z, dim_y):
+        if binary_mask2d.shape != (dim_z, dim_y):
             return False
-        mask3d[:, :, slice_idx] = mask2d.astype(np.uint8)
+        slice_view = mask3d[:, :, slice_idx]
+        slice_view[slice_view == label_id] = 0
+        slice_view[binary_mask2d > 0] = label_id
+        mask3d[:, :, slice_idx] = slice_view
         return True
+
     return False
 
 
 def apply_candidate_mask(idx):
-    """Apply selected candidate mask to the current view/slice."""
+    """Apply selected candidate mask to the slice using its stored label_id."""
     global sam_candidates
 
     if sam_candidates is None:
         log_status("No candidate masks available.")
         return
 
-    view = sam_candidates['view']
-    sl   = sam_candidates['slice_idx']
-    masks = sam_candidates['masks']
+    view   = sam_candidates['view']
+    sl     = sam_candidates['slice_idx']
+    masks  = sam_candidates['masks']
     scores = sam_candidates['scores']
+    label_id = int(sam_candidates.get('label_id', current_label))
 
     if idx < 0 or idx >= masks.shape[0]:
         log_status("Invalid candidate index.")
@@ -1358,39 +1568,41 @@ def apply_candidate_mask(idx):
         log_status("Candidate masks belong to a different slice/view. Regenerate on this slice to update.")
         return
 
-    mask2d = (masks[idx] > 0).astype(np.uint8)
+    # Binary mask, then assign label_id
+    binary2d = (masks[idx] > 0).astype(np.uint8)
 
-    ok = write_mask2d_to_volume(view, sl, mask2d)
+    ok = write_label_mask2d_to_volume(view, sl, binary2d, label_id)
     if not ok:
-        log_status(f"Mask shape mismatch for view={view}. Got {mask2d.shape}.")
+        log_status(f"Mask shape mismatch for view={view}. Got {binary2d.shape}.")
         return
 
     redraw()
-    log_status(f"Applied candidate mask {idx} (score={scores[idx]:.3f}) on {view} slice {sl}.")
+    log_status(
+        f"Applied candidate mask {idx} (score={scores[idx]:.3f}) "
+        f"as label {label_id} on {view} slice {sl}."
+    )
 
 
-def make_mask_thumbnail(slice2d, mask2d, score, idx, thumb_size=64):
+def make_mask_thumbnail(slice2d, mask2d, score, idx, color_hex, thumb_size=64):
     """
     Create a small RGB thumbnail of the slice + mask overlay.
-    Returns a VBox(Image, Button) where the button is clickable to apply mask idx.
+    Uses the stored color_hex for overlay.
     """
-    # base grayscale
     img8 = (slice2d * 255.0).clip(0, 255).astype(np.uint8)
     base = Image.fromarray(img8).convert("RGB")
 
-    # mask to overlay
+    # mask to overlay (binary)
     mask_arr = (mask2d > 0).astype(np.uint8)
     mask_img = Image.fromarray(mask_arr * 255).convert("L")
 
-    # resize both to thumbnail size
     base = base.resize((thumb_size, thumb_size), Image.BILINEAR)
     mask_img = mask_img.resize((thumb_size, thumb_size), Image.NEAREST)
 
     base_np = np.array(base)
     mask_np = np.array(mask_img) > 0
 
-    # overlay color = current overlay_color_hex
-    r, g, b = hex_to_rgb(overlay_color_hex)
+    r, g, b = hex_to_rgb(color_hex)
+
     overlay = base_np.copy()
     overlay[mask_np, 0] = r
     overlay[mask_np, 1] = g
@@ -1410,7 +1622,6 @@ def make_mask_thumbnail(slice2d, mask2d, score, idx, thumb_size=64):
         height=thumb_size
     )
 
-    # button that applies this candidate when clicked
     btn = Button(
         description=f"{idx}: {score:.3f}",
         layout={'width': f'{thumb_size + 20}px'}
@@ -1424,7 +1635,7 @@ def make_mask_thumbnail(slice2d, mask2d, score, idx, thumb_size=64):
     return VBox([img_widget, btn])
 
 
-def update_candidate_thumbnails(slice2d, masks, scores):
+def update_candidate_thumbnails(slice2d, masks, scores, color_hex):
     """Update the tiny panel with thumbnails for each candidate mask."""
     if masks is None or masks.ndim != 3:
         candidate_thumbs_box.children = []
@@ -1434,7 +1645,7 @@ def update_candidate_thumbnails(slice2d, masks, scores):
     thumbs = []
     for i in range(K):
         thumbs.append(
-            make_mask_thumbnail(slice2d, masks[i], float(scores[i]), i)
+            make_mask_thumbnail(slice2d, masks[i], float(scores[i]), i, color_hex)
         )
     candidate_thumbs_box.children = thumbs
 
@@ -1479,7 +1690,6 @@ def on_generate_mask(_):
 
     box_array = None
     if boxes_here:
-        # Use the last box for now
         b = boxes_here[-1]
         x0 = float(b['ix0'])
         y0 = float(b['iy0'])
@@ -1494,7 +1704,6 @@ def on_generate_mask(_):
     point_coords = None
     point_labels = None
     if points_here:
-        # All points treated as positive for now (label=1)
         coords = []
         labels = []
         for p in points_here:
@@ -1527,26 +1736,32 @@ def on_generate_mask(_):
         log_status(f"Unexpected masks shape: {masks.shape}")
         return
 
+    # Bind this generation to the current label ID and its color
+    label_at_gen = current_label
+    color_at_gen = get_label_color(label_at_gen)
+
     # Store candidates
     sam_candidates = {
         'view': current_view,
         'slice_idx': slice_idx,
         'masks': masks,   # (K, H, W)
-        'scores': scores  # (K,)
+        'scores': scores, # (K,)
+        'label_id': label_at_gen,
+        'color_hex': color_at_gen
     }
 
     # update thumbnails panel
-    update_candidate_thumbnails(slice2d, masks, scores)
+    update_candidate_thumbnails(slice2d, masks, scores, color_at_gen)
 
-    # pick best candidate and apply immediately
+    # pick best candidate and apply immediately (using stored label_id)
     K = masks.shape[0]
     best_idx = int(np.argmax(scores))
 
     apply_candidate_mask(best_idx)
 
     log_status(
-        f"Generated {K} candidate masks on {current_view} slice {slice_idx}. "
-        f"Best idx={best_idx} (score={scores[best_idx]:.3f}). "
+        f"Generated {K} candidate masks on {current_view} slice {slice_idx} "
+        f"for label {label_at_gen}. Best idx={best_idx} (score={scores[best_idx]:.3f}). "
         f"Click thumbnails to switch masks."
     )
 
@@ -1606,6 +1821,7 @@ axial_slider.observe(on_axial_change, names='value')
 coronal_slider.observe(on_coronal_change, names='value')
 sagittal_slider.observe(on_sag_change, names='value')
 
+
 # Axial +/- logic
 def axial_minus(_):
     if axial_slider.disabled: 
@@ -1651,17 +1867,140 @@ sagittal_minus_btn.on_click(sagittal_minus)
 sagittal_plus_btn.on_click(sagittal_plus)
 
 
-def on_color_change(_):
+def on_label_color_change(change):
+    label_colors[current_label] = change['new']
     if volume3d is not None:
         redraw()
 
-color_picker.observe(on_color_change, names='value')
+label_color_picker.observe(on_label_color_change, names='value')
 
-def on_show_mask_change(_):
+def on_mask_view_change(_):
     if volume3d is not None:
         redraw()
 
-show_mask_checkbox.observe(on_show_mask_change, names='value')
+mask_view_dropdown.observe(on_mask_view_change, names='value')
+
+def on_current_label_change(change):
+    """
+    When user picks a label from the dropdown:
+    - switch current_label to that value
+    - sync the IntText and color picker
+    """
+    global current_label
+    current_label = int(change['new'])
+    current_label_input.value = current_label
+    label_color_picker.value = get_label_color(current_label)
+    if volume3d is not None:
+        redraw()
+
+current_label_dropdown.observe(on_current_label_change, names='value')
+
+def on_current_label_input_change(change):
+    """
+    When user edits the label ID manually:
+    - update current_label
+    - ensure it exists in label_colors and dropdown options
+    - no relabeling of existing voxels (only future painting / SAM gen)
+    """
+    global current_label
+    new_label = int(change['new'])
+    if new_label < 0:
+        new_label = 0
+        current_label_input.value = 0
+
+    current_label = new_label
+    # Ensure color exists
+    get_label_color(current_label)
+
+    # Ensure dropdown contains this label
+    options = list(current_label_dropdown.options)
+    if current_label not in options:
+        options.append(current_label)
+        options = sorted(options)
+        current_label_dropdown.options = options
+
+    current_label_dropdown.value = current_label
+    label_color_picker.value = get_label_color(current_label)
+    if volume3d is not None:
+        redraw()
+
+current_label_input.observe(on_current_label_input_change, names='value')
+
+def on_add_label_clicked(_):
+    """
+    Create a new label ID = max(existing, mask) + 1,
+    assign a default color, and switch to it.
+    """
+    global current_label
+
+    labels = set(label_colors.keys())
+    if mask3d is not None:
+        labels.update(np.unique(mask3d).tolist())
+    labels.discard(0)
+    if not labels:
+        new_label = 1
+    else:
+        new_label = max(labels) + 1
+
+    current_label = int(new_label)
+    get_label_color(current_label)
+
+    options = list(set(label_colors.keys()))
+    options = sorted(options)
+    current_label_dropdown.options = options
+    current_label_dropdown.value = current_label
+    current_label_input.value = current_label
+    label_color_picker.value = get_label_color(current_label)
+
+    if volume3d is not None:
+        redraw()
+    log_status(f"Added new label: {current_label}")
+
+add_label_button.on_click(on_add_label_clicked)
+
+def on_delete_label_clicked(_):
+    """
+    Delete the current label:
+    - remove from label_colors & dropdown
+    - clear voxels with this label from mask3d
+    - switch to another existing label
+    """
+    global current_label
+
+    label_to_delete = current_label
+    if label_to_delete == 0:
+        log_status("Cannot delete background label 0.")
+        return
+
+    # Clear from mask
+    if mask3d is not None:
+        mask3d[mask3d == label_to_delete] = 0
+
+    # Remove from color dict
+    if label_to_delete in label_colors:
+        del label_colors[label_to_delete]
+
+    # Update dropdown options
+    options = [lab for lab in current_label_dropdown.options if lab != label_to_delete]
+    if not options:
+        # fallback: create label 1
+        get_label_color(1)
+        options = [1]
+
+    options = sorted(options)
+    current_label_dropdown.options = options
+    current_label = options[0]
+    current_label_dropdown.value = current_label
+    current_label_input.value = current_label
+    label_color_picker.value = get_label_color(current_label)
+
+    if volume3d is not None:
+        redraw()
+
+    log_status(f"Deleted label {label_to_delete} and cleared it from mask.")
+
+delete_label_button.on_click(on_delete_label_clicked)
+
 
 def on_zoom_change(_):
     if volume3d is not None:
@@ -1714,14 +2053,26 @@ canvas_size_plus_button.on_click(canvas_size_plus)
 # Layout
 ############################################################
 
-controls_tools = HBox([
+# Left: tool + brush size
+tools_left = HBox([
     tool_selector,
-    brush_size_slider,
-    color_picker,
-    show_mask_checkbox
+    brush_size_slider
 ])
 
-# Put clear mask + generate + thumbnails on same logical section
+# Right: two rows
+label_row1 = HBox([current_label_dropdown, mask_view_dropdown])
+label_row2 = HBox([current_label_input, label_color_picker, add_label_button, delete_label_button])
+
+label_block = VBox([
+    label_row1,
+    label_row2
+])
+
+controls_tools = HBox([
+    tools_left,
+    label_block
+])
+
 controls_prompts = HBox([
     clear_prompt_button,
     clear_mask_button,
@@ -1735,7 +2086,6 @@ controls_slices = HBox([
 ])
 
 controls_view     = HBox([axial_view_button, coronal_view_button, sagittal_view_button, mip_view_button])
-
 controls_actions  = HBox([save_mask_button])
 
 save_controls = VBox([
@@ -1748,7 +2098,6 @@ file_choosers_row = HBox([
     VBox([fc_model, model_load_label]),
     VBox([fc_mask, mask_load_label])
 ])
-
 
 canvas_size_controls = HBox([
     canvas_size_slider,
@@ -1765,7 +2114,7 @@ ui = VBox([
     controls_tools,
     canvas_size_controls,
     controls_prompts,
-    candidate_thumbs_box,   # tiny panel with thumbnails
+    candidate_thumbs_box,
     controls_slices,
     controls_view,
     VBox([
@@ -1776,5 +2125,8 @@ ui = VBox([
     save_controls,
     controls_actions
 ])
+
+# Ensure dropdown is consistent on first load (no mask yet)
+update_label_dropdown_from_mask()
 
 ui
