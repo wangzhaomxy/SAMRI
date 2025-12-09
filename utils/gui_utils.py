@@ -1,10 +1,16 @@
-############################################################
-# MRI Viewer + SAMRI inference integration (slice-level)
-# - Multi-view MRI with Paint/Erase/Box/Point/Hand tools
-# - SAMRI checkpoint loading (load_sam_model + SamPredictor)
-# - Generate Mask button with multi-mask selection via thumbnails
-# - Multi-label masks with per-label colors, names & visibility
-############################################################
+"""
+MRI Viewer + SAMRI inference integration (slice-level)
+- Multi-view MRI with Paint/Erase/Box/Point/Hand tools
+- SAMRI checkpoint loading (load_sam_model + SamPredictor)
+- Generate Mask button with multi-mask selection via thumbnails
+- Multi-label masks with per-label colors, names & visibility
+Class-based implementation with:
+- Copy label from slice above/below
+- Undo / Redo mask history
+Prompt types:
+- Point+ : foreground point (object to segment)
+- Point- : background point (region to exclude)
+"""
 
 import os
 import math
@@ -55,8 +61,10 @@ class MRIViewerApp:
         self.box_drawing = False
 
         # Prompts
-        self.box_prompts = []
-        self.point_prompts = []
+        # Prompts
+        self.box_prompts = []   # each: {view, slice, x0,y0,x1,y1, ix0,iy0,ix1,iy1}
+        self.point_prompts = [] # each: {view, slice, x,y, ix,iy, label}  label: 1 (fg), 0 (bg)
+
 
         # Labels
         self.label_colors = {1: DEFAULT_LABEL_PALETTE[0]}  # label_id -> color
@@ -88,6 +96,11 @@ class MRIViewerApp:
         self.sag_center_y = self.sag_center_z = 0.0
         self.mip_angle = 0.0
 
+        # <<< NEW: Undo / Redo history >>>
+        self.undo_stack = []   # list of mask3d snapshots
+        self.redo_stack = []
+        self.max_history = 20
+
         # Build UI & wiring
         self._build_canvas()
         self._build_widgets()
@@ -117,6 +130,42 @@ class MRIViewerApp:
     def get_zoom_factor(self):
         z = self.zoom_slider.value / 100.0
         return max(z, 0.01)
+
+    # <<< NEW: Undo / Redo helpers >>>
+    def push_undo_state(self):
+        """Save current mask to undo stack and clear redo."""
+        if self.mask3d is None:
+            return
+        self.undo_stack.append(self.mask3d.copy())
+        if len(self.undo_stack) > self.max_history:
+            self.undo_stack.pop(0)
+        self.redo_stack.clear()
+
+    def undo(self, _):
+        if not self.undo_stack:
+            self.log_status("Nothing to undo.")
+            return
+        if self.mask3d is not None:
+            self.redo_stack.append(self.mask3d.copy())
+            if len(self.redo_stack) > self.max_history:
+                self.redo_stack.pop(0)
+        self.mask3d = self.undo_stack.pop()
+        self.update_label_state_from_mask()
+        self.redraw()
+        self.log_status("Undo: restored previous mask state.")
+
+    def redo(self, _):
+        if not self.redo_stack:
+            self.log_status("Nothing to redo.")
+            return
+        if self.mask3d is not None:
+            self.undo_stack.append(self.mask3d.copy())
+            if len(self.undo_stack) > self.max_history:
+                self.undo_stack.pop(0)
+        self.mask3d = self.redo_stack.pop()
+        self.update_label_state_from_mask()
+        self.redraw()
+        self.log_status("Redo: restored next mask state.")
 
     # -----------------------------------------------------
     # Label utilities & legend
@@ -310,17 +359,20 @@ class MRIViewerApp:
         self.fc_mask.title = "<b>Choose mask file</b>"
         self.fc_mask.filter_pattern = [
             "*.nii", "*.nii.gz",
-            "*.mhd", "*.mha",
+            "*.mha", "*.mhd",
             "*.nrrd",
-            "*.dcm"
+            "*.dcm",
+            "*.png", "*.jpg", "*.jpeg",
+            "*.gz"
         ]
 
         # Tools
         self.tool_selector = ToggleButtons(
-            options=['Hand', 'Paint', 'Erase', 'Box', 'Point'],
-            value='Hand',
-            description='Tool:'
-        )
+                options=['Hand', 'Paint', 'Erase', 'Box', 'Point+', 'Point-'],
+                value='Hand',
+                description='Tool:'
+                )
+
 
         self.brush_size_slider = BoundedIntText(
             value=1,
@@ -401,6 +453,18 @@ class MRIViewerApp:
             button_style='info'
         )
 
+        # <<< NEW: Copy + Undo/Redo buttons >>>
+        self.copy_from_above_button = Button(
+            description='Copy ↑',
+            tooltip='Copy current label from slice above'
+        )
+        self.copy_from_below_button = Button(
+            description='Copy ↓',
+            tooltip='Copy current label from slice below'
+        )
+        self.undo_button = Button(description='Undo')
+        self.redo_button = Button(description='Redo')
+
         self.candidate_thumbs_box = HBox([])
 
         self.axial_view_button = Button(description="Axial")
@@ -458,10 +522,15 @@ class MRIViewerApp:
         ])
         self.controls_tools = HBox([tools_left, label_block])
 
+        # <<< NEW: copy/undo/redo added to prompt/mask controls >>>
         self.controls_prompts = HBox([
             self.clear_prompt_button,
             self.clear_mask_button,
-            self.generate_mask_button
+            self.generate_mask_button,
+            self.copy_from_above_button,
+            self.copy_from_below_button,
+            self.undo_button,
+            self.redo_button
         ])
 
         self.controls_slices = HBox([
@@ -570,6 +639,12 @@ class MRIViewerApp:
         self.save_mask_button.on_click(self.save_mask)
         self.generate_mask_button.on_click(self.on_generate_mask)
 
+        # <<< NEW: copy/undo/redo handlers >>>
+        self.copy_from_above_button.on_click(self.on_copy_from_above)
+        self.copy_from_below_button.on_click(self.on_copy_from_below)
+        self.undo_button.on_click(self.undo)
+        self.redo_button.on_click(self.redo)
+
     # -----------------------------------------------------
     # View / zoom helpers
     # -----------------------------------------------------
@@ -643,9 +718,9 @@ class MRIViewerApp:
         if self.volume3d is None:
             return
 
+        # Boxes (unchanged)
         self.main_ui.stroke_style = 'yellow'
         self.main_ui.line_width = 2
-
         for box in self.box_prompts:
             if box['view'] == view_name and box['slice'] == slice_idx:
                 x0,y0,x1,y1 = box['x0'], box['y0'], box['x1'], box['y1']
@@ -653,10 +728,12 @@ class MRIViewerApp:
                 w=abs(x1-x0); h=abs(y1-y0)
                 self.main_ui.stroke_rect(x,y,w,h)
 
-        self.main_ui.fill_style = 'cyan'
+        # Points: Point+ (fg) = green, Point- (bg) = red
         for p in self.point_prompts:
             if p['view'] == view_name and p['slice'] == slice_idx:
+                lab = p.get('label', 1)
                 self.main_ui.begin_path()
+                self.main_ui.fill_style = '#00ff00' if lab == 1 else '#ff0000'
                 self.main_ui.arc(p['x'], p['y'], 4, 0, 2*math.pi)
                 self.main_ui.fill()
 
@@ -1045,10 +1122,13 @@ class MRIViewerApp:
 
         tool = self.tool_selector.value
 
-        if self.current_view=="mip" and tool in ("Paint", "Erase", "Box", "Point"):
+        if self.current_view == "mip" and tool in ("Paint", "Erase", "Box", "Point+", "Point-"):
             return
 
+
         if tool in ("Paint", "Erase"):
+            # <<< NEW: snapshot before painting >>>
+            self.push_undo_state()
             self.drawing=True
             self.last_canvas_x, self.last_canvas_y = x,y
             self.paint_circle(x,y)
@@ -1067,16 +1147,19 @@ class MRIViewerApp:
             self.box_drawing=True
             self._draw_ui(self.current_view, slice_idx)
 
-        elif tool=="Point":
+            # old condition had: elif tool=="Point":
+        elif tool in ("Point+", "Point-"):
             slice_idx = self.get_current_slice_index()
             ix, iy = self.canvas_to_image_xy(self.current_view, x, y)
             if ix is None:
                 return
+            label = 1 if tool == "Point+" else 0  # 1=foreground, 0=background
             self.point_prompts.append({
-                'view':self.current_view,
-                'slice':slice_idx,
-                'x':x,'y':y,
-                'ix':ix,'iy':iy
+                'view':  self.current_view,
+                'slice': slice_idx,
+                'x': x, 'y': y,      # canvas
+                'ix': ix, 'iy': iy,  # image coords
+                'label': label
             })
             self._draw_ui(self.current_view, slice_idx)
 
@@ -1204,6 +1287,10 @@ class MRIViewerApp:
         self.sam_candidates = None
         self.candidate_thumbs_box.children = []
 
+        # reset history on new MRI
+        self.undo_stack.clear()
+        self.redo_stack.clear()
+
         stem, ext = self.split_name_and_ext(path)
         self.last_save_dir = os.path.dirname(path)
         self.save_filename_text.value = stem
@@ -1309,6 +1396,9 @@ class MRIViewerApp:
             )
             return
 
+        # <<< NEW: allow undo of load_mask >>>
+        self.push_undo_state()
+
         self.mask3d = mask_arr.astype(np.uint8)
 
         stem, ext = self.split_name_and_ext(path)
@@ -1348,6 +1438,9 @@ class MRIViewerApp:
             self.log_status("No labels selected (visible) to clear.")
             return
 
+        # <<< NEW: history for clear >>>
+        self.push_undo_state()
+
         for lab in labels_to_clear:
             if lab == 0:
                 continue
@@ -1372,7 +1465,7 @@ class MRIViewerApp:
         if not stem:
             stem = "mask3d"
         ext = self.save_format_dropdown.value
-        filename = stem + ext
+        filename = stem + "_seg_" + ext
         save_path = os.path.join(dir_path, filename)
 
         mask_arr = self.mask3d.astype(np.uint8)
@@ -1478,6 +1571,9 @@ class MRIViewerApp:
         if self.current_view != view or self.get_current_slice_index() != sl:
             self.log_status("Candidate masks belong to a different slice/view. Regenerate on this slice to update.")
             return
+
+        # <<< NEW: history for SAMRI apply >>>
+        self.push_undo_state()
 
         binary2d = (masks[idx] > 0).astype(np.uint8)
         ok = self.write_label_mask2d_to_volume(view, sl, binary2d, label_id)
@@ -1593,12 +1689,16 @@ class MRIViewerApp:
             coords = []
             labels = []
             for p in points_here:
-                ix = float(p['ix']); iy = float(p['iy'])
+                ix = float(p['ix'])
+                iy = float(p['iy'])
                 if 0 <= ix < W and 0 <= iy < H:
-                    coords.append([ix, iy]); labels.append(1)
+                    coords.append([ix, iy])
+                    # label: 1 = foreground, 0 = background (SAM convention)
+                    labels.append(int(p.get('label', 1)))
             if coords:
                 point_coords = np.array(coords, dtype=np.float32)
                 point_labels = np.array(labels, dtype=np.int32)
+
 
         if box_array is None and point_coords is None:
             self.log_status("No prompts on this slice. Please draw a box or point first.")
@@ -1736,6 +1836,8 @@ class MRIViewerApp:
             return
 
         if self.mask3d is not None:
+            # <<< NEW: history for delete-label >>>
+            self.push_undo_state()
             self.mask3d[self.mask3d == label_to_delete] = 0
 
         if label_to_delete in self.label_colors:
@@ -1806,5 +1908,82 @@ class MRIViewerApp:
             self.canvas_size_slider.value + self.canvas_size_slider.step
         )
 
+    # -----------------------------------------------------
+    # <<< NEW: Copy label from neighbor slice >>>
+    # -----------------------------------------------------
+    def copy_label_from_neighbor(self, direction: str):
+        if self.volume3d is None or self.mask3d is None:
+            self.log_status("No MRI/mask loaded to copy.")
+            return
+        if self.current_view == "mip":
+            self.log_status("Copy label works only on Axial/Coronal/Sagittal views, not MIP.")
+            return
+
+        cur_label = self.current_label
+        if cur_label == 0:
+            self.log_status("Copying background label 0 is not meaningful.")
+            return
+
+        # Determine axis and indices
+        if self.current_view == "axial":
+            axis_len = self.dim_z
+            cur_idx = self.axial_index
+        elif self.current_view == "coronal":
+            axis_len = self.dim_y
+            cur_idx = self.coronal_index
+        else:  # sagittal
+            axis_len = self.dim_x
+            cur_idx = self.sagittal_index
+
+        if direction == "above":
+            neigh_idx = cur_idx - 1
+            direction_name = "above"
+        else:
+            neigh_idx = cur_idx + 1
+            direction_name = "below"
+
+        if neigh_idx < 0 or neigh_idx >= axis_len:
+            self.log_status(f"No {direction_name} slice to copy from (out of volume).")
+            return
+
+        # Snapshot before modification
+        self.push_undo_state()
+
+        if self.current_view == "axial":
+            src = self.mask3d[neigh_idx, :, :]
+            dst = self.mask3d[cur_idx, :, :]
+            dst[dst == cur_label] = 0
+            dst[src == cur_label] = cur_label
+            self.mask3d[cur_idx, :, :] = dst
+
+        elif self.current_view == "coronal":
+            src = self.mask3d[:, neigh_idx, :]
+            dst = self.mask3d[:, cur_idx, :]
+            dst[dst == cur_label] = 0
+            dst[src == cur_label] = cur_label
+            self.mask3d[:, cur_idx, :] = dst
+
+        else:  # sagittal
+            src = self.mask3d[:, :, neigh_idx]
+            dst = self.mask3d[:, :, cur_idx]
+            dst[dst == cur_label] = 0
+            dst[src == cur_label] = cur_label
+            self.mask3d[:, :, cur_idx] = dst
+
+        self.update_label_state_from_mask()
+        self.redraw()
+        self.log_status(
+            f"Copied label {cur_label} from {direction_name} slice "
+            f"{neigh_idx} to current slice {cur_idx} in {self.current_view} view."
+        )
+
+    def on_copy_from_above(self, _):
+        self.copy_label_from_neighbor("above")
+
+    def on_copy_from_below(self, _):
+        self.copy_label_from_neighbor("below")
 
 
+# Instantiate app and expose ui
+app = MRIViewerApp()
+app.ui
