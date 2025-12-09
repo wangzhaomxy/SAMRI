@@ -263,6 +263,7 @@ No additional parameters are needed.
 ### ⚠️ Notes
 
 - Ensure the **dependency** is installed in a right way.
+- The GUI is compatible with **all SAMRI models and the SAM-vitb model**. **MedSAM** is **NOT** supported because it applies a different image-preprocessing pipeline from SAM and SAMRI.
 - Use **Jupyter Notebook**, not JupyterLab (unless compatible renderers/extensions are installed).
 
 ---
