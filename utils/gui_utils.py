@@ -61,7 +61,6 @@ class MRIViewerApp:
         self.box_drawing = False
 
         # Prompts
-        # Prompts
         self.box_prompts = []   # each: {view, slice, x0,y0,x1,y1, ix0,iy0,ix1,iy1}
         self.point_prompts = [] # each: {view, slice, x,y, ix,iy, label}  label: 1 (fg), 0 (bg)
 
@@ -73,7 +72,19 @@ class MRIViewerApp:
         self.label_names = {}        # label_id -> name str
         self.label_checkboxes = {}   # label_id -> checkbox widget
         self.legend_batch_update = False
-
+        self.label_protected = {}   # label_id -> bool (True = protected)
+        
+        # Small help text under the label legend
+        self.legend_help_html = HTML(
+            value=(
+                "<span style='font-size:12px;'>"
+                "👁 checkbox: show / hide this label<br>"
+                "🔒 checkbox: protect label from Erase & Clear mask<br>"
+                "<b>ALL</b>: toggle visibility of all labels at once"
+                "</span>"
+            )
+        )
+        
         # MRI / mask / model paths
         self.image_sitk = None
         self.current_image_path = None
@@ -183,23 +194,31 @@ class MRIViewerApp:
         visible = self.label_visibility.get(label_id, True)
         self.label_visibility[label_id] = visible
 
+        # visibility checkbox (column "👁")
         cb = Checkbox(
             value=visible,
             description='',
             indent=False,
-            layout={'width': '24px'}
+            layout={'width': '32px'}
         )
         self.label_checkboxes[label_id] = cb
 
+        # color box (column "Color")
         color_box = HTML(
             value=(
                 f"<div style='width:16px; height:16px; "
                 f"background:{color_hex}; border:1px solid #000;'></div>"
-            )
+            ),
+            layout={'width': '40px'}
         )
 
-        id_label = Label(f"ID {label_id}")
+        # ID label (column "ID")
+        id_label = Label(
+            f"ID {label_id}",
+            layout={'width': '50px'}
+        )
 
+        # name text (column "Name")
         name_str = self.label_names.get(label_id, "")
         name_text = Text(
             value=name_str,
@@ -207,6 +226,23 @@ class MRIViewerApp:
             layout={'width': '140px'}
         )
 
+        # protect checkbox (column "Lock")
+        prot_val = self.label_protected.get(label_id, False)
+        prot_cb = Checkbox(
+            value=prot_val,
+            description='', 
+            indent=False,
+            layout={'width': '40px'}
+        )
+
+        def _on_prot_change(change, lab=label_id):
+            if change['name'] != 'value':
+                return
+            self.label_protected[lab] = bool(change['new'])
+
+        prot_cb.observe(_on_prot_change, names='value')
+
+        # existing visibility handler (unchanged)
         def _on_cb_change(change, lab=label_id):
             if change['name'] != 'value':
                 return
@@ -236,7 +272,8 @@ class MRIViewerApp:
 
         name_text.observe(_on_name_change, names='value')
 
-        return HBox([cb, color_box, id_label, name_text])
+        # Now include protect checkbox in the row
+        return HBox([cb, color_box, id_label, name_text, prot_cb])
 
     def update_label_legend(self):
         self.label_checkboxes.clear()
@@ -504,15 +541,33 @@ class MRIViewerApp:
         self.mri_load_label   = HTML(value=self._status_html("MRI",   False))
         self.model_load_label = HTML(value=self._status_html("SAMRI", False))
         self.mask_load_label  = HTML(value=self._status_html("Mask",  False))
-
+        
         # Legend
         self.all_labels_checkbox = Checkbox(
             value=True,
             description='ALL',
             indent=False
         )
+
+        # Header row for the legend columns
+        self.legend_header = HBox([
+            Label("👁",    layout={'width': '32px'}),   # visibility checkbox
+            Label("Color", layout={'width': '40px'}),   # color box
+            Label("ID",    layout={'width': '50px'}),   # label id
+            Label("Name",  layout={'width': '140px'}),  # label name
+            Label("🔒",  layout={'width': '40px'})    # 🔒 protect
+        ])
+
+        # Box that will hold per-label rows
         self.label_legend_rows_box = VBox([])
-        self.label_legend_box = VBox([self.all_labels_checkbox, self.label_legend_rows_box])
+
+        # Full legend: header + ALL toggle + rows + help footer
+        self.label_legend_box = VBox([
+            self.legend_header,
+            self.label_legend_rows_box,
+            self.all_labels_checkbox,   # moved here
+            self.legend_help_html
+        ])
 
         # Layout
         tools_left = HBox([self.tool_selector, self.brush_size_slider])
@@ -1028,52 +1083,94 @@ class MRIViewerApp:
         if tool not in ("Paint", "Erase"):
             return
 
+        # Only erase labels that are currently visible in the legend
+        # Only erase labels that are visible AND not protected
+        visible_labels = [
+            lab for lab, vis in self.label_visibility.items()
+            if vis and lab != 0 and not self.label_protected.get(lab, False)
+        ]
+
+        if tool == "Erase" and not visible_labels:
+            # Nothing considered "erasable" if no labels are visible
+            return
+
         if self.current_view == "axial":
             vx, vy = self.canvas_to_voxel_axial(cx, cy)
-            if vx is None: return
+            if vx is None:
+                return
             z = self.axial_index
-            scale = (self.dim_x/VIEW_SIZE + self.dim_y/VIEW_SIZE)/2
+            scale = (self.dim_x / VIEW_SIZE + self.dim_y / VIEW_SIZE) / 2
             r_vox = max(1, int(self.brush_size_slider.value * scale))
-            y0=max(0,vy-r_vox); y1=min(self.dim_y, vy+r_vox+1)
-            x0=max(0,vx-r_vox); x1=min(self.dim_x, vx+r_vox+1)
-            yy,xx = np.ogrid[y0:y1, x0:x1]
-            region = (yy-vy)**2 + (xx-vx)**2 <= r_vox*r_vox
+
+            y0 = max(0, vy - r_vox); y1 = min(self.dim_y, vy + r_vox + 1)
+            x0 = max(0, vx - r_vox); x1 = min(self.dim_x, vx + r_vox + 1)
+
+            yy, xx = np.ogrid[y0:y1, x0:x1]
+            region = (yy - vy) ** 2 + (xx - vx) ** 2 <= r_vox * r_vox
+
+            slice_view = self.mask3d[z, y0:y1, x0:x1]
+
             if tool == "Paint":
-                self.mask3d[z,y0:y1,x0:x1][region]=self.current_label
-            else:
-                self.mask3d[z,y0:y1,x0:x1][region]=0
+                slice_view[region] = self.current_label
+            else:  # Erase only visible labels
+                visible_mask = np.isin(slice_view, visible_labels)
+                erase_region = region & visible_mask
+                slice_view[erase_region] = 0
+
+            self.mask3d[z, y0:y1, x0:x1] = slice_view
 
         elif self.current_view == "coronal":
             vz, vx = self.canvas_to_voxel_coronal(cx, cy)
-            if vz is None: return
+            if vz is None:
+                return
             y = self.coronal_index
-            scale = (self.dim_x/VIEW_SIZE + self.dim_z/VIEW_SIZE)/2
-            r_vox = max(1, int(self.brush_size_slider.value*scale))
-            z0=max(0,vz-r_vox); z1=min(self.dim_z, vz+r_vox+1)
-            x0=max(0,vx-r_vox); x1=min(self.dim_x, vx+r_vox+1)
-            zz,xx = np.ogrid[z0:z1, x0:x1]
-            region = (zz-vz)**2 + (xx-vx)**2 <= r_vox*r_vox
+            scale = (self.dim_x / VIEW_SIZE + self.dim_z / VIEW_SIZE) / 2
+            r_vox = max(1, int(self.brush_size_slider.value * scale))
+
+            z0 = max(0, vz - r_vox); z1 = min(self.dim_z, vz + r_vox + 1)
+            x0 = max(0, vx - r_vox); x1 = min(self.dim_x, vx + r_vox + 1)
+
+            zz, xx = np.ogrid[z0:z1, x0:x1]
+            region = (zz - vz) ** 2 + (xx - vx) ** 2 <= r_vox * r_vox
+
+            slice_view = self.mask3d[z0:z1, y, x0:x1]
+
             if tool == "Paint":
-                self.mask3d[z0:z1,y,x0:x1][region]=self.current_label
-            else:
-                self.mask3d[z0:z1,y,x0:x1][region]=0
+                slice_view[region] = self.current_label
+            else:  # Erase only visible labels
+                visible_mask = np.isin(slice_view, visible_labels)
+                erase_region = region & visible_mask
+                slice_view[erase_region] = 0
+
+            self.mask3d[z0:z1, y, x0:x1] = slice_view
 
         elif self.current_view == "sagittal":
             vz, vy = self.canvas_to_voxel_sagittal(cx, cy)
-            if vz is None: return
+            if vz is None:
+                return
             x = self.sagittal_index
-            scale = (self.dim_y/VIEW_SIZE + self.dim_z/VIEW_SIZE)/2
-            r_vox = max(1, int(self.brush_size_slider.value*scale))
-            z0=max(0,vz-r_vox); z1=min(self.dim_z, vz+r_vox+1)
-            y0=max(0,vy-r_vox); y1=min(self.dim_y, vy+r_vox+1)
-            zz,yy=np.ogrid[z0:z1, y0:y1]
-            region = (zz-vz)**2 + (yy-vy)**2 <= r_vox*r_vox
+            scale = (self.dim_y / VIEW_SIZE + self.dim_z / VIEW_SIZE) / 2
+            r_vox = max(1, int(self.brush_size_slider.value * scale))
+
+            z0 = max(0, vz - r_vox); z1 = min(self.dim_z, vz + r_vox + 1)
+            y0 = max(0, vy - r_vox); y1 = min(self.dim_y, vy + r_vox + 1)
+
+            zz, yy = np.ogrid[z0:z1, y0:y1]
+            region = (zz - vz) ** 2 + (yy - vy) ** 2 <= r_vox * r_vox
+
+            slice_view = self.mask3d[z0:z1, y0:y1, x]
+
             if tool == "Paint":
-                self.mask3d[z0:z1,y0:y1,x][region]=self.current_label
-            else:
-                self.mask3d[z0:z1,y0:y1,x][region]=0
+                slice_view[region] = self.current_label
+            else:  # Erase only visible labels
+                visible_mask = np.isin(slice_view, visible_labels)
+                erase_region = region & visible_mask
+                slice_view[erase_region] = 0
+
+            self.mask3d[z0:z1, y0:y1, x] = slice_view
 
         self.redraw()
+
 
     def paint_line(self, x0,y0,x1,y1):
         steps = int(max(abs(x1-x0),abs(y1-y0))/max(self.brush_size_slider.value/2,1))+1
@@ -1433,7 +1530,11 @@ class MRIViewerApp:
         if self.volume3d is None or self.mask3d is None:
             return
 
-        labels_to_clear = [lab for lab, vis in self.label_visibility.items() if vis]
+        labels_to_clear = [
+                lab for lab, vis in self.label_visibility.items()
+                if vis and lab != 0 and not self.label_protected.get(lab, False)
+            ]
+
         if not labels_to_clear:
             self.log_status("No labels selected (visible) to clear.")
             return
