@@ -33,10 +33,14 @@ Paper can be found [HERE](https://arxiv.org/abs/2510.26635).
 - 🖼️ Supports **box, point, and box + point prompts**.  
 
 ---
-![Graphical abstract](README/Graphical_abstract.png)  
+![Graphical_abstract)](README/Graphical_abstract.png)
+Fig.1 Graphical Abstract
 
-![SAMRI Architecture](README/pipline.png)  
-*Figure 1. Overview of SAMRI: efficient two-stage training. Stage 1: precompute and store image embeddings with the frozen SAM encoder, removing redundant per-epoch computation. Stage 2: fine-tune only the lightweight mask decoder while keeping the image and prompt encoders frozen—dramatically reducing compute and memory cost..*
+
+
+<img src="README/pipline.png" width="300">
+
+Fig.2 Overview of SAMRI: efficient two-stage training. Stage 1: precompute and store image embeddings with the frozen SAM encoder, removing redundant per-epoch computation. Stage 2: fine-tune only the lightweight mask decoder while keeping the image and prompt encoders frozen—dramatically reducing compute and memory cost..*
 
 ---
 
@@ -260,6 +264,8 @@ This is the simplest approach and requires no command-line arguments.
 No additional parameters are needed.
 
 ![SAMRI GUI](README/gui.png) 
+Fig. 3 The GUI instruction
+
 ---
 
 ### ⚠️ Notes
@@ -618,7 +624,7 @@ SAMRI is trained on a curated **1.1 million MRI image–mask pairs** from **36 p
 Detailed dataset breakdowns are provided in **Table S1 (Supplementary)** in the paper.
 
 ![Datasets](README/datasets.png) 
-*Figure 2. Datasets: anatomical coverage of the 1.1 million MRI image–mask pairs used to train SAMRI, summarized by body region (Brain 40%, Knee 26%, Abdomen 16%, Vertebrae 2.6%, Shoulder 0.5%, Thorax 0.2%, and a Whole-body/“Total Body” set 13.3%*).*
+*Figure 4. Datasets: anatomical coverage of the 1.1 million MRI image–mask pairs used to train SAMRI, summarized by body region (Brain 40%, Knee 26%, Abdomen 16%, Vertebrae 2.6%, Shoulder 0.5%, Thorax 0.2%, and a Whole-body/“Total Body” set 13.3%*).*
 
 ---
 
