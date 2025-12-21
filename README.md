@@ -33,8 +33,9 @@ Paper can be found [HERE](https://arxiv.org/abs/2510.26635).
 - 🖼️ Supports **box, point, and box + point prompts**.  
 
 ---
+![Graphical abstract](README/Graphical_abstract.png)  
 
-![SAMRI Architecture](README/training.png)  
+![SAMRI Architecture](README/pipline.png)  
 *Figure 1. Overview of SAMRI: efficient two-stage training. Stage 1: precompute and store image embeddings with the frozen SAM encoder, removing redundant per-epoch computation. Stage 2: fine-tune only the lightweight mask decoder while keeping the image and prompt encoders frozen—dramatically reducing compute and memory cost..*
 
 ---
@@ -258,6 +259,7 @@ This is the simplest approach and requires no command-line arguments.
 
 No additional parameters are needed.
 
+![SAMRI GUI](README/gui.png) 
 ---
 
 ### ⚠️ Notes
