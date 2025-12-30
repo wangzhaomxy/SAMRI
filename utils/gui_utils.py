@@ -1937,7 +1937,6 @@ class MRIViewerApp:
             return
 
         if self.mask3d is not None:
-            # <<< NEW: history for delete-label >>>
             self.push_undo_state()
             self.mask3d[self.mask3d == label_to_delete] = 0
 
@@ -2010,7 +2009,7 @@ class MRIViewerApp:
         )
 
     # -----------------------------------------------------
-    # <<< NEW: Copy label from neighbor slice >>>
+    # Copy label from neighbor slice 
     # -----------------------------------------------------
     def copy_label_from_neighbor(self, direction: str):
         if self.volume3d is None or self.mask3d is None:
@@ -2084,7 +2083,3 @@ class MRIViewerApp:
     def on_copy_from_below(self, _):
         self.copy_label_from_neighbor("below")
 
-
-# Instantiate app and expose ui
-app = MRIViewerApp()
-app.ui
