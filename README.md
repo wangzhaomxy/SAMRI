@@ -32,7 +32,7 @@ Paper can be found [HERE](https://arxiv.org/abs/2510.26635).
 - 📈 **Superior segmentation** on small and medium structures, with strong zero-shot generalization.  
 - 🖼️ Supports **box, point, and box + point prompts**.  
 
----
+
 ![Graphical_abstract)](README/Graphical_abstract.png)
 Fig.1 Graphical Abstract
 
@@ -42,7 +42,7 @@ Fig.1 Graphical Abstract
 
 Fig.2 Overview of SAMRI: efficient two-stage training. Stage 1: precompute and store image embeddings with the frozen SAM encoder, removing redundant per-epoch computation. Stage 2: fine-tune only the lightweight mask decoder while keeping the image and prompt encoders frozen—dramatically reducing compute and memory cost.
 
----
+
 
 ## 🧭 Overview
 
@@ -53,7 +53,7 @@ The approach:
 
 This lightweight strategy allows SAMRI to train efficiently on a **single GPU** or **multi-GPU clusters** (e.g., H100 x 8), while maintaining robust accuracy across unseen datasets and imaging protocols.
 
----
+
 ## 🛠️ Installation
 
 This section helps you go from **zero to a runnable environment** for SAMRI. It includes optional prerequisites, a reproducible Conda setup, and a brief explanation of how dependency installation works.
@@ -100,7 +100,7 @@ python -c "import torch, nibabel; print('SAMRI environment ready! Torch:', torch
 
 If it prints without errors, your environment is correctly configured.
 
----
+
 ## 🚀 Quick Start (Inference & Visualization only)
 
 This project ships two entry points for running SAMRI on your data:
@@ -274,7 +274,7 @@ Fig. 3 The GUI instruction
 - The GUI is compatible with **all SAMRI models and the SAM-vitb model**. **MedSAM** is **NOT** supported because it applies a different image-preprocessing pipeline from SAM and SAMRI.
 - Use **Jupyter Notebook**, not JupyterLab (unless compatible renderers/extensions are installed).
 
----
+
 ## 🧑‍🏫 Training the Model
 
 This section covers **end‑to‑end training** of SAMRI’s decoder on precomputed SAM embeddings. The workflow is lightweight:
@@ -492,7 +492,7 @@ python train_multi_gpus.py
 - **ROCm (AMD MI300X/MI210)**: use ROCm PyTorch wheels; NCCL flags above may help
 - **Apple Silicon (MPS)**: training is possible, but performance is limited compared to CUDA/ROCm
 
----
+
 
 ## 📊 Model Evaluation
 
@@ -607,7 +607,7 @@ You can:
 - Compare performance between **SAM**, **SAMRI**, and **MedSAM**
 - Generate summary plots (Dice boxplots, etc.)
 
----
+
 
 ## 🧠 Dataset Overview
 
@@ -626,7 +626,7 @@ Detailed dataset breakdowns are provided in **Table S1 (Supplementary)** in the 
 ![Datasets](README/datasets.png) 
 *Figure 4. Datasets: anatomical coverage of the 1.1 million MRI image–mask pairs used to train SAMRI, summarized by body region (Brain 40%, Knee 26%, Abdomen 16%, Vertebrae 2.6%, Shoulder 0.5%, Thorax 0.2%, and a Whole-body/“Total Body” set 13.3%*).*
 
----
+
 
 ## 📁 Repository Structure
 
@@ -694,7 +694,7 @@ SAMRI/
 </details>
 
 
----
+
 ## 📘 Citation
 
 If you use SAMRI in your research, please cite:
@@ -711,14 +711,14 @@ If you use SAMRI in your research, please cite:
 }
 ```
 
----
+
 
 ## 📄 License
 
 This repository is released under the **Apache 2.0 License** (or specify otherwise).  
 See the [LICENSE](LICENSE) file for details.
 
----
+
 ## 🤝 Acknowledgments
 
 Developed at **The University of Queensland (UQ)**,  
@@ -732,7 +732,7 @@ We also gratefully acknowledge the **MedSAM team** for pioneering open-source ad
 
 We thank open-source contributors and the MRI research community for dataset availability.
 
----
+
 
 ## 📬 Contact
 
