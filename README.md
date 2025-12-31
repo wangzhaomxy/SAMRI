@@ -21,7 +21,6 @@
 By fine-tuning only the **lightweight mask decoder** on **precomputed MRI embeddings**, SAMRI achieves state-of-the-art Dice and boundary accuracy while drastically reducing computational cost.
 Paper can be found [HERE](https://arxiv.org/abs/2510.26635).
 
----
 
 
 ## 🌟 Highlights
