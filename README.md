@@ -16,6 +16,7 @@
   </strong>
 
 </p>
+
 **SAMRI** is an MRI-specialized adaptation of [Meta AI’s Segment Anything Model (SAM)](https://segment-anything.com/), designed for accurate and efficient segmentation across diverse MRI datasets.  
 By fine-tuning only the **lightweight mask decoder** on **precomputed MRI embeddings**, SAMRI achieves state-of-the-art Dice and boundary accuracy while drastically reducing computational cost.
 Paper can be found [HERE](https://arxiv.org/abs/2510.26635).
@@ -40,7 +41,7 @@ Fig.1 Graphical Abstract
 
 <img src="README/pipline.png" width="300">
 
-Fig.2 Overview of SAMRI: efficient two-stage training. Stage 1: precompute and store image embeddings with the frozen SAM encoder, removing redundant per-epoch computation. Stage 2: fine-tune only the lightweight mask decoder while keeping the image and prompt encoders frozen—dramatically reducing compute and memory cost..*
+Fig.2 Overview of SAMRI: efficient two-stage training. Stage 1: precompute and store image embeddings with the frozen SAM encoder, removing redundant per-epoch computation. Stage 2: fine-tune only the lightweight mask decoder while keeping the image and prompt encoders frozen—dramatically reducing compute and memory cost.
 
 ---
 
