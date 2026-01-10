@@ -63,6 +63,20 @@ ckpt_path = _args.ckpt_path
 save_path = _args.save_path
 os.makedirs(save_path, exist_ok=True)
 
+def test_image_path(path):
+    """substract images from the main dataset folder
+
+    Args:
+        path (str): The root path of the datasets.
+
+    Returns:
+        list: A list of paths to the testing subdirectories.
+    """
+    return [
+        ds + "/testing/" for ds in sorted(glob(path + "*"))
+        if os.path.isdir(ds)
+    ]
+    
 def load_ckpt_list(ckpt_dir):
     """
     Given a checkpoint path:
@@ -113,7 +127,7 @@ for ckpt in ckpt_list:
     sam_model.eval()
     save_path_all = save_path + model_name[:-4]
 
-    save_test_record(file_paths=cfg.TEST_IMAGE_PATH,
+    save_test_record(file_paths=test_image_path(cfg.TEST_IMAGE_PATH),
                      sam_model=sam_model, 
                      save_path=save_path_all)
     
