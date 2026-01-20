@@ -38,7 +38,7 @@ Fig.1 Graphical Abstract
 
 
 
-<img src="README/pipline.png" width="300">
+<img src="README/pipline.png" width="500">
 
 Fig.2 Overview of SAMRI: efficient two-stage training. Stage 1: precompute and store image embeddings with the frozen SAM encoder, removing redundant per-epoch computation. Stage 2: fine-tune only the lightweight mask decoder while keeping the image and prompt encoders frozen—dramatically reducing compute and memory cost.
 
