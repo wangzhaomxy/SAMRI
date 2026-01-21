@@ -724,7 +724,7 @@ See the [LICENSE](LICENSE) file for details.
 Developed at **The University of Queensland (UQ)**,  
 **School of Electrical Engineering and Computer Science (EECS)**.
 
-Special thanks to the **UQ Research Computing Centre** and **Bunya HPC Team** for infrastructure support.
+This work was supported by resources provided by **The University of Queensland Research Computing Centre’s Bunya supercomputer** (https://dx.doi.org/10.48610/wf6c-qy55), with funding from The University of Queensland, Brisbane, Australia.
 
 Built upon **Meta AI’s Segment Anything Model (SAM)**, and inspired by the broader community efforts to adapt SAM to medical imaging.  
 
