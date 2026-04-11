@@ -623,7 +623,7 @@ def main():
             subset_name = Path(test_dir).parts[-2]   # parts[-1]='testing', parts[-2]=subset_name
             print(f"\n  [{label}] Processing: {subset_name}")
             ds     = NiiDataset([test_dir], multi_mask=True, with_name=True)
-            loader = DataLoader(ds, batch_size=1, num_workers=args.num_workers,
+            loader = DataLoader(ds, batch_size=1, num_workers=0,
                                collate_fn=_collate_fn)
             split_record[subset_name] = run_evaluation(infer_fn, loader, debug=args.debug)
         return split_record
