@@ -1,8 +1,17 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Test comparison SAM-based models (MCP-MedSAM, SAMed, MedSA) on the same
-NIfTI testing dataset used by test_vis.py.
+Test comparison SAM-based models (MCP-MedSAM, SAMed, MedSA) on NIfTI datasets.
+
+Dataset folder structure expected under each root path:
+  <root>/
+    subset1/testing/*.nii.gz
+    subset2/testing/*.nii.gz
+    ...
+
+Pass one or two roots via --dataset-path:
+  1 path  → results stored under "trained" key only.
+  2 paths → first path → "trained", second path → "zero_shot".
 
 Prompt strategy per model:
   mcp_medsam  - box prompt + CLIP features (TinyViT, 256 input)
@@ -11,41 +20,45 @@ Prompt strategy per model:
 
 All prompts are derived from the ground-truth mask, matching the protocol in test_vis.py.
 
-Output pickle format mirrors test_vis.py / visual.py save_test_record():
-  { dataset_name: [ { img_name, mask_name, labels,
-                       dice, hd, msd, pixel_count, area_percentage }, ... ] }
+Output pickle structure:
+  {
+    "trained":   { subset_name: [ { img_name, mask_name, labels,
+                                     dice, hd, msd, pixel_count,
+                                     area_percentage }, ... ], ... },
+    "zero_shot": { subset_name: [ ... ], ... }   # only present with 2 paths
+  }
 
 Usage examples:
-  # MCP-MedSAM (requires transformers + internet / cached HF models)
+  # SAMed — trained + zero-shot in one run
   python evaluation/test_comparison_models.py \\
-    --model-type mcp_medsam \\
-    --ckpt-path /path/to/mcp_medsam.pth \\
-    --test-image-path ./user_data/Datasets/SAMRI_train_test/ \\
-    --save-path ./Eval_results/ --device cuda
-
-  # SAMed
-  python evaluation/test_comparison_models.py \\
-    --model-type samed \\
+    --model samed \\
     --ckpt-path /path/to/sam_vit_b_01ec64.pth \\
     --lora-ckpt /path/to/samed_lora.pth \\
-    --test-image-path ./user_data/Datasets/SAMRI_train_test/ \\
-    --save-path ./Eval_results/ --device cuda
+    --dataset-path /path/to/test/ /path/to/ZeroShot/ \\
+    --save-path results/samed.pkl
 
-  # Medical-SAM-Adapter (MedSA)
+  # MCP-MedSAM — single dataset root
   python evaluation/test_comparison_models.py \\
-    --model-type medsa \\
+    --model mcp_medsam \\
+    --ckpt-path /path/to/mcp_medsam.pth \\
+    --dataset-path /path/to/test/ \\
+    --save-path results/mcp_medsam.pkl
+
+  # Medical-SAM-Adapter
+  python evaluation/test_comparison_models.py \\
+    --model medsa \\
     --ckpt-path /path/to/sam_vit_b_01ec64.pth \\
     --adapter-ckpt /path/to/medsa_checkpoint.pth \\
-    --test-image-path ./user_data/Datasets/SAMRI_train_test/ \\
-    --save-path ./Eval_results/ --device cuda
+    --dataset-path /path/to/test/ /path/to/ZeroShot/ \\
+    --save-path results/medsa.pkl
 
-  # Debug: run 2 samples per dataset to verify the pipeline works
+  # Debug: 2 samples per subset
   python evaluation/test_comparison_models.py \\
-    --model-type samed \\
+    --model samed \\
     --ckpt-path /path/to/sam_vit_b_01ec64.pth \\
     --lora-ckpt /path/to/samed_lora.pth \\
-    --test-image-path ./user_data/Datasets/SAMRI_train_test/ \\
-    --save-path ./Eval_results/ --device cuda --debug
+    --dataset-path /path/to/test/ /path/to/ZeroShot/ \\
+    --save-path results/samed_debug.pkl --debug
 """
 
 import os
@@ -81,9 +94,14 @@ def parse_args():
         description="Test comparison SAM-based models against the SAMRI NIfTI dataset.",
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    p.add_argument("--model-type", dest="model_type", required=True,
+    p.add_argument("--model", dest="model", required=True,
                    choices=["mcp_medsam", "samed", "medsa"],
                    help="Which comparison model to test.")
+    p.add_argument("--dataset-path", dest="dataset_path", nargs="+", required=True,
+                   metavar="PATH",
+                   help="One or two dataset root paths. "
+                        "Each root must contain subset folders with a testing/ sub-dir. "
+                        "First path → 'trained', second path (optional) → 'zero_shot'.")
     p.add_argument("--ckpt-path", dest="ckpt_path", required=True,
                    help="SAM ViT-B base checkpoint (.pth) for samed/medsa, "
                         "or the full MCP-MedSAM checkpoint for mcp_medsam.")
@@ -91,10 +109,8 @@ def parse_args():
                    help="[samed] Path to SAMed LoRA parameters checkpoint (.pth).")
     p.add_argument("--adapter-ckpt", dest="adapter_ckpt", default=None,
                    help="[medsa] Path to Medical-SAM-Adapter fine-tuned checkpoint (.pth).")
-    p.add_argument("--test-image-path", dest="test_image_path", required=True,
-                   help="Root of SAMRI_train_test/ (same as --test-image-path in test_vis.py).")
     p.add_argument("--save-path", dest="save_path", required=True,
-                   help="Directory where the output .pkl result file is written.")
+                   help="Output .pkl file path (e.g. results/samed.pkl).")
     p.add_argument("--device", dest="device", default="cuda",
                    choices=["cuda", "cpu", "mps"])
     p.add_argument("--lora-rank", dest="lora_rank", type=int, default=4,
@@ -102,21 +118,28 @@ def parse_args():
     p.add_argument("--num-workers", dest="num_workers", type=int, default=4,
                    help="DataLoader num_workers (default 4; set 0 for MPS / debugging).")
     p.add_argument("--debug", action="store_true",
-                   help="Debug mode: process only 2 samples per dataset to verify the "
+                   help="Debug mode: process only 2 samples per subset to verify the "
                         "pipeline runs end-to-end without errors.")
-    return p.parse_args()
+    args = p.parse_args()
+    if len(args.dataset_path) > 2:
+        p.error("--dataset-path accepts at most 2 paths (trained + zero-shot).")
+    return args
 
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Dataset helpers (same convention as test_vis.py)
 # ─────────────────────────────────────────────────────────────────────────────
 def get_testing_paths(root: str) -> list:
-    """Return sorted list of */testing/ subdirectories under root."""
-    return sorted(
-        ds + "/testing/"
-        for ds in sorted(glob(root.rstrip("/") + "/*"))
-        if os.path.isdir(ds)
-    )
+    """Return sorted list of <subset>/testing/ paths under root.
+
+    Only includes subsets that have an actual testing/ subdirectory so that
+    empty results are never silently created.
+    """
+    testing_dirs = []
+    for ds in sorted(glob(root.rstrip("/") + "/*")):
+        if os.path.isdir(ds) and os.path.isdir(ds + "/testing"):
+            testing_dirs.append(ds + "/testing/")
+    return testing_dirs
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -222,7 +245,7 @@ def infer_mcp_medsam(
     # ── CLIP text features (MR modality) ─────────────────────────────────────
     tokens     = tokenizer("MR Image", max_length=tokenizer.model_max_length,
                            padding="max_length", truncation=True, return_tensors="pt").input_ids
-    text_feat  = clip_model.get_text_features(tokens)          # (1, 512)
+    text_feat  = clip_model.get_text_features(tokens).detach()  # (1, 512)
     text_feat  = text_feat.unsqueeze(0).to(device)              # (1, 1, 512)
     cat_idx    = torch.tensor([1], device=device)               # MR = 1
 
@@ -485,15 +508,14 @@ def run_evaluation(infer_fn, test_loader, debug: bool = False) -> list:
 # ─────────────────────────────────────────────────────────────────────────────
 def main():
     args = parse_args()
-    os.makedirs(args.save_path, exist_ok=True)
 
     if args.debug:
-        print("[DEBUG MODE] Only 2 samples per dataset will be processed.")
+        print("[DEBUG MODE] Only 2 samples per subset will be processed.")
 
     # ── Load model and build the inference callable ──────────────────────────
-    print(f"[{args.model_type}] Loading model from: {args.ckpt_path}")
+    print(f"[{args.model}] Loading model from: {args.ckpt_path}")
 
-    if args.model_type == "mcp_medsam":
+    if args.model == "mcp_medsam":
         model, clip_model, tokenizer = load_mcp_medsam(args.ckpt_path, args.device)
         def infer_fn(img, msk):
             return infer_mcp_medsam(
@@ -501,43 +523,57 @@ def main():
                 img, gen_bboxes(msk, jitter=0), args.device,
             )
 
-    elif args.model_type == "samed":
+    elif args.model == "samed":
         if args.lora_ckpt is None:
-            raise ValueError("--lora-ckpt is required for --model-type samed")
+            raise ValueError("--lora-ckpt is required for --model samed")
         net = load_samed(args.ckpt_path, args.lora_ckpt, args.lora_rank, args.device)
         def infer_fn(img, msk):
             return infer_samed(net, img, args.device)
 
-    elif args.model_type == "medsa":
+    elif args.model == "medsa":
         net = load_medsa(args.ckpt_path, args.adapter_ckpt, args.device)
         def infer_fn(img, msk):
             return infer_medsa(net, img, msk, args.device)
 
-    # ── Discover testing subdirectories (same as test_vis.py) ────────────────
-    test_dirs = get_testing_paths(args.test_image_path)
-    if not test_dirs:
-        raise FileNotFoundError(
-            f"No dataset subdirectories found under: {args.test_image_path}"
-        )
-    print(f"Found {len(test_dirs)} test dataset(s):")
-    for d in test_dirs:
-        print(f"  {d}")
+    # ── Map dataset paths to split labels ────────────────────────────────────
+    split_labels = ["trained", "zero_shot"]
+    splits = list(zip(split_labels, args.dataset_path))   # [(label, path), ...]
 
-    # ── Iterate over datasets ─────────────────────────────────────────────────
+    # ── Helper: evaluate all subsets under one root ───────────────────────────
+    def _eval_split(root: str, label: str) -> dict:
+        test_dirs = get_testing_paths(root)
+        if not test_dirs:
+            raise FileNotFoundError(
+                f"No subset/testing/ directories found under [{label}]: {root}"
+            )
+        print(f"\n[{label}] Found {len(test_dirs)} subset(s) in: {root}")
+        for d in test_dirs:
+            print(f"  {d}")
+
+        split_record = {}
+        for test_dir in test_dirs:
+            subset_name = Path(test_dir).parts[-2]   # parts[-1]='testing', parts[-2]=subset_name
+            print(f"\n  [{label}] Processing: {subset_name}")
+            ds     = NiiDataset([test_dir], multi_mask=True, with_name=True)
+            loader = DataLoader(ds, batch_size=1, num_workers=args.num_workers)
+            split_record[subset_name] = run_evaluation(infer_fn, loader, debug=args.debug)
+        return split_record
+
+    # ── Run evaluation ────────────────────────────────────────────────────────
     final_record = {}
-    for test_dir in test_dirs:
-        ds_name = Path(test_dir).parts[-3]   # .../SAMRI_train_test/<DS_NAME>/testing/
-        print(f"\nProcessing: {ds_name}")
-        ds     = NiiDataset([test_dir], multi_mask=True, with_name=True)
-        loader = DataLoader(ds, batch_size=1, num_workers=args.num_workers)
-        final_record[ds_name] = run_evaluation(infer_fn, loader, debug=args.debug)
+    for label, root in splits:
+        final_record[label] = _eval_split(root, label)
 
     # ── Save results ──────────────────────────────────────────────────────────
-    suffix   = "_debug" if args.debug else ""
-    out_path = os.path.join(args.save_path, f"{args.model_type}{suffix}_results.pkl")
-    with open(out_path, "wb") as f:
+    os.makedirs(os.path.dirname(os.path.abspath(args.save_path)), exist_ok=True)
+    with open(args.save_path, "wb") as f:
         pickle.dump(final_record, f)
-    print(f"\nResults saved → {out_path}")
+
+    # ── Print summary ─────────────────────────────────────────────────────────
+    print(f"\nResults saved → {args.save_path}")
+    for label, subsets in final_record.items():
+        n_imgs = sum(len(v) for v in subsets.values())
+        print(f"  {label}: {len(subsets)} subset(s), {n_imgs} image(s) total")
 
 
 if __name__ == "__main__":
