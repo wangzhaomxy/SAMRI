@@ -30,35 +30,39 @@ Output pickle structure:
 
 Usage examples:
   # SAMed — trained + zero-shot in one run
-  python evaluation/test_comparison_models.py \\
-    --model samed \\
-    --ckpt-path /path/to/sam_vit_b_01ec64.pth \\
-    --lora-ckpt /path/to/samed_lora.pth \\
-    --dataset-path /path/to/test/ /path/to/ZeroShot/ \\
-    --save-path results/samed.pkl
+python evaluation/test_comparison_models.py \\
+--model samed \\
+--ckpt-path /scratch/user/s4670484/comparison_ckpt_samri/SAMed/sam_vit_b_01ec64.pth \\
+--lora-ckpt /scratch/user/s4670484/comparison_ckpt_samri/SAMed/epoch_159.pth \\
+--dataset-path /scratch/user/s4670484/Datasets/SAMRI_train_test /scratch/user/s4670484/Datasets/Zeroshot/ \\
+--save-path /scratch/user/s4670484/Eval_results/SAMRI_comparison/samed.pkl
+--debug
 
   # MCP-MedSAM — single dataset root
-  python evaluation/test_comparison_models.py \\
-    --model mcp_medsam \\
-    --ckpt-path /path/to/mcp_medsam.pth \\
-    --dataset-path /path/to/test/ \\
-    --save-path results/mcp_medsam.pkl
+python evaluation/test_comparison_models.py \\
+--model mcp_medsam \\
+--ckpt-path /scratch/user/s4670484/comparison_ckpt_samri/mcp_medsam/mcp_best.pth \\
+--dataset-path /scratch/user/s4670484/Datasets/SAMRI_train_test \\
+--save-path /scratch/user/s4670484/Eval_results/SAMRI_comparison/mcp_medsam.pkl
+--debug
 
   # Medical-SAM-Adapter
-  python evaluation/test_comparison_models.py \\
-    --model medsa \\
-    --ckpt-path /path/to/sam_vit_b_01ec64.pth \\
-    --adapter-ckpt /path/to/medsa_checkpoint.pth \\
-    --dataset-path /path/to/test/ /path/to/ZeroShot/ \\
-    --save-path results/medsa.pkl
+python evaluation/test_comparison_models.py \\
+--model medsa \\
+--ckpt-path /scratch/user/s4670484/comparison_ckpt_samri/medSA/sam_vit_b_01ec64.pth \\
+--adapter-ckpt /scratch/user/s4670484/comparison_ckpt_samri/medSA/Kidney_Tumor_sam_128.pth \\
+--dataset-path /scratch/user/s4670484/Datasets/SAMRI_train_test /scratch/user/s4670484/Datasets/Zeroshot/ \\
+--save-path /scratch/user/s4670484/Eval_results/SAMRI_comparison/medsa.pkl
+--debug
 
   # Debug: 2 samples per subset
   python evaluation/test_comparison_models.py \\
     --model samed \\
-    --ckpt-path /path/to/sam_vit_b_01ec64.pth \\
-    --lora-ckpt /path/to/samed_lora.pth \\
-    --dataset-path /path/to/test/ /path/to/ZeroShot/ \\
-    --save-path results/samed_debug.pkl --debug
+    --ckpt-path /scratch/user/s4670484/comparison_ckpt_samri/SAMed/sam_vit_b_01ec64.pth \\
+    --lora-ckpt /scratch/user/s4670484/comparison_ckpt_samri/SAMed/epoch_159.pth \\
+    --dataset-path /scratch/user/s4670484/Datasets/SAMRI_train_test /scratch/user/s4670484/Datasets/Zeroshot/ \\
+    --save-path /scratch/user/s4670484/Eval_results/SAMRI_comparison/samed_debug.pkl 
+    --debug
 """
 
 import os
