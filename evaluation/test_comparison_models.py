@@ -379,7 +379,7 @@ def load_samed(ckpt: str, lora_ckpt: str, rank: int, device: str):
 
 
 @torch.no_grad()
-def infer_samed(net, image_hwc: np.ndarray, device: str, label: int) -> np.ndarray:
+def infer_samed(net, image_hwc: np.ndarray, device: str, _label: int) -> np.ndarray:
     """
     Preprocessing:
       - Extract grayscale (channel 0), normalize to [0, 1], zoom to 512×512.
@@ -404,8 +404,12 @@ def infer_samed(net, image_hwc: np.ndarray, device: str, label: int) -> np.ndarr
     outputs  = net(tensor, multimask_output=False, image_size=512)
     logits   = outputs["masks"]                                       # (1, C, 512, 512)
     logits   = F.interpolate(logits, size=(H, W), mode="bilinear", align_corners=False)
+    # SAMed is trained with a fixed class vocabulary (e.g. Synapse organs) that
+    # does not map to SAMRI GT label values.  We therefore evaluate the binary
+    # foreground prediction (any non-background class predicted) against each
+    # GT label, consistent with how MCP-MedSAM and MedSA are evaluated.
     argmax   = torch.argmax(logits, dim=1).squeeze(0).cpu().numpy()   # (H, W) int
-    return (argmax == label).astype(np.uint8)
+    return (argmax != 0).astype(np.uint8)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
