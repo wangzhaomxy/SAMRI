@@ -347,8 +347,20 @@ def load_samed(ckpt: str, lora_ckpt: str, rank: int, device: str):
         from segment_anything import sam_model_registry as samed_registry
         from sam_lora_image_encoder import LoRA_Sam
 
+        # Auto-detect num_classes from the LoRA checkpoint so the mask decoder
+        # head matches the saved weights.
+        # mask_tokens.weight shape = [num_classes + 1, 256] in SAMed's decoder.
+        lora_state = torch.load(lora_ckpt, map_location="cpu")
+        lora_sam_dict = lora_state.get("model", lora_state)
+        token_shape = lora_sam_dict.get(
+            "sam.mask_decoder.mask_tokens.weight",
+            lora_sam_dict.get("mask_decoder.mask_tokens.weight", None),
+        )
+        num_classes = (token_shape.shape[0] - 1) if token_shape is not None else 1
+        print(f"  [samed] auto-detected num_classes={num_classes} from LoRA checkpoint")
+
         sam, _ = samed_registry["vit_b"](
-            image_size=512, num_classes=1,
+            image_size=512, num_classes=num_classes,
             checkpoint=ckpt,
             pixel_mean=[0, 0, 0], pixel_std=[1, 1, 1],
         )
