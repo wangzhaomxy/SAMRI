@@ -379,11 +379,16 @@ def load_samed(ckpt: str, lora_ckpt: str, rank: int, device: str):
 
 
 @torch.no_grad()
-def infer_samed(net, image_hwc: np.ndarray, device: str) -> np.ndarray:
+def infer_samed(net, image_hwc: np.ndarray, device: str, label: int) -> np.ndarray:
     """
     Preprocessing:
       - Extract grayscale (channel 0), normalize to [0, 1], zoom to 512×512.
       - Replicate to 3 channels; forward via SAMed's prompt-free LoRA path.
+
+    SAMed is a multi-class model (num_classes channels). We take argmax over
+    the class dimension to get a label map, then return (argmax == label) as
+    the binary prediction for the requested GT label.
+
     Returns binary mask (H, W) uint8 {0, 1}.
     """
     from einops import repeat
@@ -396,10 +401,11 @@ def infer_samed(net, image_hwc: np.ndarray, device: str) -> np.ndarray:
     tensor  = torch.from_numpy(gray).unsqueeze(0).unsqueeze(0).float().to(device)
     tensor  = repeat(tensor, "b c h w -> b (r c) h w", r=3)
 
-    outputs = net(tensor, multimask_output=False, image_size=512)
-    pred    = torch.sigmoid(outputs["masks"])
-    pred    = F.interpolate(pred, size=(H, W), mode="bilinear", align_corners=False)
-    return (pred.squeeze().cpu().numpy() > 0.5).astype(np.uint8)
+    outputs  = net(tensor, multimask_output=False, image_size=512)
+    logits   = outputs["masks"]                                       # (1, C, 512, 512)
+    logits   = F.interpolate(logits, size=(H, W), mode="bilinear", align_corners=False)
+    argmax   = torch.argmax(logits, dim=1).squeeze(0).cpu().numpy()   # (H, W) int
+    return (argmax == label).astype(np.uint8)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -520,7 +526,7 @@ def run_evaluation(infer_fn, test_loader, debug: bool = False) -> list:
         dice_l, hd_l, msd_l, pix_l, area_l, lbl_l = [], [], [], [], [], []
 
         for each_mask, label in MaskSplit(mask):
-            pred = infer_fn(image, each_mask)
+            pred = infer_fn(image, each_mask, int(label))
 
             dice_l.append(dice_similarity(each_mask, pred))
             hd_l.append(sd_hausdorff_distance(each_mask, pred))
@@ -561,7 +567,7 @@ def main():
 
     if args.model == "mcp_medsam":
         model, clip_model, tokenizer = load_mcp_medsam(args.ckpt_path, args.device)
-        def infer_fn(img, msk):
+        def infer_fn(img, msk, _label):
             return infer_mcp_medsam(
                 model, clip_model, tokenizer,
                 img, gen_bboxes(msk, jitter=0), args.device,
@@ -571,12 +577,12 @@ def main():
         if args.lora_ckpt is None:
             raise ValueError("--lora-ckpt is required for --model samed")
         net = load_samed(args.ckpt_path, args.lora_ckpt, args.lora_rank, args.device)
-        def infer_fn(img, msk):
-            return infer_samed(net, img, args.device)
+        def infer_fn(img, msk, label):
+            return infer_samed(net, img, args.device, label)
 
     elif args.model == "medsa":
         net = load_medsa(args.ckpt_path, args.adapter_ckpt, args.device)
-        def infer_fn(img, msk):
+        def infer_fn(img, msk, _label):
             return infer_medsa(net, img, msk, args.device)
 
     # ── Map dataset paths to split labels ────────────────────────────────────
