@@ -404,7 +404,7 @@ def infer_samed(net, image_hwc: np.ndarray, device: str, _label: int) -> np.ndar
     tensor  = torch.from_numpy(gray).unsqueeze(0).unsqueeze(0).float().to(device)
     tensor  = repeat(tensor, "b c h w -> b (r c) h w", r=3)
 
-    outputs  = net(tensor, multimask_output=False, image_size=512)
+    outputs  = net(tensor, multimask_output=True, image_size=512)
     logits   = outputs["masks"]                                       # (1, C, 512, 512)
     logits   = F.interpolate(logits, size=(H, W), mode="bilinear", align_corners=False)
     # SAMed is trained with a fixed class vocabulary (e.g. Synapse organs) that
