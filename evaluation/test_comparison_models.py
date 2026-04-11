@@ -30,37 +30,37 @@ Output pickle structure:
 
 Usage examples:
   # SAMed — trained + zero-shot in one run
-python evaluation/test_comparison_models.py \\
---model samed \\
---ckpt-path /scratch/user/s4670484/comparison_ckpt_samri/SAMed/sam_vit_b_01ec64.pth \\
---lora-ckpt /scratch/user/s4670484/comparison_ckpt_samri/SAMed/epoch_159.pth \\
---dataset-path /scratch/user/s4670484/Datasets/SAMRI_train_test /scratch/user/s4670484/Datasets/Zeroshot/ \\
---save-path /scratch/user/s4670484/Eval_results/SAMRI_comparison/samed.pkl
+python evaluation/test_comparison_models.py \
+--model samed \
+--ckpt-path /scratch/user/s4670484/comparison_ckpt_samri/SAMed/sam_vit_b_01ec64.pth \
+--lora-ckpt /scratch/user/s4670484/comparison_ckpt_samri/SAMed/epoch_159.pth \
+--dataset-path /scratch/user/s4670484/Datasets/SAMRI_train_test /scratch/user/s4670484/Datasets/Zeroshot/ \
+--save-path /scratch/user/s4670484/Eval_results/SAMRI_comparison/samed.pkl \
 --debug
 
   # MCP-MedSAM — single dataset root
-python evaluation/test_comparison_models.py \\
---model mcp_medsam \\
---ckpt-path /scratch/user/s4670484/comparison_ckpt_samri/mcp_medsam/mcp_best.pth \\
---dataset-path /scratch/user/s4670484/Datasets/SAMRI_train_test \\
---save-path /scratch/user/s4670484/Eval_results/SAMRI_comparison/mcp_medsam.pkl
+python evaluation/test_comparison_models.py \
+--model mcp_medsam \
+--ckpt-path /scratch/user/s4670484/comparison_ckpt_samri/mcp_medsam/mcp_best.pth \
+--dataset-path /scratch/user/s4670484/Datasets/SAMRI_train_test \
+--save-path /scratch/user/s4670484/Eval_results/SAMRI_comparison/mcp_medsam.pkl \
 --debug
 
   # Medical-SAM-Adapter
-python evaluation/test_comparison_models.py \\
---model medsa \\
---ckpt-path /scratch/user/s4670484/comparison_ckpt_samri/medSA/sam_vit_b_01ec64.pth \\
---adapter-ckpt /scratch/user/s4670484/comparison_ckpt_samri/medSA/Kidney_Tumor_sam_128.pth \\
---dataset-path /scratch/user/s4670484/Datasets/SAMRI_train_test /scratch/user/s4670484/Datasets/Zeroshot/ \\
---save-path /scratch/user/s4670484/Eval_results/SAMRI_comparison/medsa.pkl
+python evaluation/test_comparison_models.py \
+--model medsa \
+--ckpt-path /scratch/user/s4670484/comparison_ckpt_samri/medSA/sam_vit_b_01ec64.pth \
+--adapter-ckpt /scratch/user/s4670484/comparison_ckpt_samri/medSA/Kidney_Tumor_sam_128.pth \
+--dataset-path /scratch/user/s4670484/Datasets/SAMRI_train_test /scratch/user/s4670484/Datasets/Zeroshot/ \
+--save-path /scratch/user/s4670484/Eval_results/SAMRI_comparison/medsa.pkl \
 --debug
 
   # Debug: 2 samples per subset
-  python evaluation/test_comparison_models.py \\
-    --model samed \\
-    --ckpt-path /scratch/user/s4670484/comparison_ckpt_samri/SAMed/sam_vit_b_01ec64.pth \\
-    --lora-ckpt /scratch/user/s4670484/comparison_ckpt_samri/SAMed/epoch_159.pth \\
-    --dataset-path /scratch/user/s4670484/Datasets/SAMRI_train_test /scratch/user/s4670484/Datasets/Zeroshot/ \\
+  python evaluation/test_comparison_models.py \
+    --model samed \
+    --ckpt-path /scratch/user/s4670484/comparison_ckpt_samri/SAMed/sam_vit_b_01ec64.pth \
+    --lora-ckpt /scratch/user/s4670484/comparison_ckpt_samri/SAMed/epoch_159.pth \
+    --dataset-path /scratch/user/s4670484/Datasets/SAMRI_train_test /scratch/user/s4670484/Datasets/Zeroshot/ \
     --save-path /scratch/user/s4670484/Eval_results/SAMRI_comparison/samed_debug.pkl 
     --debug
 """
@@ -87,7 +87,35 @@ sys.path.insert(0, str(SAMRI_ROOT))
 
 from utils.dataloader import NiiDataset
 from utils.utils import MaskSplit, gen_points, gen_bboxes
-from utils.losses import dice_similarity, sd_hausdorff_distance, sd_mean_surface_distance
+try:
+    # Python 3.10+ environments (MCP-MedSAM, MedSA)
+    from utils.losses import dice_similarity, sd_hausdorff_distance, sd_mean_surface_distance
+except TypeError:
+    # Python 3.8 fallback (SAMed conda env) — utils.losses uses X|Y union
+    # syntax that requires Python 3.10+; define the three metrics inline.
+    from scipy import ndimage as _ndimage
+
+    def dice_similarity(y_true, y_pred, square=False, smooth=1e-10):
+        intersection = np.sum(y_true * y_pred)
+        sum_of_pred  = np.sum(np.square(y_pred) if square else y_pred)
+        sum_of_true  = np.sum(np.square(y_true) if square else y_true)
+        return (2.0 * intersection + smooth) / (sum_of_pred + sum_of_true + smooth)
+
+    def _surface_distance(input1, input2, sampling=1, connectivity=1):
+        i1   = np.atleast_1d(input1.astype(int))
+        i2   = np.atleast_1d(input2.astype(int))
+        conn = _ndimage.morphology.generate_binary_structure(i1.ndim, connectivity)
+        S      = i1 - _ndimage.morphology.binary_erosion(i1, conn)
+        Sprime = i2 - _ndimage.morphology.binary_erosion(i2, conn)
+        dta = _ndimage.morphology.distance_transform_edt((1 - S),      sampling)
+        dtb = _ndimage.morphology.distance_transform_edt((1 - Sprime), sampling)
+        return np.concatenate([np.ravel(dta[Sprime != 0]), np.ravel(dtb[S != 0])])
+
+    def sd_hausdorff_distance(input1, input2, sampling=1, connectivity=1):
+        return _surface_distance(input1, input2, sampling, connectivity).max()
+
+    def sd_mean_surface_distance(input1, input2, sampling=1, connectivity=1):
+        return _surface_distance(input1, input2, sampling, connectivity).mean()
 
 
 # ─────────────────────────────────────────────────────────────────────────────
