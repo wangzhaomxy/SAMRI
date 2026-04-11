@@ -394,12 +394,13 @@ def infer_samed(net, image_hwc: np.ndarray, device: str, _label: int) -> np.ndar
     from einops import repeat
 
     H, W  = image_hwc.shape[:2]
-    # SAMed uses pixel_mean=[0,0,0], pixel_std=[1,1,1] — no normalisation.
-    # The model expects raw [0, 255] float values, same as Synapse training.
-    gray  = image_hwc[:, :, 0].astype(np.float32)        # [0, 255]
+    # SAMed's Synapse dataloader normalises each slice to [0, 1] before
+    # passing to the model.  pixel_mean=[0,0,0], pixel_std=[1,1,1] means
+    # SAM's preprocess() is a no-op, so the model truly expects [0, 1] input.
+    gray  = image_hwc[:, :, 0].astype(np.float32) / 255.0   # [0, 1]
     if H != 512 or W != 512:
         gray = zoom(gray, (512 / H, 512 / W), order=3)
-    gray  = np.clip(gray, 0.0, 255.0)                    # guard against bicubic overshoot
+    gray  = np.clip(gray, 0.0, 1.0)                          # guard bicubic overshoot
 
     tensor  = torch.from_numpy(gray).unsqueeze(0).unsqueeze(0).float().to(device)
     tensor  = repeat(tensor, "b c h w -> b (r c) h w", r=3)
