@@ -393,7 +393,7 @@ def infer_samed(net, image_hwc: np.ndarray, device: str) -> np.ndarray:
 # ─────────────────────────────────────────────────────────────────────────────
 # 3. Medical-SAM-Adapter (MedSA)  –  point prompt + adapter, 1024-input
 # ─────────────────────────────────────────────────────────────────────────────
-def load_medsa(ckpt: str, adapter_ckpt: str | None, device: str):
+def load_medsa(ckpt: str, adapter_ckpt, device: str):  # adapter_ckpt: str or None
     """
     SAM ViT-B with AdapterBlock modifications (Medical-SAM-Adapter-main/models/sam).
     Loads the base SAM weights from *ckpt*, then overlays adapter weights from
