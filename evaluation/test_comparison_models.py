@@ -413,10 +413,6 @@ def infer_samed(net, image_hwc: np.ndarray, device: str, _label: int) -> np.ndar
     # foreground prediction (any non-background class predicted) against each
     # GT label, consistent with how MCP-MedSAM and MedSA are evaluated.
     argmax   = torch.argmax(logits, dim=1).squeeze(0).cpu().numpy()   # (H, W) int
-    unique, counts = np.unique(argmax, return_counts=True)
-    pct = counts / argmax.size * 100
-    print(f"    [samed argmax] C={logits.shape[1]} " +
-          " ".join(f"cls{int(v)}={p:.1f}%" for v, p in zip(unique, pct)))
     return (argmax != 0).astype(np.uint8)
 
 
@@ -508,6 +504,16 @@ def infer_medsa(net, image_hwc: np.ndarray, mask_gt: np.ndarray, device: str) ->
 # ─────────────────────────────────────────────────────────────────────────────
 # Evaluation loop  (mirrors get_test_record_from_ds in utils/visual.py)
 # ─────────────────────────────────────────────────────────────────────────────
+def _collate_fn(batch):
+    """PyTorch 2.4+ dropped auto-inference of numpy.uint8 in the default
+    collate.  Explicitly cast arrays before stacking to avoid the error."""
+    images     = torch.from_numpy(np.stack([b[0] for b in batch]).astype(np.uint8))
+    masks      = torch.from_numpy(np.stack([b[1] for b in batch]).astype(np.int32))
+    img_paths  = [b[2] for b in batch]
+    mask_paths = [b[3] for b in batch]
+    return images, masks, img_paths, mask_paths
+
+
 def run_evaluation(infer_fn, test_loader, debug: bool = False) -> list:
     """
     Iterate over *test_loader* (NiiDataset with multi_mask=True, with_name=True),
@@ -617,7 +623,8 @@ def main():
             subset_name = Path(test_dir).parts[-2]   # parts[-1]='testing', parts[-2]=subset_name
             print(f"\n  [{label}] Processing: {subset_name}")
             ds     = NiiDataset([test_dir], multi_mask=True, with_name=True)
-            loader = DataLoader(ds, batch_size=1, num_workers=args.num_workers)
+            loader = DataLoader(ds, batch_size=1, num_workers=args.num_workers,
+                               collate_fn=_collate_fn)
             split_record[subset_name] = run_evaluation(infer_fn, loader, debug=args.debug)
         return split_record
 
