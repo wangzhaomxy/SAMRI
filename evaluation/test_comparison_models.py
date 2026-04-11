@@ -412,6 +412,10 @@ def infer_samed(net, image_hwc: np.ndarray, device: str, _label: int) -> np.ndar
     # foreground prediction (any non-background class predicted) against each
     # GT label, consistent with how MCP-MedSAM and MedSA are evaluated.
     argmax   = torch.argmax(logits, dim=1).squeeze(0).cpu().numpy()   # (H, W) int
+    unique, counts = np.unique(argmax, return_counts=True)
+    pct = counts / argmax.size * 100
+    print(f"    [samed argmax] C={logits.shape[1]} " +
+          " ".join(f"cls{int(v)}={p:.1f}%" for v, p in zip(unique, pct)))
     return (argmax != 0).astype(np.uint8)
 
 
