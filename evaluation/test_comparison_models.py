@@ -441,8 +441,16 @@ def load_medsa(ckpt: str, adapter_ckpt, device: str):  # adapter_ckpt: str or No
 
     if adapter_ckpt is not None:
         state = torch.load(adapter_ckpt, map_location="cpu")
-        state_dict = state.get("state_dict", state)
-        net.load_state_dict(state_dict, strict=False)
+        # Try common checkpoint wrapper keys before falling back to the raw dict
+        for key in ("state_dict", "model", "net", "params"):
+            if key in state:
+                state = state[key]
+                break
+        matched  = {k: v for k, v in state.items() if k in dict(net.named_parameters())}
+        missing  = [k for k in dict(net.named_parameters()) if k not in state]
+        print(f"  [medsa] adapter ckpt: {len(state)} keys total, "
+              f"{len(matched)} matched, {len(missing)} missing in model")
+        net.load_state_dict(state, strict=False)
 
     return net.eval()
 
