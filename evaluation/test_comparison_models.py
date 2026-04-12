@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Test comparison SAM-based models (MCP-MedSAM, SAMed, MedSA) on NIfTI datasets.
+Test comparison SAM-based models (MCP-MedSAM, SAMed, MedSA, SAM-Med2D) on NIfTI datasets.
 
 Dataset folder structure expected under each root path:
   <root>/
@@ -17,6 +17,7 @@ Prompt strategy per model:
   mcp_medsam  - box prompt + CLIP features (TinyViT, 256 input)
   samed       - prompt-free LoRA forward (SAM ViT-B with LoRA, 512 input)
   medsa       - point prompt + adapter (SAM ViT-B with adapters, 1024 input)
+  sam_med2d   - box prompt + adapter (SAM ViT-B with adapters, 256 input)
 
 All prompts are derived from the ground-truth mask, matching the protocol in test_vis.py.
 
@@ -55,13 +56,21 @@ python evaluation/test_comparison_models.py \
 --save-path /scratch/user/s4670484/Eval_results/SAMRI_comparison/medsa.pkl \
 --debug
 
+  # SAM-Med2D
+python evaluation/test_comparison_models.py \
+--model sam_med2d \
+--ckpt-path /scratch/user/s4670484/comparison_ckpt_samri/SAM-Med2D/sam-med2d_b.pth \
+--dataset-path /scratch/user/s4670484/Datasets/SAMRI_train_test /scratch/user/s4670484/Datasets/Zeroshot/ \
+--save-path /scratch/user/s4670484/Eval_results/SAMRI_comparison/sam_med2d.pkl \
+--debug
+
   # Debug: 2 samples per subset
   python evaluation/test_comparison_models.py \
     --model samed \
     --ckpt-path /scratch/user/s4670484/comparison_ckpt_samri/SAMed/sam_vit_b_01ec64.pth \
     --lora-ckpt /scratch/user/s4670484/comparison_ckpt_samri/SAMed/epoch_159.pth \
     --dataset-path /scratch/user/s4670484/Datasets/SAMRI_train_test /scratch/user/s4670484/Datasets/Zeroshot/ \
-    --save-path /scratch/user/s4670484/Eval_results/SAMRI_comparison/samed_debug.pkl 
+    --save-path /scratch/user/s4670484/Eval_results/SAMRI_comparison/samed_debug.pkl
     --debug
 """
 
@@ -127,7 +136,7 @@ def parse_args():
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     p.add_argument("--model", dest="model", required=True,
-                   choices=["mcp_medsam", "samed", "medsa"],
+                   choices=["mcp_medsam", "samed", "medsa", "sam_med2d"],
                    help="Which comparison model to test.")
     p.add_argument("--dataset-path", dest="dataset_path", nargs="+", required=True,
                    metavar="PATH",
@@ -502,6 +511,81 @@ def infer_medsa(net, image_hwc: np.ndarray, mask_gt: np.ndarray, device: str) ->
 
 
 # ─────────────────────────────────────────────────────────────────────────────
+# 4. SAM-Med2D  –  box prompt + adapter, 256-input
+# ─────────────────────────────────────────────────────────────────────────────
+def load_sam_med2d(ckpt: str, device: str):
+    """
+    SAM ViT-B with adapter blocks, fine-tuned for 2D medical image segmentation.
+    Uses SAM-Med2D-main/segment_anything (its own patched build with encoder adapters).
+    The checkpoint bundles base SAM weights + adapter weights into a single file.
+
+    The SAM-Med2D segment_anything package conflicts with the top-level one, so
+    we follow the same stash/restore pattern used for SAMed.
+    """
+    sam_med2d_dir = str(EVAL_DIR / "SAM-Med2D-main")
+
+    # Stash any existing segment_anything modules so other models are unaffected
+    _cached_sa = {k: v for k, v in sys.modules.items()
+                  if k == "segment_anything" or k.startswith("segment_anything.")}
+    for k in list(_cached_sa):
+        del sys.modules[k]
+
+    sys.path.insert(0, sam_med2d_dir)
+    try:
+        from segment_anything import sam_model_registry as sammed2d_registry
+
+        sam_args = types.SimpleNamespace(
+            image_size=256,
+            sam_checkpoint=ckpt,
+            encoder_adapter=True,
+        )
+        net = sammed2d_registry["vit_b"](sam_args).to(device)
+    finally:
+        sys.path.remove(sam_med2d_dir)
+        for k in list(sys.modules.keys()):
+            if k == "segment_anything" or k.startswith("segment_anything."):
+                del sys.modules[k]
+        sys.modules.update(_cached_sa)
+
+    return net.eval()
+
+
+@torch.no_grad()
+def infer_sam_med2d(net, image_hwc: np.ndarray, mask_gt: np.ndarray, device: str) -> np.ndarray:
+    """
+    Preprocessing:
+      - Pass the raw uint8 HxWx3 image directly; SAM-Med2D's preprocess() inside
+        forward() normalises with its pixel_mean/std and pads to 256×256.
+        SAMRI images are already 256×256, so no resizing is required.
+      - Box prompt derived from the GT mask (already in 256 coordinate space).
+    Postprocessing:
+      - forward() calls postprocess_masks() then thresholds with mask_threshold.
+        The returned masks are already binary (H, W).
+    Returns binary mask (H, W) uint8 {0, 1}.
+    """
+    H, W = image_hwc.shape[:2]
+
+    # Image tensor: (3, H, W) float — preprocess() is called inside forward()
+    tensor = torch.from_numpy(image_hwc).permute(2, 0, 1).float().to(device)
+
+    # Box prompt in 256 coordinate space (matches image size)
+    bbox  = gen_bboxes(mask_gt, jitter=0)                              # [x1, y1, x2, y2]
+    box_t = torch.as_tensor(bbox[None, :], dtype=torch.float, device=device)  # (1, 4)
+
+    outputs = net([{
+        "image":         tensor,
+        "original_size": (H, W),
+        "boxes":         box_t,
+    }], multimask_output=True)
+
+    # Pick the mask with the highest predicted IOU score
+    iou   = outputs[0]["iou_predictions"]   # (1, 3)
+    masks = outputs[0]["masks"].float()     # (1, 3, H, W) — already thresholded binary
+    best  = int(iou.argmax(dim=1)[0])
+    return masks[0, best, :, :].cpu().numpy().astype(np.uint8)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Evaluation loop  (mirrors get_test_record_from_ds in utils/visual.py)
 # ─────────────────────────────────────────────────────────────────────────────
 def _collate_fn(batch):
@@ -602,6 +686,11 @@ def main():
         net = load_medsa(args.ckpt_path, args.adapter_ckpt, args.device)
         def infer_fn(img, msk, _label):
             return infer_medsa(net, img, msk, args.device)
+
+    elif args.model == "sam_med2d":
+        net = load_sam_med2d(args.ckpt_path, args.device)
+        def infer_fn(img, msk, _label):
+            return infer_sam_med2d(net, img, msk, args.device)
 
     # ── Map dataset paths to split labels ────────────────────────────────────
     split_labels = ["trained", "zero_shot"]
