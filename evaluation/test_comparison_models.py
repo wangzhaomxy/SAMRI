@@ -468,37 +468,33 @@ def infer_medsa(net, image_hwc: np.ndarray, mask_gt: np.ndarray, device: str) ->
     H, W = image_hwc.shape[:2]
     sz   = 1024
 
-    # Resize to sz×sz (values remain in [0, 255] float before SAM normalisation)
-    tensor = torch.from_numpy(image_hwc).permute(2, 0, 1).float()
-    tensor = TF.resize(tensor, [sz, sz]).unsqueeze(0).to(device)
-    # preprocess: normalise + pad. We resized directly to (sz, sz) with no
-    # padding, so input_size == (sz, sz) for postprocess_masks below.
-    tensor = net.preprocess(tensor)
+    # Raw image tensor — forward_test() calls preprocess() internally
+    tensor_raw = torch.from_numpy(image_hwc).permute(2, 0, 1).float()
+    tensor_raw = TF.resize(tensor_raw, [sz, sz]).to(device)          # (3, 1024, 1024)
 
-    # Point from GT mask (center of mass), scaled to 1024
-    pt_orig   = gen_points(mask_gt)   # [[x, y]] in original image coords
+    # Point prompt in 1024×1024 coordinate space
+    pt_orig   = gen_points(mask_gt)                                   # [[x, y]]
     pt_scaled = np.array(
         [[pt_orig[0][0] * sz / W, pt_orig[0][1] * sz / H]], dtype=np.float32
     )
     pt_coords = torch.tensor(pt_scaled, device=device).unsqueeze(0)  # (1, 1, 2)
-    pt_labels = torch.ones(1, 1, dtype=torch.int, device=device)      # (1, 1)
+    pt_labels = torch.ones(1, 1, dtype=torch.int, device=device)     # (1, 1)
 
-    emb = net.image_encoder(tensor)
-    sparse_emb, dense_emb = net.prompt_encoder(
-        points=(pt_coords, pt_labels), boxes=None, masks=None
-    )
-    low_res_pred, _ = net.mask_decoder(
-        image_embeddings=emb,
-        image_pe=net.prompt_encoder.get_dense_pe(),
-        sparse_prompt_embeddings=sparse_emb,
-        dense_prompt_embeddings=dense_emb,
-        multimask_output=False,
-    )
-    # low_res_pred: (1, 1, 256, 256) — decoder logits in 1024×1024 coord space.
-    # postprocess_masks: upsample 256→1024, crop to input_size, resize to (H, W).
-    pred = net.postprocess_masks(low_res_pred, input_size=(sz, sz), original_size=(H, W))
-    pred = torch.sigmoid(pred)
-    return (pred.squeeze().cpu().numpy() > 0.5).astype(np.uint8)
+    # Use SAM's forward_test path — handles preprocess, encoder, decoder, and
+    # postprocess internally, including correct mask thresholding.
+    outputs = net([{
+        "image":        tensor_raw,
+        "original_size": (H, W),
+        "point_coords": pt_coords,
+        "point_labels": pt_labels,
+    }], multimask_output=True)
+
+    # outputs[0]["masks"]: (1, 3, H, W) binary (already > mask_threshold)
+    # outputs[0]["iou_predictions"]: (1, 3) — pick the best-scoring mask
+    iou   = outputs[0]["iou_predictions"]                             # (1, 3)
+    masks = outputs[0]["masks"].float()                               # (1, 3, H, W)
+    best  = int(iou.argmax(dim=1)[0])
+    return masks[0, best, :, :].cpu().numpy().astype(np.uint8)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
