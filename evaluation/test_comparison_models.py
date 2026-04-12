@@ -42,7 +42,7 @@ python evaluation/test_comparison_models.py \
 python evaluation/test_comparison_models.py \
 --model mcp_medsam \
 --ckpt-path /scratch/user/s4670484/comparison_ckpt_samri/mcp_medsam/mcp_best.pth \
---dataset-path /scratch/user/s4670484/Datasets/SAMRI_train_test \
+--dataset-path /scratch/user/s4670484/Datasets/SAMRI_train_test /scratch/user/s4670484/Datasets/Zeroshot/ \
 --save-path /scratch/user/s4670484/Eval_results/SAMRI_comparison/mcp_medsam.pkl \
 --debug
 
@@ -446,10 +446,6 @@ def load_medsa(ckpt: str, adapter_ckpt, device: str):  # adapter_ckpt: str or No
             if key in state:
                 state = state[key]
                 break
-        matched  = {k: v for k, v in state.items() if k in dict(net.named_parameters())}
-        missing  = [k for k in dict(net.named_parameters()) if k not in state]
-        print(f"  [medsa] adapter ckpt: {len(state)} keys total, "
-              f"{len(matched)} matched, {len(missing)} missing in model")
         net.load_state_dict(state, strict=False)
 
     return net.eval()
