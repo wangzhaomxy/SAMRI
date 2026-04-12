@@ -59,7 +59,7 @@ python evaluation/test_comparison_models.py \
   # SAM-Med2D
 python evaluation/test_comparison_models.py \
 --model sam_med2d \
---ckpt-path /scratch/user/s4670484/comparison_ckpt_samri/SAM-Med2D/sam-med2d_b.pth \
+--ckpt-path /scratch/user/s4670484/comparison_ckpt_samri/SAM_Med2D/sam-med2d_b.pth \
 --dataset-path /scratch/user/s4670484/Datasets/SAMRI_train_test /scratch/user/s4670484/Datasets/Zeroshot/ \
 --save-path /scratch/user/s4670484/Eval_results/SAMRI_comparison/sam_med2d.pkl \
 --debug
@@ -553,34 +553,43 @@ def load_sam_med2d(ckpt: str, device: str):
 @torch.no_grad()
 def infer_sam_med2d(net, image_hwc: np.ndarray, mask_gt: np.ndarray, device: str) -> np.ndarray:
     """
+    SAM-Med2D's sam_model.py forward() differs from standard SAM:
+      - Takes a single dict (not a list of dicts).
+      - Returns a single dict (not a list of dicts).
+      - Does NOT call preprocess() internally — image must be pre-normalised.
+      - Does NOT threshold masks — "masks" are raw logits; threshold manually.
+
     Preprocessing:
-      - Pass the raw uint8 HxWx3 image directly; SAM-Med2D's preprocess() inside
-        forward() normalises with its pixel_mean/std and pads to 256×256.
-        SAMRI images are already 256×256, so no resizing is required.
-      - Box prompt derived from the GT mask (already in 256 coordinate space).
-    Postprocessing:
-      - forward() calls postprocess_masks() then thresholds with mask_threshold.
-        The returned masks are already binary (H, W).
+      - Call net.preprocess() to normalise with pixel_mean/std and pad to 256×256.
+        SAMRI images are already 256×256, so padding is a no-op.
+      - Add batch dim: (3, 256, 256) → (1, 3, 256, 256).
+      - Box prompt derived from the GT mask (in 256 coordinate space).
+
     Returns binary mask (H, W) uint8 {0, 1}.
     """
     H, W = image_hwc.shape[:2]
 
-    # Image tensor: (3, H, W) float — preprocess() is called inside forward()
-    tensor = torch.from_numpy(image_hwc).permute(2, 0, 1).float().to(device)
+    # Normalise + pad — must be done explicitly (not inside forward())
+    tensor = torch.from_numpy(image_hwc).permute(2, 0, 1).float().to(device)  # (3, H, W)
+    tensor = net.preprocess(tensor).unsqueeze(0)                               # (1, 3, 256, 256)
 
-    # Box prompt in 256 coordinate space (matches image size)
-    bbox  = gen_bboxes(mask_gt, jitter=0)                              # [x1, y1, x2, y2]
+    # Box prompt: (1, 4) — one box in 256 coordinate space
+    bbox  = gen_bboxes(mask_gt, jitter=0)
     box_t = torch.as_tensor(bbox[None, :], dtype=torch.float, device=device)  # (1, 4)
 
-    outputs = net([{
-        "image":         tensor,
-        "original_size": (H, W),
-        "boxes":         box_t,
-    }], multimask_output=True)
+    # forward() takes a plain dict and returns a plain dict
+    outputs = net(
+        {
+            "image":         tensor,
+            "original_size": (H, W),
+            "boxes":         box_t,
+        },
+        multimask_output=True,
+    )
 
-    # Pick the mask with the highest predicted IOU score
-    iou   = outputs[0]["iou_predictions"]   # (1, 3)
-    masks = outputs[0]["masks"].float()     # (1, 3, H, W) — already thresholded binary
+    # "masks" are raw logits — threshold at mask_threshold (0.0)
+    iou   = outputs["iou_predictions"]                          # (1, 3)
+    masks = (outputs["masks"] > net.mask_threshold).float()    # (1, 3, H, W) binary
     best  = int(iou.argmax(dim=1)[0])
     return masks[0, best, :, :].cpu().numpy().astype(np.uint8)
 
