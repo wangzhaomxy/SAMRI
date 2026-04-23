@@ -4,7 +4,7 @@ from setuptools import find_packages, setup
 setup(
     name="samri",
     version="0.0.1",
-    description="SAMRI: Segment Anything Model for MRI — decoder-only fine-tuning on precomputed MRI embeddings.",
+    description="SAMRI: Segment Any MRI — decoder-only fine-tuning on precomputed MRI embeddings.",
     long_description=open("README.md", encoding="utf-8").read() if __import__("os").path.exists("README.md") else "",
     long_description_content_type="text/markdown",
     author="Zhao Wang",

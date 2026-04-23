@@ -1,4 +1,4 @@
-# 🧠 SAMRI: Segment Anything Model for MRI
+# 🧠 SAMRI: Segment Any MRI
 
 <p align="center">
 
@@ -701,7 +701,7 @@ If you use SAMRI in your research, please cite:
 
 ```bibtex
 @misc{wang2025samrisegmentmodelmri,
-      title={SAMRI: Segment Anything Model for MRI}, 
+      title={SAMRI: Segment Any MRI}, 
       author={Zhao Wang and Wei Dai and Thuy Thanh Dao and Steffen Bollmann and Hongfu Sun and Craig Engstrom and Shekhar S. Chandra},
       year={2025},
       eprint={2510.26635},
