@@ -44,9 +44,8 @@ REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if REPO_ROOT not in sys.path:
     sys.path.insert(0, REPO_ROOT)
 
-from segment_anything import sam_model_registry  # noqa: E402
-from segment_anything.modeling import ImageEncoderViT  # noqa: E402
-from segment_anything.utils.transforms import ResizeLongestSide  # noqa: E402
+# segment_anything (and through it torchvision) is imported only inside the
+# functions that need it, so build_manifest.py runs with just torch + nibabel.
 
 IMG_SIZE = 1024
 PATCH = 16
@@ -139,9 +138,9 @@ def medsam_mr_preprocess(img_np):
 def make_geom(pipeline, H, W):
     """(H, W, h, w): native size and the size of the image content inside the
     1024x1024 input (h, w < 1024 for 'sam' when the slice is not square)."""
-    if pipeline == "sam":
-        h, w = ResizeLongestSide.get_preprocess_shape(H, W, IMG_SIZE)
-        return (H, W, h, w)
+    if pipeline == "sam":  # = ResizeLongestSide.get_preprocess_shape(H, W, IMG_SIZE)
+        scale = IMG_SIZE * 1.0 / max(H, W)
+        return (H, W, int(H * scale + 0.5), int(W * scale + 0.5))
     if pipeline == "medsam":
         return (H, W, IMG_SIZE, IMG_SIZE)
     raise ValueError(pipeline)
@@ -154,6 +153,7 @@ def preprocess(raw, pipeline, noise_std=0.0, rng=None):
     final normalisation; only used for the CKA noise-ceiling reference."""
     H, W = raw.shape
     if pipeline == "sam":
+        from segment_anything.utils.transforms import ResizeLongestSide
         img = minmax_uint8_3c(raw)
         img = ResizeLongestSide(IMG_SIZE).apply_image(img).astype(np.float32)  # (h, w, 3)
         if noise_std:
@@ -257,6 +257,8 @@ def box_to_grid(box_1024):
 def load_model(encoder, ckpt_dir, device, seed=0):
     """Returns (sam_model or None, image_encoder). The full SAM model is kept
     for the decoder sanity check; the random encoder has no decoder."""
+    from segment_anything import sam_model_registry
+    from segment_anything.modeling import ImageEncoderViT
     reg, fname = ENCODERS[encoder]
     if fname is None:
         torch.manual_seed(seed)
