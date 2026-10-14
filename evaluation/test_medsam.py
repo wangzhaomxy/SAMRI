@@ -50,7 +50,9 @@ _parser.add_argument("--device",
                      default=cfg.DEVICE,
                      help="Device to run the model on.")
 _args = _parser.parse_args()
-cfg.IMAGE_PATH = _args.test_image_path
+# cfg.IMAGE_PATH is a read-only property in utils/utils.py, so assigning it raises
+# AttributeError; build the testing-folder list from the CLI path directly instead.
+test_image_root = _args.test_image_path
 
 # From MedSAM Inference file
 #################
@@ -87,6 +89,49 @@ def medsam_inference(medsam_model, img_embed, box_1024, H, W):
 ##################
 # Code above are copied from MedSAM Inference file
 
+
+# MedSAM's own MR intensity preprocessing (added)
+#################
+def medsam_mr_preprocess(img_np):
+    """
+    MR intensity preprocessing adapted from MedSAM-main/pre_CT_MR.py (the
+    non-CT branch): clip to the 0.5-99.5 percentile of the non-zero voxels,
+    rescale to [0, 255], keep zero background at 0, and cast to uint8.
+
+    Why it is needed: our test slices are stored with raw MRI intensities,
+    while MedSAM_Inference.py expects an 8-bit image (it reads a PNG). Without
+    this step, the `.astype(np.uint8)` after the resize below wraps values
+    above 255 around (e.g. 300 -> 44), corrupting MedSAM's input.
+
+    Differences from pre_CT_MR.py:
+      - Percentiles are computed per 2D slice, not over the whole 3D volume,
+        because the test set is stored as individual slices.
+      - Two guards (all-zero slice, constant slice) that the original does not
+        have, so that no slice is skipped by the try/except in the main loop.
+
+    Args:
+        img_np (np.ndarray): one MR slice with raw intensities, (H, W).
+
+    Returns:
+        (np.ndarray): the preprocessed slice, (H, W), uint8 in [0, 255].
+    """
+    image_data = img_np.astype(np.float64)
+    foreground = image_data[image_data > 0]
+    if foreground.size == 0:  # guard (not in original): no positive voxels
+        return np.zeros_like(image_data, dtype=np.uint8)
+    lower_bound, upper_bound = np.percentile(
+        foreground, 0.5
+    ), np.percentile(foreground, 99.5)
+    image_data_pre = np.clip(image_data, lower_bound, upper_bound)
+    image_data_pre = (
+        (image_data_pre - np.min(image_data_pre))
+        / max(np.max(image_data_pre) - np.min(image_data_pre), 1e-8)  # guard (not in original): constant slice
+        * 255.0
+    )
+    image_data_pre[image_data == 0] = 0
+    return np.uint8(image_data_pre)
+#################
+# Code above is adapted from MedSAM-main/pre_CT_MR.py
 
 def make_dir(path):
     if not os.path.exists(path):
@@ -189,7 +234,10 @@ class MaskSplit():
         return masks, labels
     
 # Setup
-file_paths = cfg.TEST_IMAGE_PATH
+file_paths = [
+    ds + "/testing/" for ds in sorted(glob.glob(test_image_root + "*"))
+    if os.path.isdir(ds)
+]  # same rule as SAMRIConfig.TEST_IMAGE_PATH, using the CLI path
 save_path = _args.save_path
 make_dir(save_path)
 
@@ -211,6 +259,10 @@ for file_path in file_paths:
         try:
             img_name = test_dataset.get_name() # file name only, without the folder path.
             
+            # MedSAM MR intensity preprocessing (added): raw intensities -> uint8 [0, 255].
+            # Must run before the resize + uint8 cast below; see medsam_mr_preprocess().
+            img_np = medsam_mr_preprocess(img_np)
+
             # Preprocessing image, from MedSAM Inference file
             ###################
             # img_np = io.imread(args.data_path)
