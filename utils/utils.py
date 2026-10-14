@@ -17,7 +17,7 @@ MASK_KEYS = "*_seg_*"
 class SAMRIConfig:
     def __init__(
         self,
-        root_path="/scratch/project/samri",
+        root_path="/scratch/user/s4670484",
         device="cuda",
         batch_size=1024,
         num_epochs=200,

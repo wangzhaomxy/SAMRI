@@ -28,16 +28,20 @@ Outputs (in --save-path):
   overall_summary.txt  headline numbers over all instances (printed too).
   examples/            optional PNG panels per dataset (needs matplotlib).
 
-Usage on a CPU node (run from the repo root or anywhere):
+Usage on a CPU node (run from the repo root or anywhere). Pass one or more test
+roots, each holding <dataset>/<split>/ folders; datasets are reported as
+<root folder name>/<dataset>, e.g. SAMRI_train_test/ACDC, Zeroshot/<dataset>.
   # quick check first (20 slices per dataset, a few minutes at most):
   python embedding_assess/medsam_check.py \
-      --test-image-path /scratch/project/samri/Datasets/SAMRI_train_test/ \
-      --save-path ./embedding_assess/medsam_check_quick/ \
+      --test-image-path /scratch/user/s4670484/Datasets/SAMRI_train_test/ \
+                        /scratch/user/s4670484/Datasets/Zeroshot/ \
+      --save-path /scratch/user/s4670484/Eval_results/medsam_check_quick/ \
       --max-slices-per-dataset 20
   # full run:
   python embedding_assess/medsam_check.py \
-      --test-image-path /scratch/project/samri/Datasets/SAMRI_train_test/ \
-      --save-path ./embedding_assess/medsam_check_results/
+      --test-image-path /scratch/user/s4670484/Datasets/SAMRI_train_test/ \
+                        /scratch/user/s4670484/Datasets/Zeroshot/ \
+      --save-path /scratch/user/s4670484/Eval_results/medsam_check_results/
 """
 
 import argparse
@@ -274,34 +278,41 @@ def write_csv(path, rows):
 # --------------------------------------------------------------------------
 # Main
 # --------------------------------------------------------------------------
-def collect_jobs(root, split, max_per_ds, seed, exact_old):
+def collect_jobs(roots, split, max_per_ds, seed, exact_old):
     rng = random.Random(seed)
     jobs, per_ds, problems = [], {}, []
-    for ds in sorted(glob(os.path.join(root, "*"))):
-        folder = os.path.join(ds, split)
-        if not os.path.isdir(folder):
+    for root in roots:
+        root_name = os.path.basename(root.rstrip("/"))
+        if not os.path.isdir(root):
+            problems.append(f"{root}: not a directory")
             continue
-        name = os.path.basename(ds.rstrip("/"))
-        imgs = sorted(glob(os.path.join(folder, IMAGE_KEYS)))
-        segs = sorted(glob(os.path.join(folder, MASK_KEYS)))
-        if len(imgs) != len(segs):
-            problems.append(f"{name}: {len(imgs)} images vs {len(segs)} masks")
-        pairs = list(zip(imgs, segs))
-        # same pairing as NiiDataset (sorted lists); check names actually match
-        bad = [p for p in pairs if os.path.basename(p[0]).replace("_img_", "_seg_") != os.path.basename(p[1])]
-        if bad:
-            problems.append(f"{name}: {len(bad)} image/mask name mismatches, e.g. {bad[0]}")
-        if max_per_ds and len(pairs) > max_per_ds:
-            pairs = rng.sample(pairs, max_per_ds)
-        per_ds[name] = pairs
-        jobs += [(name, i, s, exact_old) for i, s in pairs]
+        for ds in sorted(glob(os.path.join(root, "*"))):
+            folder = os.path.join(ds, split)
+            if not os.path.isdir(folder):
+                continue
+            name = f"{root_name}/{os.path.basename(ds.rstrip('/'))}"
+            imgs = sorted(glob(os.path.join(folder, IMAGE_KEYS)))
+            segs = sorted(glob(os.path.join(folder, MASK_KEYS)))
+            if len(imgs) != len(segs):
+                problems.append(f"{name}: {len(imgs)} images vs {len(segs)} masks")
+            pairs = list(zip(imgs, segs))
+            # same pairing as NiiDataset (sorted lists); check names actually match
+            bad = [p for p in pairs
+                   if os.path.basename(p[0]).replace("_img_", "_seg_") != os.path.basename(p[1])]
+            if bad:
+                problems.append(f"{name}: {len(bad)} image/mask name mismatches, e.g. {bad[0]}")
+            if max_per_ds and len(pairs) > max_per_ds:
+                pairs = rng.sample(pairs, max_per_ds)
+            per_ds[name] = pairs
+            jobs += [(name, i, s, exact_old) for i, s in pairs]
     return jobs, per_ds, problems
 
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--test-image-path", required=True,
-                    help="Root holding <dataset>/<split>/ folders, e.g. .../SAMRI_train_test/")
+    ap.add_argument("--test-image-path", required=True, nargs="+",
+                    help="One or more roots holding <dataset>/<split>/ folders, "
+                         "e.g. .../SAMRI_train_test/ .../Zeroshot/")
     ap.add_argument("--split", default="testing", choices=["training", "validation", "testing"])
     ap.add_argument("--save-path", default=os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                                         "medsam_check_results"))
@@ -327,7 +338,7 @@ def main():
     for p in problems:
         print("  WARNING:", p)
     if not jobs:
-        sys.exit("No slices found: check --test-image-path (it should contain <dataset>/" + args.split + "/).")
+        sys.exit("No slices found: check --test-image-path (each root should contain <dataset>/" + args.split + "/).")
 
     rows, errors = [], []
     with Pool(args.workers) as pool:

@@ -45,7 +45,7 @@ _parser.add_argument("--ckpt-path", "--ckpt_path",
 _parser.add_argument("--save-path", "--save_path",
                      dest="save_path",
                      type=str, 
-                     default="/scratch/project/samri/Eval_results/",
+                     default="/scratch/user/s4670484/Eval_results/",
                      help="The root path to save evaluation results.")
 _parser.add_argument("--device",
                      dest="device",
