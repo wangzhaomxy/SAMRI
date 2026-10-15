@@ -44,8 +44,10 @@ source "$EBROOTANACONDA3/etc/profile.d/conda.sh"
 # Deactivate everything inherited first.
 while [ "${CONDA_SHLVL:-0}" -gt 0 ]; do conda deactivate; done
 conda activate samri-mi300
-python -c "import torch, torchvision" \
-    || { echo "samri-mi300 not usable (python: $(which python)) - stopping"; exit 1; }
+# every package the scripts import (matplotlib is optional: only the CKA plot)
+python -c "import torch, torchvision, numpy, nibabel, skimage, scipy.stats" \
+    || { echo "samri-mi300 is missing a package (python: $(which python)) - see the .error log; stopping"; exit 1; }
+python -c "import matplotlib" 2>/dev/null || echo "note: matplotlib missing - cka_layers.png will not be written"
 set -uo pipefail                    # after conda (its scripts are not -u safe); no -e: one failed condition must not stop the rest
 cd "${SLURM_SUBMIT_DIR:-$(pwd)}"
 
