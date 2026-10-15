@@ -1,9 +1,9 @@
 #!/bin/bash --login
-# Swapped-encoder decoder experiments, 1 GPU (MI300X, --qos=gpu).
+# Swapped-encoder decoder experiments, 1 GPU (MI355X, --qos=gpu).
 #
 # Q1  does the encoder matter for SAMRI's decoder?  Identical SAM mask decoders trained
 #     with SAMRI's recipe on frozen SAM ViT-B output vs frozen MedSAM-encoder output,
-#     on the same 11 clean datasets (150 training slices each), 3 seeds per arm.
+#     on the same 11 clean datasets (150 training slices each). Seed 0 by default; add seeds later.
 # Q2  does more training data improve zero-shot?  small data -> all training slices of
 #     the same 11 datasets -> released SAMRI (36 datasets), tested on the zero-shot sets.
 #
@@ -13,10 +13,12 @@
 # Submit from the repo root:
 #   cd /scratch/user/s4670484/SAMRI && sbatch embedding_assess/run_decoder_experiments.sh
 # Optional: skip the learning-rate pilot with  sbatch --export=ALL,LR=1e-4 ...
+# MORE SEEDS LATER (finished runs, features and the chosen LR are reused; evaluation reruns on everything):
+#   sbatch --export=ALL,SEEDS=1:2 embedding_assess/run_decoder_experiments.sh
 #
 # FIRST MINUTES - tail the .output log and check:
-#   "device: AMD Instinct MI300X"                        GPU visible, right env
-#   "Sampled ... slices (0 train, ... test, 6 datasets)" zero-shot manifest built
+#   "device: AMD Instinct MI355X"                        GPU visible, right env
+#   "Sampled ... slices (0 train, ... test, ... datasets)" zero-shot manifest built
 #   "[sanity] sam_vit_b own decoder ... mean Dice ~0.7-0.9" and the same for medsam_vit_b
 #   then the pilot: "[sanity] decoder before training, validation Dice ~0.8"
 #   and "epoch   1: ... val Dice" within a few minutes.
@@ -27,11 +29,11 @@
 #SBATCH --job-name=samri-dec
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
-#SBATCH --cpus-per-task=16
+#SBATCH --cpus-per-task=24
 #SBATCH --mem=160G
-#SBATCH --time=11:00:00
+#SBATCH --time=24:00:00              # one seed ~2-4 h; resumable, so a cut costs only a resubmission
 #SBATCH --partition=gpu_rocm
-#SBATCH --gres=gpu:mi300x:1
+#SBATCH --gres=gpu:mi355x:1
 #SBATCH --qos=gpu
 #SBATCH --account=a_ai_collab
 #SBATCH -o /scratch/user/s4670484/Eval_results/decoder_swap/logs/slurm-dec-%j.output
@@ -43,9 +45,9 @@ module load anaconda3/2023.09-0
 source "$EBROOTANACONDA3/etc/profile.d/conda.sh"
 # deactivate anything inherited from the submitting shell, then activate (see run_embedding_experiments.sh)
 while [ "${CONDA_SHLVL:-0}" -gt 0 ]; do conda deactivate; done
-conda activate samri-mi300
+conda activate /scratch/user/s4670484/conda/samri-mi355x   # path-based env (MI355X needs ROCm >= 6.4)
 python -c "import torch, torchvision, numpy, nibabel, skimage, scipy.stats" \
-    || { echo "samri-mi300 is missing a package (python: $(which python)) - see the .error log; stopping"; exit 1; }
+    || { echo "samri-mi355x is missing a package (python: $(which python)) - see the .error log; stopping"; exit 1; }
 set -uo pipefail                    # no -e: one failed run must not stop the rest
 cd "${SLURM_SUBMIT_DIR:-/scratch/user/s4670484/SAMRI}"
 
@@ -62,10 +64,10 @@ ZEROSHOT=$ROOT/Eval_results/embedding_research_zeroshot  # built below
 OUT=$ROOT/Eval_results/decoder_swap
 RUNS=$OUT/runs
 CKPT=$ROOT/pretrained_ckpt
-MAX_GPU_GB=${MAX_GPU_GB:-100}       # all-slices arm: encoder output kept in GPU memory (2 MiB/slice, MI300X has 192 GB)
+MAX_GPU_GB=${MAX_GPU_GB:-100}       # all-slices arm: encoder output kept in GPU memory (2 MiB/slice, MI355X has 288 GB)
 ZS_ROOT=$ROOT/Datasets/Zeroshot
 SAMRI_CKPTS="$CKPT/samri_vitb_box.pth $CKPT/samri_vitb_bp.pth"   # box / box+point checkpoints (tested with box)
-SEEDS="0 1 2"
+SEEDS=${SEEDS:-0}; SEEDS=${SEEDS//:/ }   # e.g. --export=ALL,SEEDS=1:2
 WORKERS=$(( ${SLURM_CPUS_PER_TASK:-8} - 1 ))
 mkdir -p "$RUNS"
 
@@ -112,14 +114,14 @@ EOF
 fi
 echo; echo "learning rate for every arm: $LR"
 
-# ---- 3. Q1 arms: small data, 3 seeds each ---------------------------------------------
+# ---- 3. Q1 arms: small data, one run per seed in SEEDS ---------------------------------------------
 for seed in $SEEDS; do
     for arm in sam-enc_sam-dec_small medsam-enc_sam-dec_small medsam-enc_medsam-dec_small; do
         train "$arm" "$seed" --lr "$LR"
     done
 done
 
-# ---- 4. Q2 middle step: all training slices of the 11 datasets, 1 seed. Encodes the images once at
+# ---- 4. Q2 middle step: all training slices of the 11 datasets, seed 0 only (skipped once done). Encodes the images once at
 #      the start and keeps the output in GPU memory (no disk); capped per dataset above MAX_GPU_GB.
 train sam-enc_sam-dec_all11 0 --lr "$LR" --max-gpu-gb "$MAX_GPU_GB" --epochs 15 --patience 4
 
