@@ -36,10 +36,17 @@
 #SBATCH --mail-type=END,FAIL
 #SBATCH --mail-user=zhao.wang1@uq.edu.au
 
-set -uo pipefail                    # no -e: one failed condition must not stop the rest
 module load anaconda3/2023.09-0
 source "$EBROOTANACONDA3/etc/profile.d/conda.sh"
+# sbatch copies the submitting shell's environment into the job. If an env was
+# active there, `conda activate` only re-activates it in place, behind the
+# anaconda bin that `module load` just put first in PATH -> base python, no torch.
+# Deactivate everything inherited first.
+while [ "${CONDA_SHLVL:-0}" -gt 0 ]; do conda deactivate; done
 conda activate samri-mi300
+python -c "import torch, torchvision" \
+    || { echo "samri-mi300 not usable (python: $(which python)) - stopping"; exit 1; }
+set -uo pipefail                    # after conda (its scripts are not -u safe); no -e: one failed condition must not stop the rest
 cd "${SLURM_SUBMIT_DIR:-$(pwd)}"
 
 export OMP_NUM_THREADS=1
