@@ -61,11 +61,12 @@ def list_pairs(folder):
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--trained-root", required=True)
+    ap.add_argument("--trained-root", default=None,
+                    help="SAMRI_train_test/ (omit for a zero-shot-only, test-only manifest)")
     ap.add_argument("--zeroshot-root", default=None)
     ap.add_argument("--work-dir", required=True)
     ap.add_argument("--n-train", type=int, default=50, help="training slices per trained dataset")
-    ap.add_argument("--n-test", type=int, default=25, help="testing slices per dataset")
+    ap.add_argument("--n-test", type=int, default=25, help="testing slices per dataset (0 = all)")
     ap.add_argument("--datasets", nargs="*", default=None,
                     help="only these dataset folder names (e.g. BraTS_FLAIR Heart); default all")
     ap.add_argument("--seed", type=int, default=0)
@@ -75,7 +76,9 @@ def main():
     os.makedirs(args.work_dir, exist_ok=True)
     rng = random.Random(args.seed)
     plan, problems = [], []  # (root_name, dataset, split, zeroshot, img, seg)
-    roots = [(args.trained_root, 0)] + ([(args.zeroshot_root, 1)] if args.zeroshot_root else [])
+    if not args.trained_root and not args.zeroshot_root:
+        sys.exit("give --trained-root and/or --zeroshot-root")
+    roots = ([(args.trained_root, 0)] if args.trained_root else []) + ([(args.zeroshot_root, 1)] if args.zeroshot_root else [])
     for root, zs in roots:
         root_name = os.path.basename(root.rstrip("/"))
         for ds in sorted(d for d in glob(os.path.join(root, "*")) if os.path.isdir(d)):
@@ -89,7 +92,7 @@ def main():
                     continue
                 pairs, p = list_pairs(folder)
                 problems += p
-                for img, seg in sorted(rng.sample(pairs, min(n, len(pairs)))):
+                for img, seg in sorted(pairs if n == 0 else rng.sample(pairs, min(n, len(pairs)))):
                     plan.append((root_name, name, split, zs, img, seg))
     if args.datasets:
         missing = set(args.datasets) - {p[1] for p in plan}

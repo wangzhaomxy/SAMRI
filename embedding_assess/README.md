@@ -80,9 +80,36 @@ Each finished condition writes `features/<cond>/DONE` and is skipped on resubmis
 | `results/cka_summary.txt`, `cka_results.csv`, `cka_layers.png` | CKA headline first, then by layer; the plot's lower row shows 1 − CKA on a log axis |
 | `results/probe_summary.txt`, `probe_instances.csv` | probe headline first, paired comparisons, per dataset |
 
+## Swapped-encoder decoder test (`run_decoder_experiments.sh`)
+
+Trains identical SAM mask decoders with SAMRI's recipe (AdamW, weight decay 0.1,
+Dice + 10×Focal, box jitter ±10 px) on frozen encoder output, using the feature sets
+above, so the only thing that changes between arms is the encoder.
+
+| arm id | encoder → decoder start | training data |
+|---|---|---|
+| `sam-enc_sam-dec_small` | SAM ViT-B → SAM decoder | train slices of the 11 clean datasets (minus 10% validation) |
+| `medsam-enc_sam-dec_small` | MedSAM encoder → SAM decoder | same |
+| `medsam-enc_medsam-dec_small` | MedSAM encoder → MedSAM decoder | same |
+| `sam-enc_sam-dec_all11` | SAM ViT-B → SAM decoder | all training slices of the same 11 datasets (encoded from the images at the start, kept in GPU memory) |
+
+References with no training: SAM ViT-B with its original decoder, MedSAM end to end,
+and the released SAMRI checkpoints (36 datasets). Test: tight box, Dice on native
+pixels, on the in-domain test slices and on every test slice of the zero-shot datasets.
+
+- **Q1, does the encoder matter?** `medsam-enc_sam-dec_small` − `sam-enc_sam-dec_small` (3 seeds each)
+- **Q2, does more training data help zero-shot?** small → all11 → released SAMRI, on the zero-shot sets
+
+Steps (each skipped on resubmission once done): zero-shot manifest + features →
+learning-rate pilot (1e-5 vs 1e-4, saved to `chosen_lr.txt`) → 3 small arms × 3 seeds →
+all11 arm → `eval_decoder.py`. Outputs in `decoder_swap/`: `runs/<arm>/seed<k>/`
+(`best_decoder.pt`, `curve.csv`, `meta.json`) and `results/eval_summary.txt`
+(headline first, then paired comparisons, then per dataset) with `eval_instances.csv`.
+
 ## Files
 
 - `emb_common.py` — pipelines, geometry (mask → token coverage, token map → native pixels), model loading
 - `build_manifest.py` → `extract_features.py` → `cka.py`, `probe.py`
 - `run_embedding_experiments.sh` — Slurm job (1 × MI300X, `--qos=gpu`, account `a_ai_collab`)
 - `medsam_check.py` — separate CPU check of MedSAM preprocessing on the test slices
+- `decoder_lib.py`, `train_decoder.py`, `eval_decoder.py`, `run_decoder_experiments.sh` — swapped-encoder decoder test
