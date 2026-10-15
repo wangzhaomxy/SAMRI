@@ -93,10 +93,10 @@ train () {  # train <arm> <seed> [extra args]
 }
 
 # ---- 2. learning-rate pilot (SAM arm, seed 0), unless LR was given ----------------------
+pilot_lr_ok () { [ "$1" = 1e-5 ] || [ "$1" = 1e-4 ]; }
 if [ -z "${LR:-}" ]; then
-    if [ -f "$OUT/chosen_lr.txt" ]; then
-        LR=$(cat "$OUT/chosen_lr.txt")
-    else
+    [ -f "$OUT/chosen_lr.txt" ] && LR=$(cat "$OUT/chosen_lr.txt")
+    if ! pilot_lr_ok "${LR:-}"; then  # no file, or an empty/invalid one left by a failed pilot: (re)run it
         for lr in 1e-5 1e-4; do train sam-enc_sam-dec_small 0 --lr $lr --epochs 60 --tag "_pilot-lr$lr"; done
         LR=$(python - "$RUNS" <<'EOF'
 import json, sys, os
@@ -105,6 +105,8 @@ best = max(("1e-5", "1e-4"), key=lambda lr: json.load(open(os.path.join(
 print(best)
 EOF
 )
+        # every arm needs a learning rate, so a failed pilot stops the job instead of saving an empty value
+        pilot_lr_ok "$LR" || { echo "!!!!! FAILED: learning-rate pilot gave no result - stopping (see the pilot runs above)"; exit 1; }
         echo "$LR" > "$OUT/chosen_lr.txt"
     fi
 fi
