@@ -74,9 +74,10 @@ def systems(args, device):
             try:
                 model = dl.build_decoder(p, args.ckpt_dir, device).eval()
             except Exception as e:  # noqa: BLE001 - one bad file must not lose the whole evaluation
-                first = str(e).strip().splitlines()[0] if str(e).strip() else ""
+                msg = " ".join(str(e).split())  # state_dict errors span several lines; keep the start of all of them
                 print(f"  WARNING: could not load {p} as a SAM ViT-B checkpoint, skipped "
-                      f"({type(e).__name__}: {first[:200]}). embedding_assess/ckpt_check.py shows its contents.")
+                      f"({type(e).__name__}: {msg[:300]}{'...' if len(msg) > 300 else ''}). "
+                      f"embedding_assess/ckpt_check.py shows its contents.")
                 continue
             yield (f"ref_{name}", samri_name(name), 0, "sam_vit_b__sam", model)
         else:
