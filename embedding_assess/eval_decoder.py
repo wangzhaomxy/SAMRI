@@ -43,10 +43,15 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import decoder_lib as dl  # noqa: E402
 
 MEANINGFUL = 0.01  # Dice; a difference must exceed this AND the seed spread
-SAMRI_NAMES = {  # released checkpoints in pretrained_ckpt/; every system is tested with the box prompt
-    "samri_vitb_box": "released SAMRI, box-prompt checkpoint (36 datasets)",
-    "samri_vitb_bp": "released SAMRI, box+point checkpoint (36 datasets), tested with box only",
-}
+
+
+def samri_name(name):
+    """Plain name for a SAMRI checkpoint file stem; every system is tested with the box prompt."""
+    if name.startswith("samri_vitb_box"):
+        return f"SAMRI box-prompt checkpoint {name} (36 datasets)"
+    if name.startswith("samri_vitb_bp"):
+        return f"SAMRI box+point checkpoint {name} (36 datasets), tested with box only"
+    return f"SAMRI checkpoint {name} (36 datasets)"
 
 
 def systems(args, device):
@@ -65,9 +70,9 @@ def systems(args, device):
     for p in args.samri_ckpts or []:
         if os.path.isfile(p):
             name = os.path.basename(p)[:-len(".pth")]
-            plain = SAMRI_NAMES.get(name, f"released SAMRI ({name}), trained on all 36 datasets")
-            yield (f"ref_{name}", plain, 0, "sam_vit_b__sam",
-                   dl.build_decoder(p, args.ckpt_dir, device, log=lambda *a: None).eval())
+            print(f"  {name}:")  # build_decoder reports whether its prompt encoder equals SAM's
+            yield (f"ref_{name}", samri_name(name), 0, "sam_vit_b__sam",
+                   dl.build_decoder(p, args.ckpt_dir, device).eval())
         else:
             print(f"  WARNING: released SAMRI checkpoint not found, skipped: {p}")
 
@@ -119,9 +124,11 @@ def summarise(recs):
              ("medsam-enc_medsam-dec_small", "sam-enc_sam-dec_small", "Q1 fairness: MedSAM decoder start"),
              ("medsam-enc_medsam-dec_small", "medsam-enc_sam-dec_small", "decoder start, MedSAM encoder"),
              ("sam-enc_sam-dec_all11", "sam-enc_sam-dec_small", "Q2: more slices, same 11 datasets"),
-             ("ref_samri_vitb_box", "sam-enc_sam-dec_all11", "Q2: more datasets (36 vs 11)"),
-             ("ref_samri_vitb_box", "sam-enc_sam-dec_small", "Q2: released SAMRI vs small data"),
              ("sam-enc_sam-dec_small", "ref_sam-original", "decoder training on 1.5k slices vs none")]
+    for ref in sorted(x for x in sys_name if x.startswith("ref_samri_vitb_box")):  # every SAMRI box checkpoint given
+        pairs += [(ref, "sam-enc_sam-dec_all11", f"Q2: more datasets (36 vs 11), {ref[4:]}"),
+                  (ref, "sam-enc_sam-dec_small", f"Q2: SAMRI vs small data, {ref[4:]}"),
+                  (ref, "ref_sam-original", f"SAMRI vs untrained SAM, {ref[4:]}")]
     lines += ["", f"PAIRED COMPARISONS (seed-averaged per structure; 'meaningful' = |difference| > "
                   f"{MEANINGFUL} and > seed spread)",
               "  datasets: median over datasets of the per-dataset median difference, datasets where the first "
