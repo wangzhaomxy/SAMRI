@@ -10,6 +10,14 @@ Examples:
     --save-path /path/to/save/results/ \
     --device cuda
 The results will be saved in the specified save path.
+
+Only some datasets, from both roots, without the per-structure PNGs:
+    python -m evaluation.test_medsam \
+    --test-image-path /path/to/SAMRI_train_test/ /path/to/Zeroshot/ \
+    --datasets MSD_Heart CHAOS_T2 \
+    --ckpt-path /path/to/medsam_vit_b.pth \
+    --save-path /path/to/save/results/ \
+    --no-comb
 """
 
 import numpy as np
@@ -31,7 +39,7 @@ cfg = SAMRIConfig()
 _parser = argparse.ArgumentParser(add_help=True)
 _parser.add_argument("--test-image-path", "--test_image_path",
                      dest="test_image_path",
-                     type=str, 
+                     type=str, nargs="+",
                      default=cfg.IMAGE_PATH,
                      help="The root path of the images.")
 _parser.add_argument("--ckpt-path", "--ckpt_path",
@@ -44,6 +52,10 @@ _parser.add_argument("--save-path", "--save_path",
                      type=str, 
                      default=cfg.root_path + "/MedSAM_inference/",
                      help="The root path to save evaluation results.")
+_parser.add_argument("--datasets", nargs="*", default=None,
+                     help="Only these dataset folder names under the test roots (default: all).")
+_parser.add_argument("--no-comb", dest="no_comb", action="store_true",
+                     help="Do not save the per-structure gt|prediction PNGs (saves disk space and inodes).")
 _parser.add_argument("--device",
                      dest="device",
                      type=str,
@@ -52,7 +64,7 @@ _parser.add_argument("--device",
 _args = _parser.parse_args()
 # cfg.IMAGE_PATH is a read-only property in utils/utils.py, so assigning it raises
 # AttributeError; build the testing-folder list from the CLI path directly instead.
-test_image_root = _args.test_image_path
+test_image_roots = [os.path.join(p, "") for p in _args.test_image_path]  # glob below needs the trailing "/"
 
 # From MedSAM Inference file
 #################
@@ -235,9 +247,15 @@ class MaskSplit():
     
 # Setup
 file_paths = [
-    ds + "/testing/" for ds in sorted(glob.glob(test_image_root + "*"))
+    ds + "/testing/" for root in test_image_roots for ds in sorted(glob.glob(root + "*"))
     if os.path.isdir(ds)
-]  # same rule as SAMRIConfig.TEST_IMAGE_PATH, using the CLI path
+]  # same rule as SAMRIConfig.TEST_IMAGE_PATH, using the CLI path(s)
+if _args.datasets:
+    file_paths = [p for p in file_paths if p.split("/")[-3] in _args.datasets]
+    _missing = set(_args.datasets) - {p.split("/")[-3] for p in file_paths}
+    if _missing:
+        raise FileNotFoundError(f"Datasets not found under {test_image_roots}: {sorted(_missing)}")
+print("Testing datasets:", [p.split("/")[-3] for p in file_paths])
 save_path = _args.save_path
 make_dir(save_path)
 
@@ -283,6 +301,11 @@ for file_path in file_paths:
             )
             #####################
             # Code above are copied from MedSAM Inference file
+
+            # The image embedding depends only on the image, so it is computed once per slice
+            # (it used to be recomputed for every structure; same result, fewer encoder passes).
+            with torch.no_grad():
+                image_embedding = medsam_model.image_encoder(img_1024_tensor)  # (1, 256, 64, 64)
             
             # Generate bounding box for every mask
             for mask, label in MaskSplit(masks):
@@ -313,9 +336,6 @@ for file_path in file_paths:
                 # transfer box_np t0 1024x1024 scale
                 box_1024 = [bboxes] / np.array([W, H, W, H]) * 1024               
                 
-                with torch.no_grad():
-                    image_embedding = medsam_model.image_encoder(img_1024_tensor)  # (1, 256, 64, 64)
-
                 medsam_seg = medsam_inference(medsam_model, image_embedding, box_1024, H, W)
                 #####################
                 # Code above are copied from MedSAM Inference file
@@ -327,16 +347,17 @@ for file_path in file_paths:
                 make_dir(ds_dir)
                 result_dir = ds_dir + "results/"
                 make_dir(result_dir)
-                comb_dir = ds_dir + "comb/"
-                make_dir(comb_dir)
                 
                 # From MedSAM Inference file
                 ###################
-                io.imsave(
-                    join(comb_dir, "comb_" + img_name[:-7] + str(label) + ".png"),
-                    comb_seg,
-                    check_contrast=False,
-                )
+                if not _args.no_comb:
+                    comb_dir = ds_dir + "comb/"
+                    make_dir(comb_dir)
+                    io.imsave(
+                        join(comb_dir, "comb_" + img_name[:-7] + str(label) + ".png"),
+                        comb_seg,
+                        check_contrast=False,
+                    )
                 #####################
                 # Code above are copied from MedSAM Inference file
                 
