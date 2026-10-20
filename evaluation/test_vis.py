@@ -19,6 +19,14 @@ Examples:
         --save-path /path/to/save/results/ \
         --device cuda \
         --model-type samri
+
+  - Test only some datasets of a root (e.g. rerun SAM ViT-B on MSK_shoulder):
+      python -m evaluation.test_vis \
+        --test-image-path /path/to/Zeroshot/ \
+        --datasets MSK_shoulder CHAOS_T1 \
+        --ckpt-path /path/to/sam_vit_b_01ec64.pth \
+        --save-path /path/to/save/results/ \
+        --model-type vit_b
 """
 
 from segment_anything import sam_model_registry
@@ -47,6 +55,8 @@ _parser.add_argument("--save-path", "--save_path",
                      type=str, 
                      default="/scratch/user/s4670484/Eval_results/",
                      help="The root path to save evaluation results.")
+_parser.add_argument("--datasets", nargs="*", default=None,
+                     help="Only these dataset folder names under --test-image-path (default: all).")
 _parser.add_argument("--device",
                      dest="device",
                      type=str,
@@ -58,7 +68,8 @@ _parser.add_argument("--model-type", "--model_type",
                      choices=list(cfg.ENCODER_TYPE.keys()),
                      help="Model key used to derive encoder_type from ENCODER_TYPE.")
 _args = _parser.parse_args()
-cfg.IMAGE_PATH = _args.test_image_path
+# cfg.IMAGE_PATH is a read-only property, so the test root is kept here instead of assigned to cfg
+test_image_root = os.path.join(_args.test_image_path, "")  # glob below needs the trailing "/"
 ckpt_path = _args.ckpt_path
 save_path = _args.save_path
 os.makedirs(save_path, exist_ok=True)
@@ -127,7 +138,14 @@ for ckpt in ckpt_list:
     sam_model.eval()
     save_path_all = save_path + model_name[:-4]
 
-    save_test_record(file_paths=test_image_path(cfg.TEST_IMAGE_PATH),
+    file_paths = test_image_path(test_image_root)
+    if _args.datasets:
+        file_paths = [p for p in file_paths if p.split("/")[-3] in _args.datasets]
+        missing = set(_args.datasets) - {p.split("/")[-3] for p in file_paths}
+        if missing:
+            raise FileNotFoundError(f"Datasets not found under {test_image_root}: {sorted(missing)}")
+    print("Testing datasets:", [p.split("/")[-3] for p in file_paths])
+    save_test_record(file_paths=file_paths,
                      sam_model=sam_model, 
                      save_path=save_path_all)
     
