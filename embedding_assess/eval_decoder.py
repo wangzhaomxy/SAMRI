@@ -71,8 +71,14 @@ def systems(args, device):
         if os.path.isfile(p):
             name = os.path.basename(p)[:-len(".pth")]
             print(f"  {name}:")  # build_decoder reports whether its prompt encoder equals SAM's
-            yield (f"ref_{name}", samri_name(name), 0, "sam_vit_b__sam",
-                   dl.build_decoder(p, args.ckpt_dir, device).eval())
+            try:
+                model = dl.build_decoder(p, args.ckpt_dir, device).eval()
+            except Exception as e:  # noqa: BLE001 - one bad file must not lose the whole evaluation
+                first = str(e).strip().splitlines()[0] if str(e).strip() else ""
+                print(f"  WARNING: could not load {p} as a SAM ViT-B checkpoint, skipped "
+                      f"({type(e).__name__}: {first[:200]}). embedding_assess/ckpt_check.py shows its contents.")
+                continue
+            yield (f"ref_{name}", samri_name(name), 0, "sam_vit_b__sam", model)
         else:
             print(f"  WARNING: released SAMRI checkpoint not found, skipped: {p}")
 

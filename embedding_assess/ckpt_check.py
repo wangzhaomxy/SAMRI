@@ -41,9 +41,16 @@ def part_diff(a, b, prefix):
     common = ka & kb
     if not common:
         return f"{prefix:15s} missing (keys: {len(ka)} vs {len(kb)})"
-    d = max((a[k].float() - b[k].float()).abs().max().item() for k in common
-            if a[k].shape == b[k].shape)
+    same = [k for k in common if a[k].shape == b[k].shape]
+    mism = sorted(set(common) - set(same))
     extra = "" if ka == kb else f", key sets differ ({len(ka)} vs {len(kb)})"
+    if mism:  # e.g. a ViT-H or ViT-L checkpoint compared with ViT-B
+        k = mism[0]
+        extra += (f", {len(mism)}/{len(common)} tensors differ in shape "
+                  f"(e.g. {k}: {tuple(a[k].shape)} vs {tuple(b[k].shape)})")
+    if not same:
+        return f"{prefix:15s} not comparable{extra}"
+    d = max((a[k].float() - b[k].float()).abs().max().item() for k in same)
     return f"{prefix:15s} max |diff| {d:.3g}{extra}"
 
 
