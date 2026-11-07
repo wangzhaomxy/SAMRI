@@ -126,6 +126,8 @@ def main():
     ap.add_argument("--workers", type=int, default=None)
     ap.add_argument("--device", default="cuda")
     ap.add_argument("--tag", default="", help="optional suffix for the run folder (e.g. the LR pilot)")
+    ap.add_argument("--rank", type=int, default=4, help="LoRA rank (decoder-LoRA arms only)")
+    ap.add_argument("--alpha", type=float, default=4.0, help="LoRA alpha (decoder-LoRA arms only)")
     args = ap.parse_args()
     t0 = time.time()
 
@@ -153,7 +155,19 @@ def main():
                                 os.path.join(args.out_dir, "val_rows.json")))
     val_inst = wd.instances(sorted(val_rows))
     model = dl.build_decoder(start, args.ckpt_dir, device)
-    opt = torch.optim.AdamW(model.mask_decoder.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    lora = args.arm in dl.DECODER_LORA_ARMS
+    if lora:  # frozen decoder + adapters; saved merged, so eval_decoder.py loads it as a plain decoder
+        params = dl.add_decoder_lora(model.mask_decoder, args.rank, args.alpha)
+        print(f"decoder LoRA rank {args.rank}, alpha {args.alpha}: {sum(p.numel() for p in params) / 1e3:.0f} k "
+              f"trainable parameters (full decoder: "
+              f"{sum(p.numel() for n, p in model.mask_decoder.named_parameters() if 'lora_' not in n) / 1e6:.2f} M)")
+    else:
+        params = list(model.mask_decoder.parameters())
+    opt = torch.optim.AdamW(params, lr=args.lr, weight_decay=args.weight_decay)
+
+    def save_decoder():
+        torch.save(dl.merged_state(model.mask_decoder) if lora else model.mask_decoder.state_dict(),
+                   os.path.join(run_dir, "best_decoder.pt"))
     from utils.losses import DiceFocalLoss
     loss_fn = DiceFocalLoss(sigmoid=True, squared_pred=True, reduction="mean", lambda_dice=1, lambda_focal=10)
 
@@ -168,7 +182,9 @@ def main():
           f"in {len(val_rows)} held-out slices", flush=True)
 
     # ---- training data -----------------------------------------------------------
-    cap_info = {}
+    cap_info, enc_s = {}, 0.0
+    if device.type == "cuda":
+        torch.cuda.reset_peak_memory_stats(device)
     if source == "manifest":
         train_rows = [r for r in wd.rows("train") if r not in val_rows]
         embs = torch.stack([torch.as_tensor(wd.emb(r)) for r in train_rows]).to(device)  # fp16 on GPU
@@ -234,7 +250,9 @@ def main():
                for a, b in zip(cur, (wd.emb(r).astype(np.float32) for r in chk))]
         print(f"[check] encoder output now vs stored features ({len(chk)} slices): cosine min {min(cos):.5f}"
               + ("" if min(cos) > 0.999 else "  <-- MISMATCH: preprocessing differs, stop and check"), flush=True)
+        te = time.time()
         embs, packed = encode_images(pairs, encoder, device, workers)
+        enc_s = time.time() - te
         del encoder
         if device.type == "cuda":
             torch.cuda.empty_cache()
@@ -260,7 +278,7 @@ def main():
 
     # ---- train ---------------------------------------------------------------------
     best, best_ep, since = v0, 0, 0
-    torch.save(model.mask_decoder.state_dict(), os.path.join(run_dir, "best_decoder.pt"))
+    save_decoder()
     curve = [{"epoch": 0, "train_loss": float("nan"), "val_dice": v0, "seconds": round(time.time() - t0, 1)}]
     model.train()
     for ep in range(1, args.epochs + 1):
@@ -279,7 +297,7 @@ def main():
         improved = v > best + 1e-4
         if improved:
             best, best_ep, since = v, ep, 0
-            torch.save(model.mask_decoder.state_dict(), os.path.join(run_dir, "best_decoder.pt"))
+            save_decoder()
         else:
             since += 1
         print(f"epoch {ep:3d}: train loss {tl / max(nb, 1):.4f} | val Dice {v:.4f}"
@@ -292,10 +310,12 @@ def main():
             print(f"early stop: no improvement for {args.patience} epochs")
             break
 
-    meta = {"arm": args.arm, "arm_name": arm_name, "features": feats, "decoder_start": start, "source": source,
+    meta = {"arm": args.arm, "arm_name": arm_name, "lora_rank": args.rank if lora else None, "features": feats, "decoder_start": start, "source": source,
             "seed": args.seed, "lr": args.lr, "batch_size": args.batch_size, "jitter": args.jitter,
             "epochs_run": curve[-1]["epoch"], "best_epoch": best_ep, "best_val_dice": best, "val_dice_before": v0,
-            "seconds": round(time.time() - t0, 1), "tag": args.tag, **cap_info}
+            "seconds": round(time.time() - t0, 1), "encode_seconds": round(enc_s, 1),
+            "training_slices": len(keep), "trainable_parameters": sum(p.numel() for p in params),
+            "peak_gpu_gb": dl.peak_gpu_gb(device), "tag": args.tag, **cap_info}
     with open(os.path.join(run_dir, "meta.json"), "w") as f:
         json.dump(meta, f, indent=1)
     open(os.path.join(run_dir, "DONE"), "w").close()

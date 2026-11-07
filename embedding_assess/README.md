@@ -106,6 +106,45 @@ all11 arm → `eval_decoder.py`. Outputs in `decoder_swap/`: `runs/<arm>/seed<k>
 (`best_decoder.pt`, `curve.csv`, `meta.json`) and `results/eval_summary.txt`
 (headline first, then paired comparisons, then per dataset) with `eval_instances.csv`.
 
+### LoRA arms (`run_lora_experiments.sh`)
+
+LoRA rank 4 on the query and value projections, all original weights frozen, same data, recipe, validation
+slices and test sets as the arms above:
+
+| arm id | what is trained | training data | script |
+|---|---|---|---|
+| `sam-enc_sam-dec-lora_small` | LoRA on the SAM decoder (frozen encoder) | small data | `train_decoder.py` (stored features) |
+| `sam-enc_sam-dec-lora_all11` | LoRA on the SAM decoder (frozen encoder) | all training slices | `train_decoder.py` (encodes once) |
+| `sam-enc-lora_sam-dec-lora_small` | LoRA on SAM encoder and decoder | small data | `train_lora.py` (images every step) |
+| `sam-enc-lora_sam-dec-lora_all11` | LoRA on SAM encoder and decoder | all training slices, 8,192 per epoch | `train_lora.py` |
+
+Decoder-LoRA weights are saved merged into a plain decoder, so `eval_decoder.py` loads them like the
+others. The encoder-LoRA arms change the encoder output, so `train_lora.py` evaluates them itself and
+`eval_decoder.py --extra-instances` merges their `eval_instances.csv` into one summary (`results_lora/`).
+Each small-data arm runs a learning-rate trial (decoder LoRA 1e-4 / 5e-4 / 1e-3; encoder + decoder LoRA
+1e-4 / 5e-4); the winning trial run is the seed-0 run.
+
+### Data size, data variety and compute (`run_curve_experiments.sh`, `run_final_tables.sh`)
+
+Questions: does decoder-only performance keep rising with more slices per dataset; at a fixed number of
+slices, does training on more datasets (more structures) help zero-shot; and is more data a better use of a
+limited GPU budget than encoder training?
+
+| run ids | what trains | data |
+|---|---|---|
+| `sam-enc_sam-dec_n<N>` | SAM decoder (frozen encoder) | N = 15, 50, 150, 500, 1,500, 5,000 slices per dataset, seeds 0-2 |
+| `sam-enc_sam-dec-lora_n<N>` | LoRA on the SAM decoder | same |
+| `sam-enc_sam-dec_k<k>-draw<d>` | SAM decoder | k = 1, 3, 6, 11 datasets, 1,500 slices in total, 3 draws |
+| `sam-enc-lora_sam-dec-lora_n1500` (optional) | LoRA on encoder and decoder | 1,500 per dataset, same slices as `sam-enc_sam-dec_n1500` seed 0 |
+
+`data_pools.py` builds the shared slice pool (all training slices minus the validation slices, at most
+5,000 per dataset). Sizes are nested within a seed, and seed 0 of every arm sees the same slices.
+`train_decoder_curve.py` encodes the pool once and trains every run from GPU memory. `analyse_curve.py`
+writes `data_size.csv`, `variety.csv`, `compute.csv` and `summary.txt`. GPU-hours include the one-off
+encoding for decoder-only arms, and the variety table splits the clean test sets into datasets seen in
+training and datasets left out. Full fine-tuning was left out of the study (Nov 2026); `train_lora.py`
+still has the mode.
+
 ## Files
 
 - `emb_common.py` — pipelines, geometry (mask → token coverage, token map → native pixels), model loading
@@ -113,3 +152,5 @@ all11 arm → `eval_decoder.py`. Outputs in `decoder_swap/`: `runs/<arm>/seed<k>
 - `run_embedding_experiments.sh` — Slurm job (1 × MI300X, `--qos=gpu`, account `a_ai_collab`)
 - `medsam_check.py` — separate CPU check of MedSAM preprocessing on the test slices
 - `decoder_lib.py`, `train_decoder.py`, `eval_decoder.py`, `run_decoder_experiments.sh` — swapped-encoder decoder test
+- `train_lora.py`, `run_lora_experiments.sh` — LoRA arms (decoder LoRA via `train_decoder.py`)
+- `data_pools.py`, `train_decoder_curve.py`, `analyse_curve.py`, `run_curve_experiments.sh`, `run_final_tables.sh` — data size, variety and compute

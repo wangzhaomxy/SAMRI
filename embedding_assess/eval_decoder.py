@@ -56,13 +56,14 @@ def samri_name(name):
 
 def systems(args, device):
     """Yields (system id, plain name, seed, features cond, model)."""
-    for run in sorted(glob(os.path.join(args.runs_dir, "*", "seed*", "DONE"))):
+    for run in sorted(r for d in args.runs_dir for r in glob(os.path.join(d, "*", "seed*", "DONE"))):
         run_dir = os.path.dirname(run)
         arm = os.path.basename(os.path.dirname(run_dir))
-        if arm not in dl.ARMS:  # e.g. the learning-rate pilot runs
+        info = dl.arm_info(arm)  # fixed arms, data-size and data-variety runs; None = trials etc.
+        if info is None:
             continue
         model, meta = dl.load_trained_decoder(run_dir, args.ckpt_dir, device)
-        yield arm, dl.ARMS[arm][2], meta["seed"], meta["features"], model
+        yield arm, info[2], meta["seed"], info[0], model
     yield ("ref_sam-original", "SAM ViT-B with its original decoder (no training)", 0, "sam_vit_b__sam",
            dl.build_decoder("sam", args.ckpt_dir, device, log=lambda *a: None).eval())
     yield ("ref_medsam-e2e", "MedSAM end-to-end (its encoder and its own decoder)", 0, "medsam_vit_b__medsam",
@@ -102,7 +103,10 @@ def summarise(recs):
                 per[s][t][seed] = (float(np.nanmedian([r["dice"] for r in rs])),
                                    float(np.mean([np.nanmedian(v) for v in by_ds.values()])))
 
-    order = [a for a in dl.ARMS if a in sys_name] + sorted(s for s in sys_name if s.startswith("ref_"))
+    order = ([a for a in dl.ARMS if a in sys_name] + [a for a in dl.LORA_ARMS if a in sys_name]
+             + sorted((s for s in sys_name if s not in dl.ARMS and s not in dl.LORA_ARMS and not s.startswith("ref_")),
+                      key=lambda x: (x.split("_n")[0], int(x.rsplit("_n", 1)[1]) if x.rsplit("_n", 1)[-1].isdigit() else 0, x))
+             + sorted(s for s in sys_name if s.startswith("ref_")))
     lines = ["HEADLINE - median Dice over structures | mean of per-dataset medians "
              "(trained arms: mean over seeds, +- standard deviation over seeds)"]
     for t in test_sets:
@@ -131,7 +135,25 @@ def summarise(recs):
              ("medsam-enc_medsam-dec_small", "sam-enc_sam-dec_small", "Q1 fairness: MedSAM decoder start"),
              ("medsam-enc_medsam-dec_small", "medsam-enc_sam-dec_small", "decoder start, MedSAM encoder"),
              ("sam-enc_sam-dec_all11", "sam-enc_sam-dec_small", "Q2: more slices, same 11 datasets"),
-             ("sam-enc_sam-dec_small", "ref_sam-original", "decoder training on 1.5k slices vs none")]
+             ("sam-enc_sam-dec_small", "ref_sam-original", "decoder training on 1.5k slices vs none"),
+             ("sam-enc_sam-dec-lora_small", "sam-enc_sam-dec_small", "decoder LoRA vs fully trained decoder, small data"),
+             ("sam-enc_sam-dec-lora_all11", "sam-enc_sam-dec_all11", "decoder LoRA vs fully trained decoder, all slices"),
+             ("sam-enc_sam-dec-lora_small", "ref_sam-original", "decoder LoRA, small data vs untrained SAM"),
+             ("sam-enc-lora_sam-dec-lora_small", "sam-enc_sam-dec-lora_small",
+              "adding encoder LoRA (both vs decoder only), small data"),
+             ("sam-enc-lora_sam-dec-lora_all11", "sam-enc_sam-dec-lora_all11",
+              "adding encoder LoRA (both vs decoder only), all slices"),
+             ("sam-enc-lora_sam-dec-lora_small", "sam-enc_sam-dec_small",
+              "encoder + decoder LoRA vs fully trained decoder, small data"),
+             ("sam-enc-lora_sam-dec-lora_small", "medsam-enc_sam-dec_small",
+              "encoder + decoder LoRA vs MedSAM encoder, small data"),
+             ("sam-enc-lora_sam-dec-lora_all11", "sam-enc-lora_sam-dec-lora_small",
+              "encoder + decoder LoRA: more slices, same 11 datasets"),
+             ("sam-enc-lora_sam-dec-lora_small", "ref_sam-original", "encoder + decoder LoRA, small data vs untrained SAM"),
+             ("sam-enc-lora_sam-dec-lora_n1500", "sam-enc_sam-dec_n1500",
+              "encoder + decoder LoRA vs decoder only, 1,500 per dataset"),
+             ("sam-enc_sam-dec_all11", "sam-enc-lora_sam-dec-lora_small",
+              "decoder only on all slices vs encoder + decoder LoRA on small data (more data vs encoder training)")]
     for ref in sorted(x for x in sys_name if x.startswith("ref_samri_vitb_box")):  # every SAMRI box checkpoint given
         pairs += [(ref, "sam-enc_sam-dec_all11", f"Q2: more datasets (36 vs 11), {ref[4:]}"),
                   (ref, "sam-enc_sam-dec_small", f"Q2: SAMRI vs small data, {ref[4:]}"),
@@ -180,10 +202,13 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--indomain-dir", required=True)
     ap.add_argument("--zeroshot-dir", default=None)
-    ap.add_argument("--runs-dir", required=True)
+    ap.add_argument("--runs-dir", required=True, nargs="+", help="one or more run roots (<arm>/seed<k>/)")
     ap.add_argument("--ckpt-dir", required=True)
     ap.add_argument("--samri-ckpts", nargs="*", default=None)
     ap.add_argument("--out-dir", required=True)
+    ap.add_argument("--extra-instances", nargs="*", default=None,
+                    help="eval_instances.csv files written by train_lora.py (LoRA arms evaluate themselves, "
+                         "because their encoder differs from the stored features); merged into the summary")
     ap.add_argument("--device", default="cuda" if torch.cuda.is_available() else "cpu")
     args = ap.parse_args()
     t0 = time.time()
@@ -196,12 +221,19 @@ def main():
     for sid, name, seed, feats, model in systems(args, device):
         for t, wdir in test_sets:
             if (t, feats) not in cache:
-                wd = dl.WorkDir(wdir, feats)
+                try:
+                    wd = dl.WorkDir(wdir, feats)
+                except FileNotFoundError as e:  # e.g. no MedSAM features for this test set: skip, keep the rest
+                    print(f"  WARNING: {name} not evaluated on {t}: {e}")
+                    cache[(t, feats)] = None
+                    continue
                 rows = wd.rows("test")
                 if t == "in-domain":  # only datasets the decoders were trained on
                     trained = {r["dataset"] for r in wd.manifest if r["split"] == "train"}
                     rows = [r for r in rows if wd.manifest[r]["dataset"] in trained]
                 cache[(t, feats)] = (wd, wd.instances(rows))
+            if cache[(t, feats)] is None:
+                continue
             wd, inst = cache[(t, feats)]
             n0 = len(recs)
             for r, lab, d, area in dl.predict_instances(model, wd, inst, device):
@@ -213,6 +245,15 @@ def main():
                   f"({time.time() - t0:.0f} s)", flush=True)
         del model
 
+    for p in args.extra_instances or []:
+        with open(p) as f:
+            extra = list(csv.DictReader(f))
+        for r in extra:
+            r["seed"], r["row"], r["label"], r["area"], r["dice"] = (
+                int(r["seed"]), int(r["row"]), float(r["label"]), int(r["area"]), float(r["dice"]))
+        recs += extra
+        print(f"  added {len(extra)} structures from {p}")
+
     with open(os.path.join(args.out_dir, "eval_instances.csv"), "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=list(recs[0].keys()))
         w.writeheader()
@@ -221,7 +262,7 @@ def main():
     print("\n" + report)
     with open(os.path.join(args.out_dir, "eval_summary.txt"), "w") as f:
         f.write(report + "\n")
-    runs = sorted(glob(os.path.join(args.runs_dir, "*", "seed*", "meta.json")))
+    runs = sorted(r for d in args.runs_dir for r in glob(os.path.join(d, "*", "seed*", "meta.json")))
     with open(os.path.join(args.out_dir, "training_runs.json"), "w") as f:
         json.dump([json.load(open(p)) for p in runs], f, indent=1)
     print(f"\nSaved to {args.out_dir}  ({time.time() - t0:.0f} s)")

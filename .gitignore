@@ -13,4 +13,4 @@ build/
 *.egg-info/
 
 # Ignore model checkpoints
-*.pth
+*.pth.DS_Store
