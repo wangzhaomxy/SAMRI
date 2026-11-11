@@ -145,6 +145,28 @@ encoding for decoder-only arms, and the variety table splits the clean test sets
 training and datasets left out. Full fine-tuning was left out of the study (Nov 2026); `train_lora.py`
 still has the mode.
 
+### Training on a similar dataset (`run_knee_experiments.sh`, `analyse_knee.py`)
+
+Question: does training on a dataset similar to an unseen one raise zero-shot Dice on it? MSK_T2, MSK_PD
+and MSK_FLASH are knee MRI in three contrasts with the same six targets (femur, tibia and patella, bone
+and cartilage).
+
+| run ids | what trains | data |
+|---|---|---|
+| `sam-enc_sam-dec_n<N>` (existing) | SAM decoder (frozen encoder) | the 11 clean datasets, N = 150, 500 per dataset, seeds 0-2 |
+| `sam-enc_sam-dec_n<N>_plus-MSK_T2` | SAM decoder (frozen encoder) | the same 11 × N slices + N slices of MSK_T2 |
+
+Seed k of a plus run uses exactly the 11-dataset slices of the existing run with seed k (MSK_T2 has its
+own pool and seeds in `data_pools.extra_pool`), and validation stays on the same 165 slices, so
+plus − base isolates MSK_T2. New test set (`embedding_research_knee/`): every test slice of MSK_PD and
+MSK_FLASH (unseen by all models) and MSK_T2 (seen only by the plus runs; a check that they learned it).
+Every existing model is also tested on it: `eval_decoder.py --extra-test knee=<dir>` for decoder-only
+models, `train_lora.py --eval-only knee=<dir>` for the encoder + decoder LoRA arms. There is no control
+arm with one more non-knee dataset, so a gain shows that MSK_T2 helps, not that a similar dataset helps
+more than any extra dataset would. Outputs in `decoder_swap/results_knee/`: `eval_summary.txt`,
+`eval_instances.csv` and `tables/knee_summary.txt` (plus vs base headline, per structure type, every
+system on the knee sets).
+
 ## Files
 
 - `emb_common.py` — pipelines, geometry (mask → token coverage, token map → native pixels), model loading
@@ -154,3 +176,4 @@ still has the mode.
 - `decoder_lib.py`, `train_decoder.py`, `eval_decoder.py`, `run_decoder_experiments.sh` — swapped-encoder decoder test
 - `train_lora.py`, `run_lora_experiments.sh` — LoRA arms (decoder LoRA via `train_decoder.py`)
 - `data_pools.py`, `train_decoder_curve.py`, `analyse_curve.py`, `run_curve_experiments.sh`, `run_final_tables.sh` — data size, variety and compute
+- `run_knee_experiments.sh`, `analyse_knee.py` — training on a similar dataset (11 datasets + MSK_T2, knee test set)

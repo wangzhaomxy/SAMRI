@@ -12,6 +12,7 @@ Systems
 Test sets (tight box from the native mask, one mask, Dice on native pixels)
   in-domain   test rows of --indomain-dir (11 clean datasets)
   zero-shot   test rows of --zeroshot-dir (datasets SAMRI never trained on)
+  <label>     test rows of each --extra-test <label>=<work dir> (e.g. knee=... for MSK_PD, MSK_FLASH, MSK_T2)
 
 Outputs in --out-dir: eval_instances.csv (one row per system x seed x structure)
 and eval_summary.txt.
@@ -88,7 +89,7 @@ def systems(args, device):
 def summarise(recs):
     from scipy.stats import wilcoxon
     sys_name = {r["system"]: r["name"] for r in recs}
-    test_sets = [t for t in ("in-domain", "zero-shot") if any(r["test_set"] == t for r in recs)]
+    test_sets = list(dict.fromkeys(r["test_set"] for r in recs))  # in the order they were evaluated
     # per system/test set/seed: instance median and mean of dataset medians
     per = defaultdict(lambda: defaultdict(dict))
     for s in sys_name:
@@ -152,6 +153,8 @@ def summarise(recs):
              ("sam-enc-lora_sam-dec-lora_small", "ref_sam-original", "encoder + decoder LoRA, small data vs untrained SAM"),
              ("sam-enc-lora_sam-dec-lora_n1500", "sam-enc_sam-dec_n1500",
               "encoder + decoder LoRA vs decoder only, 1,500 per dataset"),
+             ("sam-enc_sam-dec_n150_plus-MSK_T2", "sam-enc_sam-dec_n150", "adding MSK_T2 to the 11 datasets, 150 per dataset"),
+             ("sam-enc_sam-dec_n500_plus-MSK_T2", "sam-enc_sam-dec_n500", "adding MSK_T2 to the 11 datasets, 500 per dataset"),
              ("sam-enc_sam-dec_all11", "sam-enc-lora_sam-dec-lora_small",
               "decoder only on all slices vs encoder + decoder LoRA on small data (more data vs encoder training)")]
     for ref in sorted(x for x in sys_name if x.startswith("ref_samri_vitb_box")):  # every SAMRI box checkpoint given
@@ -202,6 +205,8 @@ def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--indomain-dir", required=True)
     ap.add_argument("--zeroshot-dir", default=None)
+    ap.add_argument("--extra-test", nargs="*", default=[], metavar="LABEL=DIR",
+                    help="more test sets, each a work dir (manifest + features) with its own label")
     ap.add_argument("--runs-dir", required=True, nargs="+", help="one or more run roots (<arm>/seed<k>/)")
     ap.add_argument("--ckpt-dir", required=True)
     ap.add_argument("--samri-ckpts", nargs="*", default=None)
@@ -216,6 +221,11 @@ def main():
     os.makedirs(args.out_dir, exist_ok=True)
 
     test_sets = [("in-domain", args.indomain_dir)] + ([("zero-shot", args.zeroshot_dir)] if args.zeroshot_dir else [])
+    for spec in args.extra_test:
+        label, _, wdir = spec.partition("=")
+        if not label or not wdir:
+            sys.exit(f"--extra-test expects LABEL=DIR, got {spec!r}")
+        test_sets.append((label, wdir))
     cache = {}  # (test set, features) -> (WorkDir, instances)
     recs = []
     for sid, name, seed, feats, model in systems(args, device):

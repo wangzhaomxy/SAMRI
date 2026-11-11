@@ -83,6 +83,11 @@ def arm_info(arm):
     ("sam-enc_sam-dec_k<k>-draw<d>"); None for anything else (learning-rate trials, image-trained arms)."""
     if arm in ARMS:
         return ARMS[arm]
+    m = re.fullmatch(r"sam-enc_sam-dec(-lora)?_n(\d+)_plus-(.+)", arm)
+    if m:
+        what = "LoRA on SAM decoder" if m.group(1) else "SAM decoder trained"
+        return ("sam_vit_b__sam", "sam", f"SAM encoder (frozen), {what}, {int(m.group(2)):,} slices per dataset, "
+                                         f"11 datasets + {m.group(3).replace('+', ' + ')}")
     m = re.fullmatch(r"sam-enc_sam-dec(-lora)?_n(\d+)", arm)
     if m:
         what = "LoRA on SAM decoder" if m.group(1) else "SAM decoder trained"

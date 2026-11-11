@@ -10,6 +10,9 @@ Questions
   data variety  at a FIXED total number of slices, does training on more datasets (more structures) help
                 zero-shot? arms "sam-enc_sam-dec_k<k>-draw<d>": k of the 11 datasets, total // k slices each.
                 The clean datasets left out of a draw are extra unseen test sets (analyse_curve.py).
+  similar data  does adding a dataset similar to an unseen one help on it? --extra-datasets MSK_T2 adds arms
+                "sam-enc_sam-dec_n<N>_plus-MSK_T2": the 11 datasets' N slices (exactly those of the run
+                without the extra) + N slices of each extra dataset, from <extra-root>/<dataset>/training/.
 How
   The pool (data_pools.py: up to POOL_MAX slices per dataset, validation slices removed) is encoded ONCE
   with the frozen SAM encoder and kept in GPU memory (fp16, 2 MiB per slice); every run then trains a
@@ -162,6 +165,8 @@ def main():
     ap.add_argument("--variety-draws", type=int, default=3)
     ap.add_argument("--variety-total", type=int, default=1500)
     ap.add_argument("--pool-max", type=int, default=dp.POOL_MAX)
+    ap.add_argument("--extra-root", default=None, help="root holding <dataset>/training/ for --extra-datasets")
+    ap.add_argument("--extra-datasets", nargs="*", default=[], help="datasets added on top of the 11 (plus arms)")
     ap.add_argument("--lr-decoder", type=float, default=1e-4)
     ap.add_argument("--lr-decoder-lora", type=float, default=5e-4)
     ap.add_argument("--rank", type=int, default=4)
@@ -196,8 +201,18 @@ def main():
         for j, p in enumerate(pool[ds]):
             pool_index[(ds, j)] = len(pairs)
             pairs.append(p)
+    extra = dp.extra_pool(args.extra_root, args.extra_datasets, args.pool_max) if args.extra_datasets else {}
+    clash = set(extra) & set(pool)
+    if clash:
+        raise SystemExit(f"extra datasets already among the 11: {sorted(clash)}")
+    for ds in sorted(extra):
+        for j, p in enumerate(extra[ds]):
+            pool_index[(ds, j)] = len(pairs)
+            pairs.append(p)
     for ds in sorted(pool):
         print(f"  pool {ds}: {len(pool[ds])} slices")
+    for ds in sorted(extra):
+        print(f"  pool {ds} (extra, from {args.extra_root}): {len(extra[ds])} slices")
     print(f"pool: {len(pairs)} slices ({len(pairs) * 2 / 1024:.1f} GB on GPU once encoded)", flush=True)
 
     _, encoder = ec.load_model("sam_vit_b", args.ckpt_dir, device)
@@ -219,7 +234,7 @@ def main():
     print(f"encoded {len(pairs)} slices in {enc_s / 60:.1f} min ({enc_s / max(len(pairs), 1) * 1000:.0f} ms per slice)",
           flush=True)
     with open(os.path.join(args.out_dir, "pool.json"), "w") as f:
-        json.dump({"pool_max": args.pool_max, "slices_per_dataset": {d: len(v) for d, v in pool.items()},
+        json.dump({"pool_max": args.pool_max, "slices_per_dataset": {d: len(v) for d, v in {**pool, **extra}.items()},
                    "encode_seconds": round(enc_s, 1), "encode_seconds_per_slice": enc_s / max(len(pairs), 1)}, f, indent=1)
     per_slice = enc_s / max(len(pairs), 1)
 
@@ -231,6 +246,18 @@ def main():
                 arm = f"sam-enc_sam-dec{'-lora' if lora else ''}_n{n}"
                 train_one(arm, seed, dp.size_subset(pool, n, seed), pool_index, embs, packed, wd, val_inst, args,
                           device, args.lr_decoder_lora if lora else args.lr_decoder, lora, per_slice)
+    # ---- similar data: the 11 datasets' slices + the extra datasets -------------------------
+    if extra:
+        tag = "+".join(sorted(extra))
+        for mode in args.modes:
+            lora = mode == "decoder-lora"
+            for n in args.sizes:
+                for seed in args.seeds:
+                    sel = dp.size_subset(pool, n, seed)
+                    sel.update(dp.extra_subset(extra, n, seed))
+                    train_one(f"sam-enc_sam-dec{'-lora' if lora else ''}_n{n}_plus-{tag}", seed, sel, pool_index,
+                              embs, packed, wd, val_inst, args, device,
+                              args.lr_decoder_lora if lora else args.lr_decoder, lora, per_slice)
     # ---- data variety (decoder trained, fixed total) -------------------------------------
     for k in args.variety_ks:
         for draw in range(args.variety_draws):

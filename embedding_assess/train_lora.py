@@ -30,6 +30,9 @@ Evaluation (end of training, best weights): the encoder must be rerun on the tes
   and the zero-shot test rows, same boxes and Dice as eval_decoder.py, and writes eval_instances.csv
   in eval_decoder.py's format (merge with: eval_decoder.py --extra-instances ...).
 Resumable: last.pt is written every epoch and picked up on resubmission.
+Evaluate-only: --eval-only LABEL=DIR reloads <run>/best.pt (no training) and scores it on DIR's test rows
+  (e.g. knee=<work dir of MSK_PD/MSK_FLASH/MSK_T2>), writing <run>/eval_instances_<LABEL>.csv for
+  eval_decoder.py --extra-instances.
 
 Outputs in <out-dir>/<arm><tag>/seed<k>/: best.pt (encoder LoRA + decoder state), best_decoder.pt (decoder
 with its LoRA merged), curve.csv, meta.json, eval_instances.csv, DONE.
@@ -194,6 +197,55 @@ def training_pairs(arm_data, wd, val_rows, max_slices, split_seed, seed=0):
 
 
 # ---------------------------------------------------------------------------
+def eval_only(args):
+    label, _, wdir = args.eval_only.partition("=")
+    if not label or not wdir:
+        sys.exit(f"--eval-only expects LABEL=DIR, got {args.eval_only!r}")
+    arm_data, mode, arm_name = dl.IMAGE_ARMS[args.arm]
+    run_dir = os.path.join(args.out_dir, args.arm + args.tag, f"seed{args.seed}")
+    out = os.path.join(run_dir, f"eval_instances_{label}.csv")
+    if os.path.isfile(out):
+        print(f"{out}: exists - skipping")
+        return
+    best = os.path.join(run_dir, "best.pt")
+    if not os.path.isfile(best):
+        sys.exit(f"no trained weights: {best}")
+    meta_p = os.path.join(run_dir, "meta.json")
+    meta = json.load(open(meta_p)) if os.path.isfile(meta_p) else {}
+    rank, alpha = meta.get("rank", args.rank), meta.get("alpha", args.alpha)
+    t0 = time.time()
+    if args.device != "cpu":
+        assert torch.cuda.is_available(), "no GPU visible - wrong conda env for this card?"
+        print("device:", torch.cuda.get_device_name(0))
+    device = torch.device(args.device)
+    autocast = device.type == "cuda" and not args.no_autocast
+    _, encoder = ec.load_model("sam_vit_b", args.ckpt_dir, device)
+    model = dl.build_decoder("sam", args.ckpt_dir, device, log=lambda *a: None)
+    if mode == "lora":
+        add_lora(encoder, rank, alpha, False)
+        dl.add_decoder_lora(model.mask_decoder, rank, alpha)
+    else:
+        for p in encoder.parameters():
+            p.requires_grad = True
+    st = torch.load(best, map_location="cpu")
+    load_lora_state(encoder, st["lora"])
+    model.mask_decoder.load_state_dict(st["decoder"])
+    encoder.eval(), model.eval()
+    lw = LiveWorkDir(wdir, encoder, device, autocast)
+    recs = []
+    for r, lab, d, area in dl.predict_instances(model, lw, lw.instances(lw.rows("test")), device):
+        m = lw.manifest[r]
+        recs.append({"system": args.arm + args.tag, "name": arm_name + (f" ({args.tag.strip('_')})" if args.tag else ""),
+                     "seed": args.seed, "test_set": label, "root": m["root"], "dataset": m["dataset"],
+                     "row": r, "label": lab, "area": area, "dice": d})
+    with open(out, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=list(recs[0].keys()))
+        w.writeheader()
+        w.writerows(recs)
+    print(f"{arm_name} on {label}: median Dice {np.nanmedian([x['dice'] for x in recs]):.3f} over {len(recs)} "
+          f"structures ({time.time() - t0:.0f} s) -> {out}", flush=True)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--arm", required=True, choices=list(dl.IMAGE_ARMS))
@@ -220,7 +272,11 @@ def main():
     ap.add_argument("--workers", type=int, default=None)
     ap.add_argument("--device", default="cuda")
     ap.add_argument("--tag", default="")
+    ap.add_argument("--eval-only", default=None, metavar="LABEL=DIR",
+                    help="no training: test the finished run's best.pt on DIR's test rows under the label LABEL")
     args = ap.parse_args()
+    if args.eval_only:
+        return eval_only(args)
     t0 = time.time()
 
     arm_data, mode, arm_name = dl.IMAGE_ARMS[args.arm]

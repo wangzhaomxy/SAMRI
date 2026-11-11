@@ -12,6 +12,8 @@ size runs  N slices per dataset = the first N of a seed-specific order of that d
            A dataset with fewer than N pool slices contributes all of them.
 variety    k datasets drawn at random (per draw) among those with >= total // k pool slices, each giving
            total // k slices: the total stays fixed while the number of datasets (structures) changes.
+extra      datasets added ON TOP of the 11 (e.g. MSK_T2): their own pool and subsets, drawn with separate
+           seeds, so adding them leaves the 11 datasets' slices exactly as in the runs without them.
 """
 
 import os
@@ -60,4 +62,28 @@ def variety_subset(pool, k, total, draw):
         i = sorted(pool).index(ds)
         order = np.random.default_rng([3000 + draw, i]).permutation(len(pool[ds]))
         out[ds] = sorted(int(j) for j in order[:per])
+    return out
+
+
+def extra_pool(root, datasets, pool_max=POOL_MAX, seed=0):
+    """dataset -> (image, mask) pairs from <root>/<dataset>/training/, in pool order (no validation slices:
+    validation stays on the 11 datasets)."""
+    from build_manifest import list_pairs
+    pool = {}
+    for j, ds in enumerate(sorted(datasets)):
+        folder = os.path.join(root, ds, "training")
+        if not os.path.isdir(folder):
+            raise SystemExit(f"extra dataset not found: {folder}")
+        pairs = list_pairs(folder)[0]
+        order = np.random.default_rng([500 + seed, j]).permutation(len(pairs))
+        pool[ds] = [pairs[i] for i in order[:pool_max]]
+    return pool
+
+
+def extra_subset(pool, n, seed):
+    """Like size_subset, for the extra datasets (separate seeds; nested across n)."""
+    out = {}
+    for j, ds in enumerate(sorted(pool)):
+        order = np.random.default_rng([1500 + seed, j]).permutation(len(pool[ds]))
+        out[ds] = sorted(int(i) for i in order[:n])
     return out
