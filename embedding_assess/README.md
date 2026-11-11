@@ -169,6 +169,23 @@ on every set would instead point to more data variety in general. Outputs in `de
 `eval_instances.csv` and `tables/knee_summary.txt` (plus vs base headline, per structure type, every
 system on the knee sets).
 
+### nnU-Net comparison (`run_nnunet_prepare.sh`, `run_nnunet_train.sh`)
+
+One specialist 2D nnU-Net (v2.7.0, default plans and trainer, 1,000 epochs) per dataset, each trained on its
+own data: the 11 clean datasets and MSK_T2, every slice of the dataset's `training` folder, with its
+patient-wise `validation` folder as nnU-Net's fold 0 validation set (`splits_final.json`). Test slices are the
+ones every other system is scored on: each clean dataset's in-domain manifest rows, and for the MSK_T2 model
+every test slice of MSK_T2, MSK_PD and MSK_FLASH (the same six classes, other sequences). nnU-Net cannot
+segment classes it was not trained on, so no zero-shot set is tested. Scoring matches `eval_decoder.py` (one instance per label value in a slice, Dice at native size), but
+nnU-Net gets no box: it has to find the structure as well as delineate it.
+
+Order: `setup_nnunet_env.sh` once on a login node (a venv on top of samri-mi355x) → `run_nnunet_prepare.sh`
+(CPU; `nnunet_prepare.py` writes 2D NIfTI slices with labels mapped to 1..K, then nnU-Net planning and
+preprocessing) → `run_nnunet_train.sh` as a smoke test (`--export=ALL,SMOKE=1`, 5 epochs on the smallest
+dataset) → the 12-task array (`nnunet_run.py`: train, nnU-Net validation, predict, score). Outputs in
+`Eval_results/nnunet_knee/eval/nnUNetTrainer/eval_instances_<dataset>.csv`; merge with the knee results via
+`analyse_knee.py --instances results_knee/eval_instances.csv <those files>`.
+
 ## Files
 
 - `emb_common.py` — pipelines, geometry (mask → token coverage, token map → native pixels), model loading
@@ -179,3 +196,4 @@ system on the knee sets).
 - `train_lora.py`, `run_lora_experiments.sh` — LoRA arms (decoder LoRA via `train_decoder.py`)
 - `data_pools.py`, `train_decoder_curve.py`, `analyse_curve.py`, `run_curve_experiments.sh`, `run_final_tables.sh` — data size, variety and compute
 - `run_knee_experiments.sh`, `analyse_knee.py` — training on a similar dataset (11 datasets + MSK_T2, knee test set)
+- `setup_nnunet_env.sh`, `nnunet_prepare.py`, `nnunet_run.py`, `run_nnunet_prepare.sh`, `run_nnunet_train.sh` — nnU-Net comparison

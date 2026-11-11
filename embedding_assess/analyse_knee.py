@@ -12,6 +12,7 @@ Test sets: unseen knee = MSK_PD + MSK_FLASH (same knee cohort and targets as MSK
   the 11 in-domain datasets (does adding MSK_T2 cost anything there?).
 Metric: mean over datasets of the per-dataset median Dice, per seed; mean ± sd over seeds.
 Outputs in --out-dir: knee_summary.txt (headline first), knee_all_systems.csv, knee_by_label.csv.
+Several --instances files are merged (e.g. results_knee/eval_instances.csv + nnU-Net's eval_instances_*.csv).
 """
 
 import argparse
@@ -28,7 +29,8 @@ SEEN_EXTRA = "MSK_T2"
 
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    ap.add_argument("--instances", required=True, help="eval_instances.csv from eval_decoder.py")
+    ap.add_argument("--instances", nargs="+", required=True,
+                    help="eval_instances.csv from eval_decoder.py, plus any other instance files (e.g. nnU-Net's)")
     ap.add_argument("--knee-label", default="knee", help="test-set label used for --extra-test")
     ap.add_argument("--extra", default="MSK_T2")
     ap.add_argument("--out-dir", required=True)
@@ -37,10 +39,11 @@ def main():
     from scipy.stats import wilcoxon
 
     recs = []
-    with open(args.instances) as f:
-        for r in csv.DictReader(f):
-            r["seed"], r["dice"], r["label"] = int(r["seed"]), float(r["dice"]), float(r["label"])
-            recs.append(r)
+    for path in args.instances:
+        with open(path) as f:
+            for r in csv.DictReader(f):
+                r["seed"], r["dice"], r["label"] = int(r["seed"]), float(r["dice"]), float(r["label"])
+                recs.append(r)
     by = defaultdict(list)  # (system, seed, test set, dataset) -> dice
     names = {}
     for r in recs:
@@ -141,13 +144,14 @@ def main():
 
     # ---- every system on the knee sets ------------------------------------------------------------
     lines.append("EVERY SYSTEM ON THE KNEE SETS (sorted by unseen knee Dice)")
-    lines.append("  " + f"{'system':78s}" + "".join(f"{c[0]:>24s}" for c in cols[:4]))
+    show = cols[:4] + cols[5:]  # knee sets, MSK_shoulder, in-domain
+    lines.append("  " + f"{'system':78s}" + "".join(f"{c[0]:>24s}" for c in show))
     allrows = []
     for s in systems:
         r = row(s)
         allrows.append((np.nanmean(r[0]) if r[0] else np.nan, s, r))
     for key, s, r in sorted(allrows, key=lambda x: -x[0] if x[0] == x[0] else 9):
-        lines.append("  " + f"{names[s][:78]:78s}" + "".join(f"{fmt(v):>24s}" for v in r[:4]))
+        lines.append("  " + f"{names[s][:78]:78s}" + "".join(f"{fmt(v):>24s}" for v in r[:4] + r[5:]))
     report = "\n".join(lines)
     print(report)
     with open(os.path.join(args.out_dir, "knee_summary.txt"), "w") as f:
