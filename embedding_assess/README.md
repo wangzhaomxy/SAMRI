@@ -161,9 +161,11 @@ own pool and seeds in `data_pools.extra_pool`), and validation stays on the same
 plus − base isolates MSK_T2. New test set (`embedding_research_knee/`): every test slice of MSK_PD and
 MSK_FLASH (unseen by all models) and MSK_T2 (seen only by the plus runs; a check that they learned it).
 Every existing model is also tested on it: `eval_decoder.py --extra-test knee=<dir>` for decoder-only
-models, `train_lora.py --eval-only knee=<dir>` for the encoder + decoder LoRA arms. There is no control
-arm with one more non-knee dataset, so a gain shows that MSK_T2 helps, not that a similar dataset helps
-more than any extra dataset would. Outputs in `decoder_swap/results_knee/`: `eval_summary.txt`,
+models, `train_lora.py --eval-only knee=<dir>` for the encoder + decoder LoRA arms. The test sets form a
+similarity gradient to MSK_T2: MSK_PD and MSK_FLASH (same knee structures, other sequences), MSK_shoulder
+(cartilage of another joint), and the other zero-shot sets (unrelated). A similarity effect should be
+largest on the knee sets, smaller on the shoulder and absent on the unrelated sets; a gain of similar size
+on every set would instead point to more data variety in general. Outputs in `decoder_swap/results_knee/`: `eval_summary.txt`,
 `eval_instances.csv` and `tables/knee_summary.txt` (plus vs base headline, per structure type, every
 system on the knee sets).
 
