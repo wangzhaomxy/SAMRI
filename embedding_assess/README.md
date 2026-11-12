@@ -145,6 +145,18 @@ encoding for decoder-only arms, and the variety table splits the clean test sets
 training and datasets left out. Full fine-tuning was left out of the study (Nov 2026); `train_lora.py`
 still has the mode.
 
+**Fixed training budget (`run_fixed_budget.sh`, `analyse_fixed.py`).** The data-size runs above stop early on
+the validation slices, so more data also means longer training (the best epoch comes after ~1-4k training
+samples with 15 slices per dataset and ~0.2-0.8 M with 5,000). The fixed-budget runs separate the two: every
+size (same slices and seeds as `sam-enc_sam-dec_n<N>`) trains for the same number of training samples, with
+a constant learning rate and no early stopping, and the decoder is saved after 6k, 20k, 60k, 200k and 600k
+samples (`sam-enc_sam-dec_n<N>_s<B>`, `train_decoder_curve.py --fixed-samples`, out dir `runs_fixed`).
+Validation Dice is recorded at each budget for information only. `analyse_fixed.py` writes
+`results_fixed/tables/summary.txt`: the largest vs the smallest size at each budget (seed-paired), the gain
+per 10× more slices at each budget and per 10× longer training at each size, and size × budget grids for
+in-domain, zero-shot without MSK_shoulder, unseen knee and single structures, next to the original
+early-stopped runs.
+
 ### Training on a similar dataset (`run_knee_experiments.sh`, `analyse_knee.py`)
 
 Question: does training on a dataset similar to an unseen one raise zero-shot Dice on it? MSK_T2, MSK_PD
@@ -186,6 +198,15 @@ dataset) → the 12-task array (`nnunet_run.py`: train, nnU-Net validation, pred
 `Eval_results/nnunet_knee/eval/nnUNetTrainer/eval_instances_<dataset>.csv`; merge with the knee results via
 `analyse_knee.py --instances results_knee/eval_instances.csv <those files>`.
 
+Lesion fix (Nov 2026): ISLES2022_ADC, ISLES2022_DWI and QIN-PROSTATE-Lesion store one label number per lesion
+(2, 3, 4, …; the lesion's number in its scan, not a class). The first run (array indices 4, 5, 8) made each
+number a class, so nnU-Net could not find lesions numbered 3 and up. Re-running `run_nnunet_prepare.sh` adds
+one-label versions (array indices 12-14, `Dataset913-915_*_onelabel`: every lesion = class 1) and preprocesses
+only those; `sbatch --array=12-14 run_nnunet_train.sh` trains them. They are scored per lesion (each
+predicted lesion pixel goes to the nearest true lesion of the slice), with the original label numbers, so the
+rows pair with `eval_decoder.py`'s. The first-run results of these three datasets are renamed
+`*.csv.superseded`, so a `*.csv` glob gives one nnU-Net result per test structure.
+
 ## Files
 
 - `emb_common.py` — pipelines, geometry (mask → token coverage, token map → native pixels), model loading
@@ -195,5 +216,6 @@ dataset) → the 12-task array (`nnunet_run.py`: train, nnU-Net validation, pred
 - `decoder_lib.py`, `train_decoder.py`, `eval_decoder.py`, `run_decoder_experiments.sh` — swapped-encoder decoder test
 - `train_lora.py`, `run_lora_experiments.sh` — LoRA arms (decoder LoRA via `train_decoder.py`)
 - `data_pools.py`, `train_decoder_curve.py`, `analyse_curve.py`, `run_curve_experiments.sh`, `run_final_tables.sh` — data size, variety and compute
+- `run_fixed_budget.sh`, `analyse_fixed.py` — data size at a fixed training budget
 - `run_knee_experiments.sh`, `analyse_knee.py` — training on a similar dataset (11 datasets + MSK_T2, knee test set)
 - `setup_nnunet_env.sh`, `nnunet_prepare.py`, `nnunet_run.py`, `run_nnunet_prepare.sh`, `run_nnunet_train.sh` — nnU-Net comparison

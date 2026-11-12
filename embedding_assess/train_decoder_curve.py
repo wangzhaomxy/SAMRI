@@ -13,6 +13,15 @@ Questions
   similar data  does adding a dataset similar to an unseen one help on it? --extra-datasets MSK_T2 adds arms
                 "sam-enc_sam-dec_n<N>_plus-MSK_T2": the 11 datasets' N slices (exactly those of the run
                 without the extra) + N slices of each extra dataset, from <extra-root>/<dataset>/training/.
+  fixed budget  (--fixed-samples B1 B2 ...; only the data-size runs, in their own --out-dir) the data-size runs
+                above stop early on validation, so a bigger data set also trains for longer (best epoch
+                after ~1-4k training samples with 15 slices per dataset, ~0.2-0.8 M with 5,000): data size and
+                training length are confounded. Here every size trains for the SAME number of training
+                samples (slices seen, with repeats): one run per size and seed to the largest budget, constant
+                learning rate, no early stopping, and the decoder is saved after exactly B samples for each
+                budget B (no best-epoch choice; validation Dice is recorded at each budget and every
+                --val-every samples for information only). Arms "sam-enc_sam-dec[-lora]_n<N>_s<B>", the same
+                slices as "sam-enc_sam-dec[-lora]_n<N>" for the same seed. Tables: analyse_fixed.py.
 How
   The pool (data_pools.py: up to POOL_MAX slices per dataset, validation slices removed) is encoded ONCE
   with the frozen SAM encoder and kept in GPU memory (fp16, 2 MiB per slice); every run then trains a
@@ -23,7 +32,8 @@ Outputs (one folder per run, same files as train_decoder.py, so eval_decoder.py 
   <out-dir>/<arm>/seed<k>/{best_decoder.pt, curve.csv, meta.json, DONE}; meta.json adds the training
   datasets, slices per dataset, train seconds, this run's share of the encoding time, peak GPU memory.
   <out-dir>/pool.json: pool sizes and the encoding time.
-Resumable: finished runs (DONE) are skipped; the pool is re-encoded on restart (~minutes).
+Resumable: finished runs (DONE) are skipped; the pool is re-encoded on restart (~minutes). A fixed-budget run
+  with any budget unfinished is trained again from the start (its budgets are rewritten).
 
 Usage (normally via run_curve_experiments.sh):
   python embedding_assess/train_decoder_curve.py \\
@@ -152,6 +162,121 @@ def train_one(arm, seed, sel, pool_index, embs, packed, wd, val_inst, args, devi
     print(f"  done: best val Dice {best:.4f} at epoch {best_ep} | {train_s / 60:.1f} min", flush=True)
 
 
+def train_fixed(base, seed, sel, budgets, pool_index, embs, packed, wd, val_inst, args, device, lr, lora,
+                enc_s_per_slice):
+    """Fixed training budgets: one fresh decoder trained for max(budgets) samples (constant learning rate, no
+    early stopping); after exactly b samples (rounded up to a whole batch) the decoder is saved as arm
+    <base>_s<b>. Same data, loss, sampling and optimiser as train_one."""
+    budgets = sorted(set(budgets))
+    dirs = {b: os.path.join(args.out_dir, f"{base}_s{b}", f"seed{seed}") for b in budgets}
+    if all(os.path.isfile(os.path.join(d, "DONE")) for d in dirs.values()):
+        print(f"{base} seed {seed}: all {len(budgets)} budgets done - skipping")
+        return
+    for d in dirs.values():
+        os.makedirs(d, exist_ok=True)
+        if os.path.isfile(os.path.join(d, "DONE")):
+            os.remove(os.path.join(d, "DONE"))  # retrained below; written again when this budget is reached
+    t0 = time.time()
+    if device.type == "cuda":
+        torch.cuda.reset_peak_memory_stats(device)
+    torch.manual_seed(seed)
+    rng = np.random.default_rng(seed)
+    idx_all = [pool_index[(ds, j)] for ds in sorted(sel) for j in sel[ds]]
+    keep = [i for i in idx_all if packed[i]]
+    n_slices = len(idx_all)
+    if not keep:
+        raise SystemExit(f"{base} seed {seed}: no training slice has a structure")
+
+    model = dl.build_decoder("sam", args.ckpt_dir, device, log=lambda *a: None)
+    params = dl.add_decoder_lora(model.mask_decoder, args.rank, args.alpha) if lora else list(model.mask_decoder.parameters())
+    opt = torch.optim.AdamW(params, lr=lr, weight_decay=args.weight_decay)
+    from utils.losses import DiceFocalLoss
+    loss_fn = DiceFocalLoss(sigmoid=True, squared_pred=True, reduction="mean", lambda_dice=1, lambda_focal=10)
+    shape = (dl.LOWRES, dl.LOWRES)
+
+    def validate():
+        model.eval()
+        d = [x[2] for x in dl.predict_instances(model, wd, val_inst, device)]
+        model.train()
+        return float(np.nanmean(d))
+
+    def batches():  # one epoch, exactly as train_one
+        order = rng.permutation(keep)
+        for s in range(0, len(order), args.batch_size):
+            idx = order[s:s + args.batch_size]
+            ts, bs = [], []
+            for i in idx:
+                opts = packed[i]
+                t = np.unpackbits(opts[int(rng.integers(len(opts)))])[:shape[0] * shape[1]].reshape(shape)
+                ts.append(t)
+                bs.append(dl.jitter_box_1024(dl.tight_box_256(t), args.jitter, rng))
+            yield (embs[torch.as_tensor(idx, device=device)].float(),
+                   torch.as_tensor(np.stack(ts), dtype=torch.float32, device=device)[:, None],
+                   torch.as_tensor(np.stack(bs), device=device))
+
+    v0 = validate()
+    curve = [{"samples": 0, "steps": 0, "epochs": 0.0, "train_loss": float("nan"), "val_dice": v0, "train_seconds": 0.0}]
+    print(f"\n{base} seed {seed}: {n_slices} slices ({len(keep)} with a structure) from {len(sel)} datasets, lr {lr}, "
+          f"budgets {', '.join(f'{b:,}' for b in budgets)} training samples "
+          f"(= {', '.join(f'{b / len(keep):.1f}' for b in budgets)} epochs); validation Dice before training {v0:.3f}",
+          flush=True)
+    model.train()
+    samples, steps, train_s, tl, nb = 0, 0, 0.0, 0.0, 0
+    todo = list(budgets)
+    next_val = args.val_every
+    while todo:
+        for emb, tgt, box in batches():
+            ts0 = time.time()
+            loss = loss_fn(model(emb, box), tgt)
+            opt.zero_grad()
+            loss.backward()
+            opt.step()
+            tl, nb = tl + loss.item(), nb + 1
+            train_s += time.time() - ts0
+            samples, steps = samples + emb.shape[0], steps + 1
+            at_budget = samples >= todo[0]
+            if at_budget or samples >= next_val:
+                v = validate()
+                curve.append({"samples": samples, "steps": steps, "epochs": round(samples / len(keep), 3),
+                              "train_loss": tl / max(nb, 1), "val_dice": v, "train_seconds": round(train_s, 1)})
+                tl, nb = 0.0, 0
+                while next_val <= samples:
+                    next_val += args.val_every
+            if at_budget:
+                b = todo.pop(0)
+                d = dirs[b]
+                torch.save(dl.merged_state(model.mask_decoder) if lora else model.mask_decoder.state_dict(),
+                           os.path.join(d, "best_decoder.pt"))
+                peak = dl.peak_gpu_gb(device)
+                arm = f"{base}_s{b}"
+                meta = {"arm": arm, "arm_name": dl.arm_info(arm)[2], "seed": seed, "lr": lr,
+                        "decoder_lora_rank": args.rank if lora else None, "batch_size": args.batch_size,
+                        "jitter": args.jitter, "datasets": sorted(sel),
+                        "slices_per_dataset": {ds: len(v) for ds, v in sel.items()}, "training_slices": n_slices,
+                        "budget_samples": b, "samples_seen": samples, "steps": steps,
+                        "epochs_equivalent": round(samples / len(keep), 3),
+                        "selection": "none: the decoder after this many training samples (no early stopping, "
+                                     "no best-epoch choice); file named best_decoder.pt only so eval_decoder.py loads it",
+                        "val_dice": curve[-1]["val_dice"], "val_dice_before": v0, "best_val_dice": curve[-1]["val_dice"],
+                        "train_seconds": round(train_s, 1), "encode_seconds_share": round(n_slices * enc_s_per_slice, 1),
+                        "seconds": round(train_s + n_slices * enc_s_per_slice, 1),
+                        "trainable_parameters": sum(p.numel() for p in params),
+                        "peak_gpu_gb_including_cache": peak,
+                        "peak_gpu_gb_training": None if peak is None else round(peak - embs.numel() * 2 / 1024 ** 3, 2)}
+                with open(os.path.join(d, "meta.json"), "w") as f:
+                    json.dump(meta, f, indent=1)
+                with open(os.path.join(d, "curve.csv"), "w", newline="") as f:
+                    w = csv.DictWriter(f, fieldnames=list(curve[0].keys()))
+                    w.writeheader()
+                    w.writerows(curve)
+                open(os.path.join(d, "DONE"), "w").close()
+                print(f"  {b:>9,} samples ({samples / len(keep):7.1f} epochs, {steps} steps): val Dice "
+                      f"{curve[-1]['val_dice']:.4f} | {train_s / 60:.1f} min training", flush=True)
+                if not todo:
+                    break
+    print(f"  done: {(time.time() - t0) / 60:.1f} min including validation", flush=True)
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--work-dir", required=True)
@@ -180,6 +305,11 @@ def main():
     ap.add_argument("--patience-long", type=int, default=5)
     ap.add_argument("--long-threshold", type=int, default=2000, help="runs with more slices use --epochs-long")
     ap.add_argument("--encode-batch", type=int, default=8, help="slices per encoder pass while building the pool")
+    ap.add_argument("--fixed-samples", type=int, nargs="*", default=[],
+                    help="fixed training budgets (training samples): run only the data-size runs, each trained for "
+                         "these budgets with no early stopping (use a separate --out-dir)")
+    ap.add_argument("--val-every", type=int, default=20000,
+                    help="fixed-budget runs: validation Dice every this many samples (information only)")
     ap.add_argument("--workers", type=int, default=None)
     ap.add_argument("--device", default="cuda")
     args = ap.parse_args()
@@ -237,6 +367,20 @@ def main():
         json.dump({"pool_max": args.pool_max, "slices_per_dataset": {d: len(v) for d, v in {**pool, **extra}.items()},
                    "encode_seconds": round(enc_s, 1), "encode_seconds_per_slice": enc_s / max(len(pairs), 1)}, f, indent=1)
     per_slice = enc_s / max(len(pairs), 1)
+
+    # ---- fixed training budgets (data size only) -----------------------------------------
+    if args.fixed_samples:
+        if extra:
+            raise SystemExit("--fixed-samples runs the 11-dataset data-size runs only; drop --extra-datasets")
+        for mode in args.modes:
+            lora = mode == "decoder-lora"
+            for n in args.sizes:
+                for seed in args.seeds:
+                    train_fixed(f"sam-enc_sam-dec{'-lora' if lora else ''}_n{n}", seed, dp.size_subset(pool, n, seed),
+                                args.fixed_samples, pool_index, embs, packed, wd, val_inst, args, device,
+                                args.lr_decoder_lora if lora else args.lr_decoder, lora, per_slice)
+        print(f"\nall fixed-budget runs finished in {(time.time() - t0) / 3600:.1f} h")
+        return
 
     # ---- data size ---------------------------------------------------------------------
     for mode in args.modes:

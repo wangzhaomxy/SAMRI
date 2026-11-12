@@ -15,6 +15,10 @@
 #      sbatch embedding_assess/run_nnunet_train.sh
 #    Resumable: resubmitting continues unfinished tasks from their last 50-epoch checkpoint
 #    (e.g. sbatch --array=3,7 embedding_assess/run_nnunet_train.sh for the tasks that ran out of time).
+# 3) LESION FIX (after the second run_nnunet_prepare.sh): the one-label lesion datasets, array indices 12-14:
+#      sbatch --array=12-14 embedding_assess/run_nnunet_train.sh
+#    Check: "scoring: one lesion class, per lesion", "first-run result ... -> ....csv.superseded", "per lesion:
+#    label 2 median ..., higher labels median ..." (higher labels no longer all missed), "whole slice ...".
 #SBATCH --job-name=samri-nnunet
 #SBATCH --array=0-11%3
 #SBATCH --nodes=1

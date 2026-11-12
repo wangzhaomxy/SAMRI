@@ -11,8 +11,15 @@ Resumable: an unfinished run continues from checkpoint_latest.pth (saved every 5
 written are kept, and a finished run goes straight to prediction.
 The MSK_T2 model is also tested on MSK_PD and MSK_FLASH (same six classes, other sequences); no model is
 tested on the zero-shot sets, whose classes it was not trained on.
+One-label lesion datasets (nnunet_prepare.py: ISLES2022_ADC/DWI and QIN-PROSTATE-Lesion, every lesion = class 1)
+are scored per lesion, like the box-prompted systems: each true lesion (label number) in a slice is one
+structure, and each predicted lesion pixel is given to the nearest true lesion of that slice (so a false
+positive counts against the lesion it lies closest to). The rows keep the original label numbers, so they pair
+with eval_decoder.py's rows.
 Output: <nnunet-root>/eval/<trainer>/eval_instances_<DatasetNNN_name>.csv, with the columns of
-eval_decoder.py's eval_instances.csv (merge with analyse_knee.py --instances).
+eval_decoder.py's eval_instances.csv (merge with analyse_knee.py --instances). For a dataset that also has a
+one-label version, the first-run file (one class per lesion number) is renamed to *.csv.superseded, so a
+*.csv glob picks up exactly one nnU-Net result per test structure.
 """
 
 import argparse
@@ -30,12 +37,28 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 import emb_common as ec  # noqa: E402
 
 
+def entry_key(e):
+    return e["name"] + (f"_{e['variant']}" if e.get("variant") else "")
+
+
+def lesion_dice(pred_bin, seg):
+    """Per-lesion Dice when the model predicts one lesion class: every pixel goes to its nearest true lesion
+    (nearest-neighbour partition of the slice), and lesion l is scored on the predicted pixels in its part."""
+    from scipy import ndimage
+    labs = ec.slice_labels(seg)
+    if len(labs) == 1:
+        return {labs[0]: ec.dice(pred_bin, seg == labs[0])}
+    idx = ndimage.distance_transform_edt(seg == 0, return_distances=False, return_indices=True)
+    owner = seg[tuple(idx)]
+    return {lab: ec.dice(pred_bin & (owner == lab), seg == lab) for lab in labs}
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--nnunet-root", required=True)
     g = ap.add_mutually_exclusive_group(required=True)
     g.add_argument("--index", type=int, help="array index (see datasets.json)")
-    g.add_argument("--dataset", help="dataset name, e.g. MSK_T2")
+    g.add_argument("--dataset", help="dataset name, e.g. MSK_T2 or ISLES2022_ADC_onelabel")
     ap.add_argument("--trainer", default="nnUNetTrainer", help="nnUNetTrainer_5epochs for a smoke test")
     ap.add_argument("--device", default="cuda")
     ap.add_argument("--workers", type=int, default=8)
@@ -50,8 +73,8 @@ def main():
     from torch.backends import cudnn
 
     datasets = json.load(open(os.path.join(root, "datasets.json")))
-    entry = next((e for e in datasets if (e["index"] == args.index if args.index is not None else e["name"] == args.dataset)),
-                 None)
+    entry = next((e for e in datasets if (e["index"] == args.index if args.index is not None
+                                          else entry_key(e) == args.dataset)), None)
     if entry is None:
         sys.exit(f"no dataset {args.index if args.index is not None else args.dataset} in datasets.json")
     folder, ds, fold = entry["folder"], entry["name"], entry["fold"]
@@ -119,31 +142,50 @@ def main():
     # ---- score -------------------------------------------------------------------------------------------------
     import SimpleITK as sitk
     smap = json.load(open(os.path.join(root, "raw", folder, "samri_map.json")))
-    inv = {int(n): float(v) for n, v in smap["labels"].items()}  # nnU-Net label -> original label value
-    lut = np.zeros(max(inv) + 1, dtype=np.float64)
-    for n, v in inv.items():
-        lut[n] = v
+    onelabel = bool(smap.get("onelabel"))
+    if onelabel:
+        print("scoring: one lesion class, per lesion (predicted pixels go to the nearest true lesion)")
+    else:
+        inv = {int(n): float(v) for n, v in smap["labels"].items()}  # nnU-Net label -> original label value
+        lut = np.zeros(max(inv) + 1, dtype=np.float64)
+        for n, v in inv.items():
+            lut[n] = v
     system = "nnunet-2d" + ("" if args.trainer == "nnUNetTrainer" else f"_{args.trainer}")
     name = "nnU-Net 2D, one model per dataset, trained on that dataset" + (
         "" if args.trainer == "nnUNetTrainer" else f" ({args.trainer})")
-    recs, unknown = [], defaultdict(int)
+    recs, unknown, slice_dice = [], defaultdict(int), []
     for e in index:
-        pred = lut[sitk.GetArrayFromImage(sitk.ReadImage(os.path.join(pred_dir, e["case"] + ".nii.gz"))).astype(np.int64)]
+        raw_pred = sitk.GetArrayFromImage(sitk.ReadImage(os.path.join(pred_dir, e["case"] + ".nii.gz"))).astype(np.int64)
         seg = ec.load_slice(e["img_path"], e["seg_path"])[1]
-        if pred.shape != seg.shape:
-            sys.exit(f"{e['case']}: prediction {pred.shape} vs label map {seg.shape}")
-        for lab in ec.slice_labels(seg):
-            m = seg == lab
-            if float(lab) not in inv.values():
+        if raw_pred.shape != seg.shape:
+            sys.exit(f"{e['case']}: prediction {raw_pred.shape} vs label map {seg.shape}")
+        if onelabel:
+            scores = lesion_dice(raw_pred > 0, seg)
+            slice_dice.append(ec.dice(raw_pred > 0, seg > 0))
+        else:
+            pred = lut[raw_pred]
+            scores = {lab: ec.dice(pred == lab, seg == lab) for lab in ec.slice_labels(seg)}
+        for lab, d in scores.items():
+            if not onelabel and float(lab) not in inv.values():
                 unknown[(e["dataset"], float(lab))] += 1
             recs.append({"system": system, "name": name, "seed": 0, "test_set": e["test_set"], "root": e["root"],
-                         "dataset": e["dataset"], "row": e["row"], "label": float(lab), "area": int(m.sum()),
-                         "dice": ec.dice(pred == lab, m)})
+                         "dataset": e["dataset"], "row": e["row"], "label": float(lab), "area": int((seg == lab).sum()),
+                         "dice": d})
     for (d, lab), n in sorted(unknown.items()):
         print(f"  WARNING: {d} label {lab:g} ({n} structures) is not a class of this model - scored as missed")
     out_dir = os.path.join(root, "eval", args.trainer)
     os.makedirs(out_dir, exist_ok=True)
     out = os.path.join(out_dir, f"eval_instances_{folder}.csv")
+    has_onelabel = any(x.get("variant") == "onelabel" and x["name"] == ds for x in datasets)
+    if has_onelabel and not entry.get("variant"):  # first-run lesion model: keep its result out of *.csv globs
+        out += ".superseded"
+        print(f"  {ds} has a one-label version: this result is written as superseded")
+    if onelabel:
+        for x in datasets:
+            old = os.path.join(out_dir, f"eval_instances_{x['folder']}.csv")
+            if x["name"] == ds and not x.get("variant") and os.path.isfile(old):
+                os.replace(old, old + ".superseded")
+                print(f"  first-run result (one class per lesion number) -> {os.path.basename(old)}.superseded")
     with open(out, "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=list(recs[0].keys()))
         w.writeheader()
@@ -153,6 +195,14 @@ def main():
         by[(r["test_set"], r["dataset"])].append(r["dice"])
     for (t, d), v in sorted(by.items()):
         print(f"  {d:24s} ({t:9s}): median Dice {np.nanmedian(v):.3f} over {len(v)} structures")
+    if onelabel:
+        low = min(smap["lesion_numbers"])
+        first = [r["dice"] for r in recs if r["label"] == low]
+        later = [r["dice"] for r in recs if r["label"] != low]
+        med = lambda v: f"{np.nanmedian(v):.3f}" if v else "-"  # noqa: E731
+        print(f"  per lesion: label {low:g} median {med(first)} ({len(first)}), higher labels median {med(later)} "
+              f"({len(later)}); misses (Dice < 0.01) {np.mean([r['dice'] < 0.01 for r in recs]):.0%}")
+        print(f"  whole slice (all lesions as one mask): median Dice {med(slice_dice)} over {len(slice_dice)} slices")
     print(f"-> {out} ({(time.time() - t0) / 60:.1f} min)")
 
 

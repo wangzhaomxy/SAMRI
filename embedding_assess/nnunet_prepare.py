@@ -16,6 +16,15 @@ model's own dataset is the MSK_T2 model on the other knee sequences, which have 
 
 Each slice is written as a 2D NIfTI with SimpleITK, which nnU-Net reads as a 2D image. Label values are
 mapped to 1..K for nnU-Net (samri_map.json keeps the original values; nnunet_run.py maps them back).
+
+Lesion datasets (ISLES2022_ADC, ISLES2022_DWI, QIN-PROSTATE-Lesion) store one label number per lesion (2, 3, 4,
+... up to 109: the lesion's number within its scan). The number is not a class. Mapping each number to its own
+class (array indices 4, 5 and 8, the first run) asks nnU-Net to tell lesion 2 from lesion 3 by appearance,
+which it cannot learn: in that run it found almost no lesion numbered 3 or higher. These three are therefore
+written a second time as one-label datasets ("onelabel": every lesion -> class 1), after the 12 above: array
+indices 12-14, dataset ids first-id + 12..14. nnunet_run.py scores them per lesion (each predicted lesion pixel
+goes to the nearest true lesion) and marks the first-run results of the same datasets as superseded.
+
 Outputs under --nnunet-root: raw/DatasetNNN_<name>/ (imagesTr, labelsTr, dataset.json, samri_map.json,
 splits_final.json), test/DatasetNNN_<name>/ (imagesTs, index.json), datasets.json. A dataset with a DONE file
 is skipped.
@@ -38,6 +47,7 @@ import emb_common as ec  # noqa: E402
 DATASETS = ["BraTS_FLAIR", "BraTS_T1", "BraTS_T1CE", "Heart", "ISLES2022_ADC", "ISLES2022_DWI", "MSK_T2",
             "ProstateT2", "QIN-PROSTATE-Lesion", "QIN-PROSTATE-Prostate", "SpineMR", "crossmoda"]
 KNEE_TEST = ("MSK_T2", "MSK_PD", "MSK_FLASH")
+ONE_LABEL = ("ISLES2022_ADC", "ISLES2022_DWI", "QIN-PROSTATE-Lesion")  # label value = lesion number, not class
 
 
 def _load_seg(seg_path):
@@ -111,10 +121,12 @@ def main():
                 tests["MSK_T2"].append((label, r))
 
     os.makedirs(args.nnunet_root, exist_ok=True)
+    # the 12 datasets keep their array indices (0-11, sorted by name); the one-label variants come after them
+    jobs = [(ds, None) for ds in names] + [(ds, "onelabel") for ds in ONE_LABEL if ds in names]
     summary = []
     with Pool(args.workers) as pool:
-        for i, ds in enumerate(names):
-            fname = folder_name(i, ds, args.first_id)
+        for i, (ds, variant) in enumerate(jobs):
+            fname = folder_name(i, ds + (f"_{variant}" if variant else ""), args.first_id)
             raw = os.path.join(args.nnunet_root, "raw", fname)
             tdir = os.path.join(args.nnunet_root, "test", fname)
             done = os.path.join(raw, "DONE")
@@ -138,10 +150,14 @@ def main():
             os.makedirs(os.path.join(tdir, "imagesTs"), exist_ok=True)
 
             area, count = label_stats(pool, [s for _, s in pairs])
-            mapping = {v: k + 1 for k, v in enumerate(sorted(area))}
+            if variant == "onelabel":
+                mapping = {v: 1 for v in sorted(area)}
+            else:
+                mapping = {v: k + 1 for k, v in enumerate(sorted(area))}
             fold = "0" if splits["validation"] else "all"
             print(f"[{i}] {fname}: {len(splits['training'])} training + {len(splits['validation'])} validation slices "
-                  f"(fold {fold}); labels (original -> nnU-Net; slices; mean area): "
+                  f"(fold {fold}){'; one label for every lesion' if variant else ''}; "
+                  f"labels (original -> nnU-Net; slices; mean area): "
                   + ", ".join(f"{v}->{mapping[v]} ({count[v]}; {area[v] / count[v]:.0f})" for v in sorted(area)),
                   flush=True)
 
@@ -153,15 +169,20 @@ def main():
                 sys.exit(f"image and mask shapes differ for {len(bad)} slices, e.g. {bad[0]}")
             pool.map(_write_label, [(seg, os.path.join(raw, "labelsTr", c + ".nii.gz"), mapping)
                                     for c, (_, seg) in zip(all_cases, pairs)], chunksize=64)
-            json.dump({"channel_names": {"0": "MRI"},
-                       "labels": {"background": 0, **{f"label_{v}": mapping[v] for v in sorted(mapping)}},
+            classes = ({"lesion": 1} if variant == "onelabel"
+                       else {f"label_{v}": mapping[v] for v in sorted(mapping)})
+            json.dump({"channel_names": {"0": "MRI"}, "labels": {"background": 0, **classes},
                        "numTraining": len(all_cases), "file_ending": ".nii.gz",
                        "description": f"SAMRI {ds}, 2D slices; original label values in samri_map.json"},
                       open(os.path.join(raw, "dataset.json"), "w"), indent=1)
             if fold == "0":
                 json.dump([{"train": cases["training"], "val": cases["validation"]}],
                           open(os.path.join(raw, "splits_final.json"), "w"))
-            json.dump({"dataset": ds, "fold": fold, "labels": {str(n): v for v, n in mapping.items()},
+            json.dump({"dataset": ds, "fold": fold, "variant": variant, "onelabel": variant == "onelabel",
+                       # one-label: class 1 = any lesion; the original values are lesion numbers (scored per lesion)
+                       "labels": ({"1": "lesion"} if variant == "onelabel"
+                                  else {str(n): v for v, n in mapping.items()}),
+                       "lesion_numbers": sorted(mapping) if variant == "onelabel" else None,
                        "cases": dict(zip(all_cases, (p[0] for p in pairs)))},
                       open(os.path.join(raw, "samri_map.json"), "w"))
 
@@ -176,7 +197,7 @@ def main():
             for e in index:
                 by[(e["test_set"], e["dataset"])] += 1
             print("      test slices: " + ", ".join(f"{d} ({t}) {n}" for (t, d), n in sorted(by.items())))
-            if ds == "MSK_T2":  # do the other sets' label values mean the same structures? compare mean areas
+            if ds == "MSK_T2" and not variant:  # do the other sets' label values mean the same structures? compare mean areas
                 for other in ("MSK_PD", "MSK_FLASH"):
                     oa, oc = label_stats(pool, [e["seg_path"] for e in index if e["dataset"] == other])
                     print(f"      labels {other} test (label: slices; mean area; MSK_T2 mean area): "
@@ -185,6 +206,8 @@ def main():
                                       for v in sorted(oa)))
             entry = {"index": i, "id": args.first_id + i, "name": ds, "folder": fname, "fold": fold,
                      "n_train": len(splits["training"]), "n_val": len(splits["validation"]), "n_test": len(index)}
+            if variant:
+                entry["variant"] = variant
             summary.append(entry)
             json.dump(entry, open(done, "w"))
             print(f"      {time.time() - t1:.0f} s", flush=True)
@@ -192,7 +215,9 @@ def main():
     print(f"{len(summary)} datasets -> {args.nnunet_root} ({time.time() - t0:.0f} s)")
     for e in summary:
         print(f"  array index {e['index']:2d}: {e['folder']} ({e['n_train']} train, {e['n_val']} validation, "
-              f"{e['n_test']} test; fold {e['fold']})")
+              f"{e['n_test']} test; fold {e['fold']})"
+              + (" - superseded by its one-label version" if any(x.get("variant") == "onelabel" and x["name"] == e["name"]
+                                                                  for x in summary) and not e.get("variant") else ""))
 
 
 if __name__ == "__main__":

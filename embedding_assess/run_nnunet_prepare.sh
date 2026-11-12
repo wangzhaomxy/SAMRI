@@ -7,12 +7,20 @@
 # BEFORE: bash embedding_assess/setup_nnunet_env.sh (once, login node), and step 1 of run_knee_experiments.sh
 # has written the knee manifest (the MSK_T2/PD/FLASH test rows). Submit from the repo root:
 #   cd /scratch/user/s4670484/SAMRI && sbatch embedding_assess/run_nnunet_prepare.sh
-# Re-running skips datasets already written (DONE files); nnU-Net preprocessing is redone.
+# Re-running skips datasets already written (DONE files) and preprocesses only datasets whose nnU-Net
+# preprocessed folder is missing or incomplete.
+#
+# Lesion fix (second run, ~15 min): the three lesion datasets store one label number per lesion; the first run
+# made each number a class. Re-running this script writes them again with one lesion class (array indices
+# 12-14: ISLES2022_ADC_onelabel, ISLES2022_DWI_onelabel, QIN-PROSTATE-Lesion_onelabel) and preprocesses only
+# those three; the 12 first-run datasets are left as they are. Then train: sbatch --array=12-14 run_nnunet_train.sh
 #
 # CHECK the .output log:
-#   "[k] DatasetNNN_<name>: N training + M validation slices (fold 0)" for all 12 (fold all = no validation split)
-#   "labels MSK_PD / MSK_FLASH test": labels 1-6, mean areas close to MSK_T2's
-#   "array index 0..11", then nnU-Net's "2D U-Net configuration" per dataset and no integrity errors
+#   "[k] DatasetNNN_<name>: done - skipping" for the 12 first-run datasets (0-11)
+#   "[12] Dataset913_ISLES2022_ADC_onelabel: 2345 training + 315 validation slices (fold 0); one label for every
+#    lesion; labels (original -> nnU-Net ...): 2->1 ..., 3->1 ..." (all -> 1), same for 13 and 14
+#   "array index 12..14", "planning and 2D preprocessing: 913 914 915", nnU-Net's "2D U-Net configuration" for each, no
+#   integrity errors
 #SBATCH --job-name=samri-nnunet-prep
 #SBATCH --nodes=1
 #SBATCH --ntasks-per-node=1
@@ -48,9 +56,26 @@ python embedding_assess/nnunet_prepare.py --traintest "$ROOT/Datasets/SAMRI_trai
     || { echo "!!!!! FAILED: nnunet_prepare"; exit 1; }
 
 export nnUNet_raw=$NN/raw nnUNet_preprocessed=$NN/preprocessed nnUNet_results=$NN/results
-IDS=$(python -c "import json; print(' '.join(str(e['id']) for e in json.load(open('$NN/datasets.json'))))")
-echo; echo "===== nnU-Net planning and 2D preprocessing: $IDS ====="
-nnUNetv2_plan_and_preprocess -d $IDS -c 2d -np "$WORKERS" -npfp "$WORKERS" --verify_dataset_integrity \
-    || { echo "!!!!! FAILED: nnUNetv2_plan_and_preprocess"; exit 1; }
+# preprocess only datasets whose preprocessed 2D folder is missing or holds fewer cases than training +
+# validation slices (nnU-Net writes one .pkl per case, last)
+PRE=$(python - "$NN" <<'PY'
+import glob, json, os, sys
+nn = sys.argv[1]
+todo = []
+for e in json.load(open(os.path.join(nn, "datasets.json"))):
+    n = len(glob.glob(os.path.join(nn, "preprocessed", e["folder"], "nnUNetPlans_2d", "*.pkl")))
+    if n < e["n_train"] + e["n_val"]:
+        todo.append(str(e["id"]))
+    print(f"  {e['folder']}: {n} of {e['n_train'] + e['n_val']} cases already preprocessed")
+print("IDS:" + " ".join(todo))
+PY
+) || { echo "!!!!! FAILED: checking preprocessed folders"; exit 1; }
+echo; echo "$PRE" | grep -v '^IDS:'
+IDS=$(echo "$PRE" | grep '^IDS:' | cut -c5-)
+echo "===== nnU-Net planning and 2D preprocessing: ${IDS:-nothing to do} ====="
+if [ -n "$IDS" ]; then
+    nnUNetv2_plan_and_preprocess -d $IDS -c 2d -np "$WORKERS" -npfp "$WORKERS" --verify_dataset_integrity \
+        || { echo "!!!!! FAILED: nnUNetv2_plan_and_preprocess"; exit 1; }
+fi
 echo "files under $NN: $(find "$NN" -type f | wc -l), size: $(du -sh "$NN" | cut -f1)"
 echo "all steps finished: $(date)"
