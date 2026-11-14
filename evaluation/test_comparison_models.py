@@ -550,48 +550,88 @@ def load_sam_med2d(ckpt: str, device: str):
     return net.eval()
 
 
+_SAM_MED2D_SIZE = 256
+_SAM_MED2D_MEAN = np.array([123.675, 116.28, 103.53], dtype=np.float32)
+_SAM_MED2D_STD  = np.array([58.395, 57.12, 57.375], dtype=np.float32)
+
+
+def _sam_med2d_inputs(image_hwc: np.ndarray, mask_gt: np.ndarray, size: int = _SAM_MED2D_SIZE):
+    """
+    Image, mask and box in SAM-Med2D's 256×256 input frame, as its test pipeline builds them
+    (SAM-Med2D-main/DataLoader.TestingDataset + utils.train_transforms):
+      - normalise with pixel mean/std at the native size;
+      - slice smaller than 256 on BOTH sides: zero-pad, centred (A.PadIfNeeded);
+        otherwise: stretch image and mask to 256×256, nearest neighbour (A.Resize);
+      - box from the mask in that frame.
+    The box is the tight box of the whole structure (the protocol of test_vis.py, shared by every
+    model here; SAM-Med2D's own script boxes only the largest connected component), written in
+    SAM-Med2D's convention (max corner exclusive, as skimage regionprops gives it).
+
+    Returns (image (256, 256, 3) float32, box [x0, y0, x1, y1] float32, pad) where pad is
+    (top, left) for the padded case and None for the stretched case.
+    """
+    H, W = mask_gt.shape
+    img  = (image_hwc.astype(np.float32) - _SAM_MED2D_MEAN) / _SAM_MED2D_STD
+    msk  = mask_gt.astype(np.uint8)
+    if H < size and W < size:
+        top, left = (size - H) // 2, (size - W) // 2
+        img = np.pad(img, ((top, size - H - top), (left, size - W - left), (0, 0)))
+        msk = np.pad(msk, ((top, size - H - top), (left, size - W - left)))
+        pad = (top, left)
+    else:
+        img = cv2.resize(img, (size, size), interpolation=cv2.INTER_NEAREST)
+        msk = cv2.resize(msk, (size, size), interpolation=cv2.INTER_NEAREST)
+        pad = None
+    if msk.any():
+        x0, y0, x1, y1 = gen_bboxes(msk, jitter=0)
+    else:  # a tiny structure can vanish in the nearest-neighbour resize: scale its native box instead
+        bx0, by0, bx1, by1 = gen_bboxes(mask_gt, jitter=0)
+        x0, x1 = int(bx0 * size / W), min(int(bx1 * size / W), size - 1)
+        y0, y1 = int(by0 * size / H), min(int(by1 * size / H), size - 1)
+    box = np.array([x0, y0, x1 + 1, y1 + 1], dtype=np.float32)
+    return img, box, pad
+
+
 @torch.no_grad()
 def infer_sam_med2d(net, image_hwc: np.ndarray, mask_gt: np.ndarray, device: str) -> np.ndarray:
     """
-    SAM-Med2D's sam_model.py forward() differs from standard SAM:
-      - Takes a single dict (not a list of dicts).
-      - Returns a single dict (not a list of dicts).
-      - Does NOT call preprocess() internally — image must be pre-normalised.
-      - Does NOT threshold masks — "masks" are raw logits; threshold manually.
-
-    Preprocessing:
-      - Call net.preprocess() to normalise with pixel_mean/std and pad to 256×256.
-        SAMRI images are already 256×256, so padding is a no-op.
-      - Add batch dim: (3, 256, 256) → (1, 3, 256, 256).
-      - Box prompt derived from the GT mask (in 256 coordinate space).
+    SAM-Med2D inference following its own test.py (box prompt, 256×256 input):
+      - image, mask and box brought into the 256×256 frame by _sam_med2d_inputs()
+        (slices are NOT all 256×256: larger ones are stretched, smaller ones padded);
+      - image encoder -> prompt encoder (box) -> mask decoder with 3 masks, the one with
+        the highest predicted IoU is kept (test.py prompt_and_decoder, --multimask True);
+      - low-res logits -> 256×256 -> native size: centre crop for a padded slice, resize
+        for a stretched one (test.py postprocess_masks);
+      - threshold at logit 0 (= sigmoid > 0.5, as SAM-Med2D's metrics do).
 
     Returns binary mask (H, W) uint8 {0, 1}.
     """
     H, W = image_hwc.shape[:2]
+    size = _SAM_MED2D_SIZE
+    img, box, pad = _sam_med2d_inputs(image_hwc, mask_gt, size)
 
-    # Normalise + pad — must be done explicitly (not inside forward())
-    tensor = torch.from_numpy(image_hwc).permute(2, 0, 1).float().to(device)  # (3, H, W)
-    tensor = net.preprocess(tensor).unsqueeze(0)                               # (1, 3, 256, 256)
+    tensor = torch.from_numpy(img).permute(2, 0, 1).unsqueeze(0).float().to(device)  # (1, 3, 256, 256)
+    box_t  = torch.as_tensor(box[None, :], dtype=torch.float, device=device)         # (1, 4)
 
-    # Box prompt: (1, 4) — one box in 256 coordinate space
-    bbox  = gen_bboxes(mask_gt, jitter=0)
-    box_t = torch.as_tensor(bbox[None, :], dtype=torch.float, device=device)  # (1, 4)
-
-    # forward() takes a plain dict and returns a plain dict
-    outputs = net(
-        {
-            "image":         tensor,
-            "original_size": (H, W),
-            "boxes":         box_t,
-        },
+    emb = net.image_encoder(tensor)
+    sparse_emb, dense_emb = net.prompt_encoder(points=None, boxes=box_t, masks=None)
+    low_res, iou = net.mask_decoder(
+        image_embeddings=emb,
+        image_pe=net.prompt_encoder.get_dense_pe(),
+        sparse_prompt_embeddings=sparse_emb,
+        dense_prompt_embeddings=dense_emb,
         multimask_output=True,
     )
+    best    = int(iou.argmax(dim=1)[0])
+    low_res = low_res[:, best:best + 1]                                              # (1, 1, 64, 64)
 
-    # "masks" are raw logits — threshold at mask_threshold (0.0)
-    iou   = outputs["iou_predictions"]                          # (1, 3)
-    masks = (outputs["masks"] > net.mask_threshold).float()    # (1, 3, H, W) binary
-    best  = int(iou.argmax(dim=1)[0])
-    return masks[0, best, :, :].cpu().numpy().astype(np.uint8)
+    logits = F.interpolate(low_res, (size, size), mode="bilinear", align_corners=False)
+    if pad is not None:
+        top, left = pad
+        logits = logits[..., top:top + H, left:left + W]
+    else:
+        logits = F.interpolate(logits, (H, W), mode="bilinear", align_corners=False)
+    return (logits[0, 0] > net.mask_threshold).cpu().numpy().astype(np.uint8)
 
 
 # ─────────────────────────────────────────────────────────────────────────────
