@@ -158,6 +158,9 @@ def parse_args():
                    help="[samed] LoRA rank; must match the trained checkpoint (default 4).")
     p.add_argument("--num-workers", dest="num_workers", type=int, default=4,
                    help="DataLoader num_workers (default 4; set 0 for MPS / debugging).")
+    p.add_argument("--datasets", nargs="*", default=None,
+                   help="Only these subset folder names under each --dataset-path root (default: all). "
+                        "Lets a job run one dataset per call, so a cut job can resume.")
     p.add_argument("--debug", action="store_true",
                    help="Debug mode: process only 2 samples per subset to verify the "
                         "pipeline runs end-to-end without errors.")
@@ -748,9 +751,12 @@ def main():
     # ── Helper: evaluate all subsets under one root ───────────────────────────
     def _eval_split(root: str, label: str) -> dict:
         test_dirs = get_testing_paths(root)
+        if args.datasets:
+            test_dirs = [d for d in test_dirs if Path(d).parts[-2] in args.datasets]
         if not test_dirs:
             raise FileNotFoundError(
                 f"No subset/testing/ directories found under [{label}]: {root}"
+                + (f" for --datasets {args.datasets}" if args.datasets else "")
             )
         print(f"\n[{label}] Found {len(test_dirs)} subset(s) in: {root}")
         for d in test_dirs:
