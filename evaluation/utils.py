@@ -428,8 +428,8 @@ def summarize_metric(
     - Adds 'AVG' row = mean±std over per-group medians.
     - If `wilcoxon` is True, reorders columns as
       ['SAM_vitb','MedSAM','SAMRI_box','SAMRI_bp'] and decorates cells:
-        * add '*' to MedSAM / SAM_vitb when p<0.05 vs SAMRI_box
-        * add '†' to MedSAM / SAM_vitb when p<0.05 vs SAMRI_bp
+        * add '*' to MedSAM / SAM_vitb / SAM-Med2D when p<0.05 vs SAMRI_box
+        * add '†' to MedSAM / SAM_vitb / SAM-Med2D when p<0.05 vs SAMRI_bp
       matching by (group value == wil_df['label']) and
       metric column == wil_df['metric'].
     """
@@ -513,7 +513,7 @@ def summarize_metric(
         # For fast membership checks, group by label (group value)
         by_label = dict(tuple(w.groupby("label", dropna=False)))
 
-        # Iterate over table cells for MedSAM and SAM_vitb
+        # Iterate over table cells for MedSAM, SAM_vitb and SAM-Med2D
         for row_key in result.index:
             grp_val = row_key
             if grp_val not in by_label:
@@ -522,7 +522,7 @@ def summarize_metric(
             sub = by_label[grp_val]
 
             # Flags: is there a significant comparison vs SAMRI_box / SAMRI_bp?
-            # We mark MedSAM and SAM_vitb cells separately depending on which pair shows p<0.05
+            # We mark MedSAM, SAM_vitb and SAM-Med2D cells separately depending on which pair shows p<0.05
             def _has_sig_against(target_model: str, ref_model: str) -> bool:
                 mask = (
                     ((sub["model_a"] == target_model) & (sub["model_b"] == ref_model)) |
@@ -532,7 +532,7 @@ def summarize_metric(
                     return False
                 return (sub.loc[mask, "p_value"] < 0.05).any()
 
-            for target in ["MedSAM", "SAM_vitb"]:
+            for target in ["MedSAM", "SAM_vitb", "SAM_Med2D", "SAM-Med2D"]:  # both SAM-Med2D spellings
                 if target in result.columns:
                     mark = ""
                     if _has_sig_against(target, "SAMRI_box"):
@@ -544,7 +544,7 @@ def summarize_metric(
                         cell = result.at[row_key, target]
                         result.at[row_key, target] = _decorate_stat_cell(cell, mark)
 
-        # Note: We only mark MedSAM and SAM_vitb (per your rule).
+        # Note: We only mark MedSAM, SAM_vitb and SAM-Med2D (the models calculate_wilcoxon tests).
         # SAMRI_box and SAMRI_bp columns are left unchanged.
 
     return result
@@ -661,8 +661,8 @@ def _extract_msk_name(row):
     if model == 'MedSAM':
         # Remove '_1.0.npz' or similar
         msk_name = re.sub(r'(_\d+(\.\d+)+)?\.npz$', '', base)
-    elif model == 'SAM_vitb' or model == 'SAMRI_box' or model == 'SAMRI_bp':
-        # Remove '.nii.gz'
+    elif model in ('SAM_vitb', 'SAMRI_box', 'SAMRI_bp', 'SAM_Med2D', 'SAM-Med2D'):
+        # Remove '.nii.gz' (SAM-Med2D records the same NIfTI mask path as SAM_vitb)
         msk_name = re.sub(r'\.nii\.gz$', '', base)
     else:
         msk_name = base  # fallback
@@ -686,8 +686,10 @@ def calculate_wilcoxon(result_df: pd.DataFrame, by="Dataset") -> pd.DataFrame:
     )
 
 
-    # Define models and metrics
-    models = ['MedSAM', 'SAM_vitb', 'SAMRI_box', 'SAMRI_bp']
+    # Define models and metrics. A model with no rows in result_df simply yields no pairs,
+    # so a table without SAM-Med2D gives the same result as before. Both spellings of the
+    # SAM-Med2D model name are accepted ('SAM_Med2D' is the one used in add_comparison.csv).
+    models = ['MedSAM', 'SAM_vitb', 'SAMRI_box', 'SAMRI_bp', 'SAM_Med2D', 'SAM-Med2D']
     metrics = ['b_dice', 'b_hd', 'b_msd']
 
     results = []

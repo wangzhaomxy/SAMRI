@@ -22,6 +22,10 @@
 # Card: 1 x NVIDIA H100 (partition gpu_cuda) with the sam_med2d conda env (a CUDA build of torch).
 # If sbatch rejects the --gres name, list the valid ones with  sinfo -p gpu_cuda -o "%G"  and pass it:
 #   sbatch --gres=gpu:<name>:1 evaluation/run_sam_med2d_rerun.sh
+# WITHOUT sbatch, on a GPU you already hold (interactive / onBunya desktop session) - same checks, same
+# resume, output on screen and in a log file. REPO is needed because SLURM_SUBMIT_DIR there is not the repo:
+#   cd /scratch/user/s4670484/SAMRI && REPO=$PWD bash -l evaluation/run_sam_med2d_rerun.sh 2>&1 | tee -a sam_med2d_rerun.log
+# On an AMD card (MI300X / MI355X) add  CONDA_ENV=/scratch/user/s4670484/conda/samri-mi355x  before  bash.
 # Another conda env (it needs torch, nibabel, scipy, tqdm and cv2):
 #   sbatch --export=ALL,CONDA_ENV=/path/to/env evaluation/run_sam_med2d_rerun.sh
 #
@@ -58,10 +62,15 @@ python -c "import torch, numpy, nibabel, scipy, tqdm, cv2" \
          echo "If it is cv2:  python -m pip install opencv-python-headless \"numpy==\$(python -c 'import numpy; print(numpy.__version__)')\""
          exit 1; }
 set -uo pipefail
-cd "${SLURM_SUBMIT_DIR:-/scratch/user/s4670484/SAMRI}"
+cd "${REPO:-${SLURM_SUBMIT_DIR:-/scratch/user/s4670484/SAMRI}}"
 
 export OMP_NUM_THREADS=1
 export MKL_NUM_THREADS=1
+# AMD cards (ROCm build of torch) need these; they do nothing on an NVIDIA card
+unset ROCR_VISIBLE_DEVICES GPU_DEVICE_ORDINAL
+export MIOPEN_USER_DB_PATH="/dev/shm/miopen-${SLURM_JOB_ID:-local}"
+export MIOPEN_CUSTOM_CACHE_DIR="$MIOPEN_USER_DB_PATH"
+mkdir -p "$MIOPEN_USER_DB_PATH"
 
 # ---- job body ----------------------------------------------------------------------------------
 ROOT=${ROOT:-/scratch/user/s4670484}
@@ -78,8 +87,8 @@ mkdir -p "$PARTS"
 grep -q "_sam_med2d_inputs" evaluation/test_comparison_models.py \
     || { echo "evaluation/test_comparison_models.py is the OLD version (no _sam_med2d_inputs) - copy the fixed file first"; exit 1; }
 if [ "$DEVICE" = cuda ]; then
-    python -c "import sys, torch; print(sys.executable, '| python', sys.version.split()[0], '| torch', torch.__version__, '| cuda', torch.version.cuda); \
-assert torch.cuda.is_available(), 'no GPU visible - is the torch in this env a CUDA build?'; print('device:', torch.cuda.get_device_name(0))" || exit 1
+    python -c "import sys, torch; print(sys.executable, '| python', sys.version.split()[0], '| torch', torch.__version__, '| cuda', torch.version.cuda, '| hip', getattr(torch.version, 'hip', None)); \
+assert torch.cuda.is_available(), 'no GPU visible - wrong conda env for this card? (NVIDIA: sam_med2d, AMD: samri-mi355x)'; print('device:', torch.cuda.get_device_name(0))" || exit 1
 fi
 echo "repo: $(pwd)  commit: $(git rev-parse --short HEAD 2>/dev/null)  python: $(which python)"
 
